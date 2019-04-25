@@ -20,6 +20,7 @@
 // SOFTWARE.
 */
 
+#include <stdio.h>
 #include <vector>
 
 #include "CL/cl2.hpp"
