@@ -1,0 +1,10 @@
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(SAMPLES_PLATFORM_NAME "x64")
+elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(SAMPLES_PLATFORM_NAME "x86")
+else()
+    set(SAMPLES_PLATFORM_NAME "Unknown")
+endif()
+
+add_subdirectory( 00_enumopencl )
+add_subdirectory( 00_enumopenclpp )
