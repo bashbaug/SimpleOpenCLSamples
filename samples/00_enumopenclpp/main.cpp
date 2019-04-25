@@ -40,7 +40,7 @@ static cl_int PrintDeviceInfoSummary(
     size_t  i = 0;
     for( i = 0; i < devices.size(); i++ )
     {
-        printf("Device[%d]:\n", i );
+        printf("Device[%d]:\n", (int)i );
 
         cl_device_type  deviceType = devices[i].getInfo<CL_DEVICE_TYPE>();
         switch( deviceType )

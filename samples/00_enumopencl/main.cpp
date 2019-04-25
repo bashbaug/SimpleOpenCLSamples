@@ -217,7 +217,7 @@ static cl_int PrintDeviceInfoSummary(
 
         if( errorCode == CL_SUCCESS )
         {
-            printf("Device[%d]:\n", i );
+            printf("Device[%d]:\n", (int)i );
 
             switch( deviceType )
             {
@@ -235,7 +235,7 @@ static cl_int PrintDeviceInfoSummary(
         }
         else
         {
-            fprintf(stderr, "Error getting device info for device %d.\n", i );
+            fprintf(stderr, "Error getting device info for device %d.\n", (int)i );
         }
 
         delete [] deviceName;
