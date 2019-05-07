@@ -52,7 +52,7 @@ find_path(OPENCL_CPP_INCLUDE_DIR "CL/cl2.hpp" "/usr/include" "/usr/local/include
 if (OPENCL_CPP_INCLUDE_DIR)
     message(STATUS "Found OCL C++ headers in " ${OPENCL_CPP_INCLUDE_DIR})
 else()
-    message(STATUS "OCL headers not found, using local headers...")
+    message(STATUS "OCL C++ headers not found, using local headers...")
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 endif()
 
