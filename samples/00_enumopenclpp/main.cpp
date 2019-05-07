@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "CL/cl2.hpp"
+#include <CL/cl2.hpp>
 
 static cl_int PrintPlatformInfoSummary(
     cl::Platform platform )
