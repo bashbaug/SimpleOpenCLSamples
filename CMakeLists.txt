@@ -32,11 +32,29 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(SimpleOpenCLSample)
 
-set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
-find_package(OpenCL)
+# Setup OCL C headers
+find_path(OPENCL_INCLUDE_DIR "CL/cl.h" "/usr/include" "/usr/local/include")
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${OpenCL_INCLUDE_DIR})
+if (OPENCL_INCLUDE_DIR)
+    message(STATUS "Found OCL C headers in " ${OPENCL_INCLUDE_DIR})
+else()
+    message(STATUS "OCL headers not found, initializing local clone...")
+    execute_process(COMMAND git submodule update --init -- external/OpenCL-Headers
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
+    include_directories(${OpenCL_INCLUDE_DIR})
+    find_package(OpenCL)
+endif()
+
+# Setup OCL C++ headers
+find_path(OPENCL_CPP_INCLUDE_DIR "CL/cl2.hpp" "/usr/include" "/usr/local/include")
+
+if (OPENCL_CPP_INCLUDE_DIR)
+    message(STATUS "Found OCL C++ headers in " ${OPENCL_CPP_INCLUDE_DIR})
+else()
+    message(STATUS "OCL headers not found, using local headers...")
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+endif()
 
 add_subdirectory(external/opencl-icd-loader)
 set_target_properties(icd_loader_test  PROPERTIES FOLDER "OpenCL-ICD-Loader")

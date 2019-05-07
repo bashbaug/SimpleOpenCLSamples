@@ -4,16 +4,11 @@ Most modern GPUs support OpenCL. For integrated graphics devices (iGPUs), use `l
 
 # Build Dependencies
 
-OpenCL Headers:
+Building OpenCL applications requires headers for the OpenCL API and OpenCL ICD Loader. These headers should be provided automatically by CMake, but can also be manually imported as follows.
 
 ```
-$ git clone https://github.com/KhronosGroup/OpenCL-Headers external/OpenCL-Headers
-```
-
-OpenCL ICD Loader:
-
-```
-$ git clone https://github.com/KhronosGroup/opencl-icd-loader external/opencl-icd-loader
+$ git submodule update --init -- external/OpenCL-Headers
+$ git submodule update --init -- external/opencl-icd-loader
 ```
 
 # Runtime Dependencies
