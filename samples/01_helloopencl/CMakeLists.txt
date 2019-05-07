@@ -1,5 +1,3 @@
-# Copyright (c) 2019 Ben Ashbaugh
-#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
@@ -18,14 +16,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SAMPLES_PLATFORM_NAME "x64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(SAMPLES_PLATFORM_NAME "x86")
-else()
-    set(SAMPLES_PLATFORM_NAME "Unknown")
-endif()
+set(SAMPLE_NAME helloopencl)
+set(SAMPLE_NUMBER 01)
 
-add_subdirectory( 00_enumopencl )
-add_subdirectory( 00_enumopenclpp )
-add_subdirectory( 01_helloopencl )
+project(${SAMPLE_NAME})
+include_directories( ${OpenCL_INCLUDE_DIR} )
+add_executable( ${SAMPLE_NAME} main.cpp )
+
+add_custom_command(
+        TARGET ${SAMPLE_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_SOURCE_DIR}/samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}/hello.cl
+                ${CMAKE_CURRENT_BINARY_DIR}/hello.cl)
+
+target_link_libraries( ${SAMPLE_NAME} OpenCL )
+set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
+
+install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Debug   DESTINATION ${SAMPLES_PLATFORM_NAME}/Debug   )
+install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Release DESTINATION ${SAMPLES_PLATFORM_NAME}/Release )
