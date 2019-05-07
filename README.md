@@ -45,6 +45,12 @@ Done.
 $
 ```
 
+## Further Reading
+
+* [OpenCLPapers](https://github.com/bashbaug/OpenCLPapers)
+* [OpenCL Specs](https://www.khronos.org/registry/OpenCL/specs/)
+* [OpenCL Return Codes](https://streamhpc.com/blog/2013-04-28/opencl-error-codes/)
+
 ## License
 
 These samples are licensed under the [MIT License](LICENSE).
