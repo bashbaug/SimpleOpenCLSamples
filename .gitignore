@@ -6,8 +6,5 @@ _bin64/
 build/
 build32/
 build64/
-external/
-external/OpenCL-Headers/
-external/OpenCL-ICD-Loader/
 install/
 *~
