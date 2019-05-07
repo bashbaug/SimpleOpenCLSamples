@@ -9,41 +9,41 @@ All samples have been tested on Windows and Linux.
 
 ```
 README.md               This file
+LICENSE                 License information
 CMakeLists.txt          Top-level CMakefile
-external/               Directory Containing External Projects (headers and libs)
-include/                Directory Containing Include Files (OpenCL C++ bindings)
-samples/                Directory Containing Samples
+external/               External Projects (headers and libs)
+include/                Include Files (OpenCL C++ bindings)
+samples/                Samples
 ```
 
-## How to Build
+## Environment Setup
 
-The samples require the following external dependencies:
+Building an OpenCL application requires the OpenCL API and ICD Loader headers. Running an OpenCL application requires
+the associated ICD and runtime objects.
 
-OpenCL Headers:
+* [Generic Linux (build from source)](docs/env/linux.md)
+* [Ubuntu 18.04](docs/env/ubuntu/18.04.md)
 
-    git clone https://github.com/KhronosGroup/OpenCL-Headers external/OpenCL-Headers
+## Building the Samples
 
-OpenCL ICD Loader:
+Follow the environment setup instructions for your environment of choice, then create the build files using CMake:
 
-    git clone https://github.com/KhronosGroup/opencl-icd-loader external/opencl-icd-loader
+```
+$ mkdir build && cd build
+$ cmake ..
+$ make -j
+```
 
-After satisfying the external dependencies create build files using CMake.  For example:
+## Running the Samples
 
-    mkdir build && cd build
-    cmake ..
+Follow the environment setup and build instructions, then run the sample of interest from the build directory. For example:
 
-Then, build with the generated build files.
-
-## How to Run the Samples
-
-To run the samples, you will need to obtain and install an ICD loader and an 
-OpenCL implementation (ICD) that supports the `cl_khr_icd` extension.
-
-The ICD loader is likely provided by your operating system or an OpenCL
-implementation.  If desired, you may use the ICD loader that is built along 
-with these OpenCL samples.  The OpenCL implementation will likely be provided 
-by your OpenCL device vendor.  There are several open source OpenCL
-implementations as well.
+```
+$ samples/00_enumopenclpp/enumopenclpp
+<platform information shown here>
+Done.
+$
+```
 
 ## License
 
