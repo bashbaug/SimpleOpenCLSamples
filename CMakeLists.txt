@@ -56,11 +56,20 @@ else()
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 endif()
 
-add_subdirectory(external/opencl-icd-loader)
-set_target_properties(icd_loader_test  PROPERTIES FOLDER "OpenCL-ICD-Loader")
-set_target_properties(IcdLog           PROPERTIES FOLDER "OpenCL-ICD-Loader")
-set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
-set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
+find_library(OPENCL_LOADER_PATH "OpenCL" "/usr/lib" "/usr/local/lib")
+
+if (OPENCL_LOADER_PATH)
+    message(STATUS "Found OCL ICD loader in " ${OPENCL_LOADER_PATH})
+else()
+    message(STATUS "OCL Loader not found, initializing local clone...")
+    execute_process(COMMAND git submodule update --init -- external/opencl-icd-loader
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    add_subdirectory(external/opencl-icd-loader)
+    set_target_properties(icd_loader_test  PROPERTIES FOLDER "OpenCL-ICD-Loader")
+    set_target_properties(IcdLog           PROPERTIES FOLDER "OpenCL-ICD-Loader")
+    set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
+    set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
+endif()
 
 # This will setup the OpenCL headers and OpenCL C++ bindings to require
 # no more than OpenCL 1.2.  This means that these samples should be
