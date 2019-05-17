@@ -44,17 +44,6 @@ set_target_properties(IcdLog           PROPERTIES FOLDER "OpenCL-ICD-Loader")
 set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
 set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
 
-# This will setup the OpenCL headers and OpenCL C++ bindings to require
-# no more than OpenCL 1.2.  This means that these samples should be
-# deployable to any system that has an OpenCL 1.2 or newer ICD loader,
-# and that they should run correctly on any OpenCL 1.2 implementation.
-# Changing these defines to a newer OpenCL version will enable the new
-# OpenCL functionality, however it will also require a newer ICD loader
-# and a newer OpenCL implementation.
-add_definitions(-DCL_TARGET_OPENCL_VERSION=120)
-add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
-add_definitions(-DCL_HPP_MINIMUM_OPENCL_VERSION=120)
-
 add_subdirectory(samples)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)

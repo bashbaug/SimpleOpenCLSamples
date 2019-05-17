@@ -26,5 +26,10 @@ else()
     set(SAMPLES_PLATFORM_NAME "Unknown")
 endif()
 
+set(SAMPLES_CL_VERSION 120)
+
 add_subdirectory( 00_enumopencl )
 add_subdirectory( 00_enumopenclpp )
+
+set(SAMPLES_CL_VERSION 220)
+
