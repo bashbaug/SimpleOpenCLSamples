@@ -1,0 +1,21 @@
+os:
+  - Visual Studio 2017
+  #- Visual Studio 2015
+
+platform:
+  - Win32
+  - x64
+
+configuration:
+  #- Debug
+  - Release
+
+before_build:
+  - git clone --depth=1 https://github.com/KhronosGroup/OpenCL-Headers    external/OpenCL-Headers
+  - git clone --depth=1 https://github.com/KhronosGroup/OpenCL-ICD-Loader external/opencl-icd-loader
+  - cmake -H. -Bbuild -A%PLATFORM%
+
+build:
+  project: build\SimpleOpenCLSample.sln
+  parallel: true
+  verbosity: normal
