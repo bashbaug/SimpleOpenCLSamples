@@ -140,7 +140,7 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: CopyBuffer      [options]\n"
+            "Usage: copybuffer      [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
