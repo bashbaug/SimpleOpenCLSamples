@@ -33,16 +33,16 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(SimpleOpenCLSample)
 
 set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
-find_package(OpenCL)
+#find_package(OpenCL)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OpenCL_INCLUDE_DIR})
 
-add_subdirectory(external/opencl-icd-loader)
-set_target_properties(icd_loader_test  PROPERTIES FOLDER "OpenCL-ICD-Loader")
-set_target_properties(IcdLog           PROPERTIES FOLDER "OpenCL-ICD-Loader")
-set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
-set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
+#add_subdirectory(external/opencl-icd-loader)
+#set_target_properties(icd_loader_test  PROPERTIES FOLDER "OpenCL-ICD-Loader")
+#set_target_properties(IcdLog           PROPERTIES FOLDER "OpenCL-ICD-Loader")
+#set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
+#set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
 
 add_subdirectory(samples)
 
