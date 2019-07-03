@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "CL/cl2.hpp"
+#include "CL/cl_static.h"
 
 static cl_int PrintPlatformInfoSummary(
     cl::Platform platform )

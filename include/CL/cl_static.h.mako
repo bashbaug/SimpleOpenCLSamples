@@ -305,7 +305,7 @@ static inline cl_platform_id _sclGetPlatfromFromContextProperties(
     return NULL;
 }
 
-static inline cl_int sclGetPlatformIDs(
+static inline cl_int clGetPlatformIDs(
     cl_uint num_entries,
     cl_platform_id* platforms,
     cl_uint* num_platforms)
@@ -321,9 +321,7 @@ static inline cl_int sclGetPlatformIDs(
     return _SCL_PLATFORM_NOT_FOUND_KHR;
 }
 
-#define clGetPlatformIDs sclGetPlatformIDs
-
-static inline void* sclGetExtensionFunctionAddress(
+static inline void* clGetExtensionFunctionAddress(
     const char* function_name)
 {
 #if 0
@@ -338,14 +336,10 @@ static inline void* sclGetExtensionFunctionAddress(
     return NULL;
 }
 
-#define clGetExtensionFunctionAddress sclGetExtensionFunctionAddress
-
-static inline cl_int sclUnloadCompiler(void)
+static inline cl_int clUnloadCompiler(void)
 {
     return CL_SUCCESS;
 }
-
-#define clUnloadCompiler sclUnloadCompiler
 
 ///////////////////////////////////////////////////////////////////////////////
 // Generated API function definitions:
@@ -361,7 +355,7 @@ static inline cl_int sclUnloadCompiler(void)
 %>
 #ifdef ${apivers[api.Name]}
 
-static inline ${api.RetType} s${api.Name}(
+static inline ${api.RetType} ${api.Name}(
 %for i, param in enumerate(api.Params):
 %  if i < len(api.Params)-1:
     ${param.Type} ${param.Name}${param.TypeEnd},
@@ -417,8 +411,6 @@ static inline ${api.RetType} s${api.Name}(
 %  endif
 %endfor
 }
-
-#define ${api.Name} s${api.Name}
 
 #endif
 
