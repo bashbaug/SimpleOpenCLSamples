@@ -23,6 +23,8 @@
 #include <windows.h>
 #endif
 
+#define _SCL_MAX_NUM_PLATFORMS 64
+
 #define _SCL_VALIDATE_HANDLE_RETURN_ERROR(_handle, _error)              \
     if (_handle == NULL) return _error;
 
@@ -1488,7 +1490,7 @@ typedef void*   _sclModuleHandle ;
 #define _sclGetfunctionAddress(_module, _name)  dlsym(_module, _name)
 #endif
 
-// This is a helper function to fine a platform from context properties:
+// This is a helper function to find a platform from context properties:
 static inline cl_platform_id _sclGetPlatfromFromContextProperties(
     const cl_context_properties* properties)
 {
@@ -1504,7 +1506,27 @@ static inline cl_platform_id _sclGetPlatfromFromContextProperties(
     return NULL;
 }
 
-static inline cl_int clGetPlatformIDs(
+// This is a helper function to determine if the given platform supports
+// the cl_khr_icd extension:
+static cl_bool _sclIsICDPlatform(
+    _sclModuleHandle module,
+    cl_platform_id platform)
+{
+    static _sclpfn_clGetExtensionFunctionAddressForPlatform 
+        _clGetExtensionFunctionAddressForPlatform =
+            (_sclpfn_clGetExtensionFunctionAddressForPlatform)
+                _sclGetFunctionAddress(
+                    module, "clGetExtensionFunctionAddressForPlatform");
+    if (_clGetExtensionFunctionAddressForPlatform) {
+        if (_clGetExtensionFunctionAddressForPlatform(
+                platform, "clIcdGetPlatformIDsKHR") != NULL) {
+            return CL_TRUE;
+        }
+    }
+    return CL_FALSE;
+}
+
+static cl_int clGetPlatformIDs(
     cl_uint num_entries,
     cl_platform_id* platforms,
     cl_uint* num_platforms)
@@ -1513,18 +1535,74 @@ static inline cl_int clGetPlatformIDs(
     static _sclpfn_clGetPlatformIDs _clGetPlatformIDs = 
         (_sclpfn_clGetPlatformIDs)_sclGetFunctionAddress(
             module, "clGetPlatformIDs");
-    if (_clGetPlatformIDs) {
-        return _clGetPlatformIDs(num_entries, platforms, num_platforms);
+
+    // Basic error checks:
+    if ((platforms == NULL && num_entries != 0) ||
+        (platforms == NULL && num_platforms == NULL)) {
+        return CL_INVALID_VALUE;
     }
 
+    if (_clGetPlatformIDs) {
+        // Only return platforms that support the ICD extension.
+        cl_int errorCode = CL_SUCCESS;
+        cl_platform_id* all_platforms = NULL;
+        cl_uint total_num_platforms = 0;
+        cl_uint num_icd_platforms = 0;
+        cl_uint p = 0;
+
+        // Get the total number of platforms:
+        errorCode = _clGetPlatformIDs(0, NULL, &total_num_platforms);
+        if (errorCode != CL_SUCCESS) {
+            return errorCode;
+        }
+        if (total_num_platforms >= 0) {
+            // Sanity check:
+            if (total_num_platforms > _SCL_MAX_NUM_PLATFORMS) {
+                total_num_platforms = _SCL_MAX_NUM_PLATFORMS;
+            }
+
+            all_platforms = (cl_platform_id*)alloca(
+                total_num_platforms * sizeof(cl_platform_id));
+            errorCode = _clGetPlatformIDs(total_num_platforms, all_platforms, NULL);
+            if (errorCode != CL_SUCCESS) {
+                return errorCode;
+            }
+
+            for (p = 0; p < total_num_platforms; p++) {
+                if (_sclIsICDPlatform(module, all_platforms[p])) {
+                    if (num_icd_platforms < num_entries && platforms != NULL) {
+                        platforms[num_icd_platforms] = all_platforms[p];
+                    }
+                    num_icd_platforms++;
+                }
+            }
+
+            if (num_platforms) {
+                num_platforms[0] = num_icd_platforms;
+            }
+
+            return CL_SUCCESS;
+        }
+    }
+
+    // The cl_khr_icd spec says that an error should be returned if no
+    // platforms are found, but this is not an error condition in the OpenCL
+    // spec.
+#if 1
     return _SCL_PLATFORM_NOT_FOUND_KHR;
+#else
+    if (num_platforms) {
+        num_platforms[0] = 0;
+    }
+    return CL_SUCCESS;
+#endif
 }
 
-static inline void* clGetExtensionFunctionAddress(
+static void* clGetExtensionFunctionAddress(
     const char* function_name)
 {
 #if 0
-    static HMODULE module = ::LoadLibraryA("OpenCL.dll");
+    static _sclModuleHandle module = _sclOpenICDLoader();
     static _sclpfn_clGetExtensionFunctionAddress _clGetExtensionFunctionAddress = 
         (_sclpfn_clGetExtensionFunctionAddress)::GetProcAddress(
             module, "clGetExtensionFunctionAddress");
