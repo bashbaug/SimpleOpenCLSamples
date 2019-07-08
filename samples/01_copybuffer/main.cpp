@@ -20,8 +20,8 @@
 // SOFTWARE.
 */
 
-#include "CL/cl2.hpp"
 #include "CL/cl_static.h"
+#include "CL/cl2.hpp"
 
 cl::CommandQueue commandQueue;
 cl::Buffer deviceMemSrc;

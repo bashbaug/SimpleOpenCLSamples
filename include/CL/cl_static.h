@@ -17,9 +17,15 @@
  */
 
 #pragma once
+#ifdef __OPENCL_CL_H
+#pragma message("cl_static.h: Please include this file before cl.h!")
+#endif
+
+#define CL_API_LINKAGE static
 #include <CL/cl.h>
 
 #ifdef _WIN32
+#include <malloc.h>
 #include <windows.h>
 #endif
 #ifdef __linux__

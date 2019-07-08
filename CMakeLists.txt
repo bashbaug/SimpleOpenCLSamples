@@ -32,8 +32,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(SimpleOpenCLSample)
 
-set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
+#set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
 #find_package(OpenCL)
+set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OpenCL_INCLUDE_DIR})
