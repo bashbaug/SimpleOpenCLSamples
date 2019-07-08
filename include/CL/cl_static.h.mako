@@ -22,6 +22,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#ifdef __linux__
+#include <dlfcn.h>
+#endif
 
 #define _SCL_MAX_NUM_PLATFORMS 64
 

@@ -22,6 +22,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#ifdef __linux__
+#include <dlfcn.h>
+#endif
 
 #define _SCL_MAX_NUM_PLATFORMS 64
 
@@ -1486,8 +1489,8 @@ typedef HMODULE _sclModuleHandle ;
 #endif
 #ifdef __linux__
 typedef void*   _sclModuleHandle ;
-#define _sclOpenICDLoader()                     dlopen("libOpenCL.so", RTLD_LAZY | RTLD_LOCAL)
-#define _sclGetfunctionAddress(_module, _name)  dlsym(_module, _name)
+#define _sclOpenICDLoader()                     ::dlopen("libOpenCL.so", RTLD_LAZY | RTLD_LOCAL)
+#define _sclGetFunctionAddress(_module, _name)  ::dlsym(_module, _name)
 #endif
 
 // This is a helper function to find a platform from context properties:
