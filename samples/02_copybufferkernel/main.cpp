@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2018 Intel Corporation
+// Copyright (c) 2019 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@
 // SOFTWARE.
 */
 
-#include "CL/cl2.hpp"
+#include <CL/cl2.hpp>
 
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
