@@ -32,44 +32,17 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(SimpleOpenCLSample)
 
-# Setup OCL C headers
-find_path(OPENCL_INCLUDE_DIR "CL/cl.h" "/usr/include" "/usr/local/include")
+set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
+find_package(OpenCL)
 
-if (OPENCL_INCLUDE_DIR)
-    message(STATUS "Found OCL C headers in " ${OPENCL_INCLUDE_DIR})
-else()
-    message(STATUS "OCL headers not found, initializing local clone...")
-    execute_process(COMMAND git submodule update --init -- external/OpenCL-Headers
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
-    include_directories(${OpenCL_INCLUDE_DIR})
-    find_package(OpenCL)
-endif()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${OpenCL_INCLUDE_DIR})
 
-# Setup OCL C++ headers
-find_path(OPENCL_CPP_INCLUDE_DIR "CL/cl2.hpp" "/usr/include" "/usr/local/include")
-
-if (OPENCL_CPP_INCLUDE_DIR)
-    message(STATUS "Found OCL C++ headers in " ${OPENCL_CPP_INCLUDE_DIR})
-else()
-    message(STATUS "OCL C++ headers not found, using local headers...")
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-endif()
-
-find_library(OPENCL_LOADER_PATH "OpenCL" "/usr/lib" "/usr/local/lib")
-
-if (OPENCL_LOADER_PATH)
-    message(STATUS "Found OCL ICD loader in " ${OPENCL_LOADER_PATH})
-else()
-    message(STATUS "OCL Loader not found, initializing local clone...")
-    execute_process(COMMAND git submodule update --init -- external/opencl-icd-loader
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    add_subdirectory(external/opencl-icd-loader)
-    set_target_properties(icd_loader_test  PROPERTIES FOLDER "OpenCL-ICD-Loader")
-    set_target_properties(IcdLog           PROPERTIES FOLDER "OpenCL-ICD-Loader")
-    set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
-    set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
-endif()
+add_subdirectory(external/opencl-icd-loader)
+set_target_properties(icd_loader_test  PROPERTIES FOLDER "OpenCL-ICD-Loader")
+set_target_properties(IcdLog           PROPERTIES FOLDER "OpenCL-ICD-Loader")
+set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
+set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
 
 add_subdirectory(samples)
 

@@ -16,37 +16,39 @@ include/                Include Files (OpenCL C++ bindings)
 samples/                Samples
 ```
 
-## Environment Setup
+## How to Build the Samples
 
-Building an OpenCL application requires the OpenCL API and ICD Loader headers. Running an OpenCL application requires
-the associated ICD and runtime objects.
+The samples require the following external dependencies:
 
-* [Generic Linux (build from source)](docs/env/linux.md)
-* [Ubuntu 18.04](docs/env/ubuntu/18.04.md)
+OpenCL Headers:
 
-## Building the Samples
+    git clone https://github.com/KhronosGroup/OpenCL-Headers external/OpenCL-Headers
 
-Follow the environment setup instructions for your environment of choice, then create the build files using CMake:
+OpenCL ICD Loader:
 
-```
-$ mkdir build && cd build
-$ cmake ..
-$ make -j
-```
+    git clone https://github.com/KhronosGroup/opencl-icd-loader external/opencl-icd-loader
 
-## Running the Samples
+After satisfying the external dependencies create build files using CMake.  For example:
 
-Follow the environment setup and build instructions, then run the sample of interest from the build directory. For example:
+    mkdir build && cd build
+    cmake ..
 
-```
-$ samples/00_enumopenclpp/enumopenclpp
-<platform information shown here>
-Done.
-$
-```
+Then, build with the generated build files.
+
+## How to Run the Samples
+
+To run the samples, you will need to obtain and install an ICD loader and an 
+OpenCL implementation (ICD) that supports the `cl_khr_icd` extension.
+
+The ICD loader is likely provided by your operating system or an OpenCL
+implementation.  If desired, you may use the ICD loader that is built along 
+with these OpenCL samples.  The OpenCL implementation will likely be provided 
+by your OpenCL device vendor.  There are several open source OpenCL
+implementations as well.
 
 ## Further Reading
 
+* [Environment Setup for Ubuntu 18.04](docs/env/ubuntu/18.04.md)
 * [OpenCLPapers](https://github.com/bashbaug/OpenCLPapers)
 * [OpenCL Specs](https://www.khronos.org/registry/OpenCL/specs/)
 * [OpenCL Return Codes](https://streamhpc.com/blog/2013-04-28/opencl-error-codes/)
