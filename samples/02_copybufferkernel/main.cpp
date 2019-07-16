@@ -23,10 +23,19 @@
 #include <CL/cl2.hpp>
 
 cl::CommandQueue commandQueue;
+cl::Kernel kernel;
 cl::Buffer deviceMemSrc;
 cl::Buffer deviceMemDst;
 
 size_t  gwx = 1024*1024;
+
+static const char kernelString[] = R"CLC(
+kernel void CopyBuffer( global uint* dst, global uint* src )
+{
+    uint id = get_global_id(0);
+    dst[id] = src[id];
+}
+)CLC";
 
 static void init( void )
 {
@@ -49,12 +58,13 @@ static void init( void )
 
 static void go()
 {
-    commandQueue.enqueueCopyBuffer(
-        deviceMemSrc,
-        deviceMemDst,
-        0,
-        0,
-        gwx * sizeof(cl_uint) );
+    kernel.setArg(0, deviceMemDst);
+    kernel.setArg(1, deviceMemSrc);
+
+    commandQueue.enqueueNDRangeKernel(
+        kernel,
+        cl::NullRange,
+        cl::NDRange{gwx} );
 }
 
 static void checkResults()
@@ -140,7 +150,7 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: copybuffer      [options]\n"
+            "Usage: saxpykernel     [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
@@ -163,6 +173,19 @@ int main(
 
     cl::Context context{devices};
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+
+     cl::Program program{ context, kernelString };
+    program.build();
+#if 0
+    for( auto& device : devices )
+    {
+        LogInfo("Program build log for device %s:\n",
+            device.getInfo<CL_DEVICE_NAME>().c_str() );
+        LogInfo("%s\n",
+            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
+    }
+#endif
+    kernel = cl::Kernel{ program, "CopyBuffer" };
 
     deviceMemSrc = cl::Buffer{
         context,

@@ -9,13 +9,14 @@ All samples have been tested on Windows and Linux.
 
 ```
 README.md               This file
+LICENSE                 License information
 CMakeLists.txt          Top-level CMakefile
-external/               Directory Containing External Projects (headers and libs)
-include/                Directory Containing Include Files (OpenCL C++ bindings)
-samples/                Directory Containing Samples
+external/               External Projects (headers and libs)
+include/                Include Files (OpenCL C++ bindings)
+samples/                Samples
 ```
 
-## How to Build
+## How to Build the Samples
 
 The samples require the following external dependencies:
 
@@ -44,6 +45,13 @@ implementation.  If desired, you may use the ICD loader that is built along
 with these OpenCL samples.  The OpenCL implementation will likely be provided 
 by your OpenCL device vendor.  There are several open source OpenCL
 implementations as well.
+
+## Further Reading
+
+* [Environment Setup for Ubuntu 18.04](docs/env/ubuntu/18.04.md)
+* [OpenCLPapers](https://github.com/bashbaug/OpenCLPapers)
+* [OpenCL Specs](https://www.khronos.org/registry/OpenCL/specs/)
+* [OpenCL Return Codes](https://streamhpc.com/blog/2013-04-28/opencl-error-codes/)
 
 ## License
 

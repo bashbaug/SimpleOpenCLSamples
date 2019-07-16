@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "CL/cl.h"
+#include <CL/cl.h>
 
 static cl_int AllocateAndGetPlatformInfoString(
     cl_platform_id platformId,

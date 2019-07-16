@@ -18,20 +18,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SAMPLES_PLATFORM_NAME "x64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(SAMPLES_PLATFORM_NAME "x86")
-else()
-    set(SAMPLES_PLATFORM_NAME "Unknown")
-endif()
+set(SAMPLE_NAME copybufferkernel)
+set(SAMPLE_NUMBER 02)
 
-set(SAMPLES_CL_VERSION 120)
+project(${SAMPLE_NAME})
+include_directories( ${OpenCL_INCLUDE_DIR} )
+add_executable( ${SAMPLE_NAME} main.cpp )
 
-add_subdirectory( 00_enumopencl )
-add_subdirectory( 00_enumopenclpp )
-add_subdirectory( 01_copybuffer )
-add_subdirectory( 02_copybufferkernel )
+target_include_directories( ${SAMPLE_NAME} PRIVATE ${OpenCL_INCLUDE_DIR} )
+target_link_libraries( ${SAMPLE_NAME} OpenCL )
 
-set(SAMPLES_CL_VERSION 220)
+target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION} )
+target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION})
+target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${SAMPLES_CL_VERSION})
 
+set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
+
+install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Debug   DESTINATION ${SAMPLES_PLATFORM_NAME}/Debug   )
+install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Release DESTINATION ${SAMPLES_PLATFORM_NAME}/Release )
