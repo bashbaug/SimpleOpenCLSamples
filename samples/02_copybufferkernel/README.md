@@ -7,7 +7,7 @@ An OpenCL kernel is a short program defining what one OpenCL work item should do
 In this case, each OpenCL work item will copy value from a source buffer to a destination buffer.
 Since this sample launches one work item for every element in the source buffer, behaviorally this sample will do exactly the same thing as the previous copy buffer sample.
 
-In this sample, the sorce code for the OpenCL kernel is embedded into the host code as a raw string.
+In this sample, the source code for the OpenCL kernel is embedded into the host code as a raw string.
 At runtime, an OpenCL program is created from the raw string, and the OpenCL device compiler is invoked to compile the OpenCL program for the OpenCL device.
 This isn't the only way to create OpenCL programs, but it is fairly common, especially while learning and developing an OpenCL application.
 

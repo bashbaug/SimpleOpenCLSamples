@@ -21,92 +21,98 @@
 */
 
 #include <CL/cl2.hpp>
+#include "bmp.hpp"
+
+const char* filename = "mandelbrot.bmp";
+
+const cl_uint width = 768;
+const cl_uint height = 512;
+
+const int maxIterations = 256;
 
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
-cl::Buffer deviceMemSrc;
 cl::Buffer deviceMemDst;
 
-size_t  gwx = 1024*1024;
-
 static const char kernelString[] = R"CLC(
-kernel void CopyBuffer( global uint* dst, global uint* src )
+static inline int mandel(float c_re, float c_im, int count) {
+    float z_re = c_re, z_im = c_im;
+    int i;
+    for (i = 0; i < count; ++i) {
+        if (z_re * z_re + z_im * z_im > 4.)
+            break;
+
+        float new_re = z_re*z_re - z_im*z_im;
+        float new_im = 2.f * z_re * z_im;
+
+        z_re = c_re + new_re;
+        z_im = c_im + new_im;
+    }
+
+    return i;
+}
+kernel void Mandelbrot(
+    float x0, float y0,
+    float x1, float y1,
+    int width, int height,
+    int maxIterations,
+    global int* output)
 {
-    uint id = get_global_id(0);
-    dst[id] = src[id];
+    float dx = (x1 - x0) / width;
+    float dy = (y1 - y0) / height;
+
+    float x = x0 + get_global_id(0) * dx;
+    float y = y0 + get_global_id(1) * dy;
+
+    int index = get_global_id(1) * width + get_global_id(0);
+    output[index] = mandel(x, y, maxIterations);
 }
 )CLC";
 
 static void init( void )
 {
-    cl_uint*    pSrc = (cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemSrc,
-        CL_TRUE,
-        CL_MAP_WRITE_INVALIDATE_REGION,
-        0,
-        gwx * sizeof(cl_uint) );
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        pSrc[i] = (cl_uint)(i);
-    }
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemSrc,
-        pSrc );
+    // No initialization is needed for this sample.
 }
 
 static void go()
 {
-    kernel.setArg(0, deviceMemDst);
-    kernel.setArg(1, deviceMemSrc);
+    kernel.setArg(0, -2.0f);    // x0
+    kernel.setArg(1, -1.0f);    // y0
+    kernel.setArg(2, 1.0f);     // x1
+    kernel.setArg(3, 1.0f);     // y1
+    kernel.setArg(4, width);
+    kernel.setArg(5, height);
+    kernel.setArg(6, maxIterations);
+    kernel.setArg(7, deviceMemDst);
 
     commandQueue.enqueueNDRangeKernel(
         kernel,
         cl::NullRange,
-        cl::NDRange{gwx} );
+        cl::NDRange{width, height} );
 }
 
 static void checkResults()
 {
-    const cl_uint*  pDst = (const cl_uint*)commandQueue.enqueueMapBuffer(
+    const cl_int*  buf = (const cl_int*)commandQueue.enqueueMapBuffer(
         deviceMemDst,
         CL_TRUE,
         CL_MAP_READ,
         0,
-        gwx * sizeof(cl_uint) );
+        width * height * sizeof(cl_int) );
 
-    unsigned int    mismatches = 0;
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        if( pDst[i] != i )
-        {
-            if( mismatches < 16 )
-            {
-                fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
-                    (unsigned int)i,
-                    pDst[i],
-                    (unsigned int)i );
-            }
-            mismatches++;
-        }
+    std::vector<uint8_t> colors;
+    colors.resize(width * height);
+    for (int i = 0; i < width * height; ++i) {
+        // Map the iteration count to colors by just alternating between
+        // two greys.
+        colors[i] = (buf[i] & 0x1) ? 240 : 20;
     }
-
-    if( mismatches )
-    {
-        fprintf(stderr,"Error: Found %d mismatches / %d values!!!\n",
-            mismatches,
-            (unsigned int)gwx );
-    }
-    else
-    {
-        printf("Success.\n");
-    }
+    BMP::save_image(colors.data(), width, height, filename);
+    printf("Wrote image file %s\n", filename);
 
     commandQueue.enqueueUnmapMemObject(
         deviceMemDst,
-        (void*)pDst ); // TODO: Why isn't this a const void* in the API?
+        (void*)buf ); // TODO: Why isn't this a const void* in the API?
 }
 
 int main(
@@ -150,7 +156,7 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: copybufferkernel    [options]\n"
+            "Usage: mandelbrot  [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
@@ -185,17 +191,12 @@ int main(
             program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
     }
 #endif
-    kernel = cl::Kernel{ program, "CopyBuffer" };
-
-    deviceMemSrc = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    kernel = cl::Kernel{ program, "Mandelbrot" };
 
     deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+        width * height * sizeof( cl_int ) };
 
     init();
     go();
