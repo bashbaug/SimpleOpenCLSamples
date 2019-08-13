@@ -1,4 +1,4 @@
-# Mandelbrot
+# Mandelbrot Set
 
 ## Sample Purpose
 
@@ -17,7 +17,6 @@ To run on a different OpenCL device or platform, please use the provided command
 
 This example shows how to create an OpenCL program from a source string and enqueue an ND range for the kernel into an OpenCL command queue.
 
-
 ```c
 clCreateProgramWithSource
 clBuildProgram
@@ -25,3 +24,10 @@ clCreateKernel
 clSetKernelArg
 clEnqueueNDRangeKernel
 ```
+
+## Command Line Options
+
+| Option | Default Value | Description |
+|:--|:-:|:--|
+| `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
+| `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
