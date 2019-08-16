@@ -3641,8 +3641,8 @@ static inline void clSVMFree(
     cl_context context,
     void* svm_pointer)
 {
-    _SCL_VALIDATE_HANDLE_RETURN_ERROR(context, CL_INVALID_CONTEXT);
-    return context->dispatch->clSVMFree(
+    if (context == NULL) return;
+    context->dispatch->clSVMFree(
         context,
         svm_pointer);
 }

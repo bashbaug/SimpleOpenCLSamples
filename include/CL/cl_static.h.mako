@@ -296,8 +296,8 @@ typedef HMODULE _sclModuleHandle ;
 #endif
 #ifdef __linux__
 typedef void*   _sclModuleHandle ;
-#define _sclOpenICDLoader()                     dlopen("libOpenCL.so", RTLD_LAZY | RTLD_LOCAL)
-#define _sclGetfunctionAddress(_module, _name)  dlsym(_module, _name)
+#define _sclOpenICDLoader()                     ::dlopen("libOpenCL.so", RTLD_LAZY | RTLD_LOCAL)
+#define _sclGetFunctionAddress(_module, _name)  ::dlsym(_module, _name)
 #endif
 
 // This is a helper function to find a platform from context properties:
@@ -465,12 +465,15 @@ static inline ${api.RetType} ${api.Name}(
     cl_platform_id platform = _sclGetPlatfromFromContextProperties(${api.Params[0].Name});
     _SCL_VALIDATE_HANDLE_RETURN_HANDLE(platform, CL_INVALID_PLATFORM);
 ## These APIs are special cases because they return a void*, but
-## do not nave an errcode_ret.
+## do not nave an errcode_ret:
 %  elif api.Name == "clSVMAlloc" or api.Name == "clGetExtensionFunctionAddressForPlatform":
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(${handle.Name}, NULL);
 %  else:
     _SCL_VALIDATE_HANDLE_RETURN_HANDLE(${handle.Name}, ${invalid});
 %  endif
+%elif api.Name == "clSVMFree":
+## clSVMFree has no return value or errcode_ret:
+    if (${handle.Name} == NULL) return;
 ## clWaitForEvents is a special case, since it calls through
 ## the dispatch table via the first "event":
 %elif api.Name == "clWaitForEvents":
@@ -487,6 +490,8 @@ static inline ${api.RetType} ${api.Name}(
     return ${api.Params[1].Name}[0]->dispatch->${api.Name}(
 %elif api.Name == "clCreateContextFromType":
     return platform->dispatch->${api.Name}(
+%elif api.Name == "clSVMFree":
+    ${handle.Name}->dispatch->${api.Name}(
 %else:
     return ${handle.Name}->dispatch->${api.Name}(
 %endif:
