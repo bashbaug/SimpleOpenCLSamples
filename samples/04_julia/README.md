@@ -19,7 +19,7 @@ Since the default global work size is a power of two, this means that the local 
 This sample also demonstrates how to measure the wall clock time for an OpenCL kernel.
 Note especially how `clFinish` is used to ensure that the OpenCL command queue is empty before starting the timer, and that all processing is complete before stopping the timer.
 
-![Mandelbrot Image](julia.png)
+![Julia Set Image](julia.png)
 
 As with prior samples, the source code for the OpenCL kernel is embedded into the host code as a raw string, and by default, this sample will run in the first enumerated OpenCL device on the first enumerated OpenCL platform.
 To run on a different OpenCL device or platform, please use the provided command line options.
