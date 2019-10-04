@@ -31,12 +31,13 @@ cl::CommandQueue commandQueue;
 cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
-static std::string readStringFromFile(
+static std::vector<cl_uchar> readSPIRVFromFile(
     const std::string& filename )
 {
     std::ifstream is(filename, std::ios::binary);
+    std::vector<cl_uchar> ret;
     if (!is.good()) {
-        return nullptr;
+        return ret;
     }
 
     size_t filesize = 0;
@@ -44,11 +45,81 @@ static std::string readStringFromFile(
     filesize = (size_t)is.tellg();
     is.seekg(0, std::ios::beg);
 
-    std::string source{
+    ret.resize(filesize);
+    ret.insert(
+        ret.begin(),
         std::istreambuf_iterator<char>(is),
-        std::istreambuf_iterator<char>() };
+        std::istreambuf_iterator<char>() );
 
-    return source;
+    return ret;
+}
+
+static cl_uint getPlatformVersion(const cl::Platform& platform)
+{
+    cl_uint major = 0;
+    cl_uint minor = 0;
+
+    std::string version = platform.getInfo<CL_PLATFORM_VERSION>();
+
+    // The platform version string has the form:
+    //   OpenCL <Major>.<Minor> <Vendor Specific Info>
+    const std::string prefix{"OpenCL "};
+    if (!version.compare(0, prefix.length(), prefix)) {
+        const char* check = version.c_str() + prefix.length();
+        while (isdigit(check[0])) {
+            major *= 10;
+            major += check[0] - '0';
+            ++check;
+        }
+        if (check[0] == '.') {
+            ++check;
+        }
+        while (isdigit(check[0])) {
+            minor *= 10;
+            minor += check[0] - '0';
+            ++check;
+        }
+    }
+
+    return (major << 16) | minor;
+}
+
+static cl::Program createProgramWithIL(
+    const cl::Context& context,
+    const std::vector<cl_uchar>& il )
+{
+    cl_program program = nullptr;
+
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    if (!devices.empty()) {
+        cl::Platform platform{ devices[0].getInfo<CL_DEVICE_PLATFORM>() };
+#ifdef CL_VERSION_2_1
+        if (getPlatformVersion(platform) >= 0x00020001) {
+            program = clCreateProgramWithIL(
+                context(),
+                il.data(),
+                il.size(),
+                nullptr);
+        }
+        else
+#endif
+        {
+            auto clCreateProgramWithILKHR_ = (clCreateProgramWithILKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(
+                    platform(),
+                    "clCreateProgramWithILKHR");
+
+            if (clCreateProgramWithILKHR_) {
+                program = clCreateProgramWithILKHR_(
+                    context(),
+                    il.data(),
+                    il.size(),
+                    nullptr);
+            }
+        }
+    }
+
+    return cl::Program{ program };
 }
 
 static void init( void )
@@ -81,7 +152,10 @@ int main(
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    const char* fileName = "sample_kernel.cl";
+    const char* fileName = 
+        ( sizeof(void*) == 8 ) ?
+        "sample_kernel64.spv" :
+        "sample_kernel32.spv";
     const char* kernelName = "Test";
     const char* buildOptions = NULL;
 
@@ -144,14 +218,15 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: kernelfromfile  [options]\n"
+            "Usage: spirvkernelfromfile [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
-            "      -file: Kernel File Name (default = sample_kernel.cl)\n"
+            "      -file: Kernel File Name (default = %s)\n"
             "      -name: Kernel Name (default = Test)\n"
             "      -options: Program Build Options (default = NULL)\n"
-            "      -gwx: Global Work Size (default = 512)\n"
+            "      -gwx: Global Work Size (default = 512)\n",
+            ( sizeof(void*) == 8 ) ? "sample_kernel64.spv" : "sample_kernel32.spv"
             );
 
         return -1;
@@ -168,24 +243,23 @@ int main(
 
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+    printf("CL_DEVICE_ADDRESS_BITS is %d for this device.\n",
+        devices[deviceIndex].getInfo<CL_DEVICE_ADDRESS_BITS>() );
 
-    cl::Context context{devices};
+    cl::Context context{devices[deviceIndex]};
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
-    printf("Reading program source from file: %s\n", fileName );
-    std::string kernelString = readStringFromFile(fileName);
+    printf("Reading SPIR-V from file: %s\n", fileName );
+    std::vector<cl_uchar> spirv = readSPIRVFromFile(fileName);
 
     printf("Building program with build options: %s\n",
         buildOptions ? buildOptions : "(none)" );
-    cl::Program program{ context, kernelString };
+    cl::Program program = createProgramWithIL( context, spirv );
     program.build(buildOptions);
-    for( auto& device : devices )
-    {
-        printf("Program build log for device %s:\n",
-            device.getInfo<CL_DEVICE_NAME>().c_str() );
-        printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
-    }
+    printf("Program build log for device %s:\n",
+        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+    printf("%s\n",
+        program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[deviceIndex]).c_str() );
     printf("Creating kernel: %s\n", kernelName );
     kernel = cl::Kernel{ program, kernelName };
 
