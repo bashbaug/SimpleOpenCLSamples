@@ -173,7 +173,7 @@ int main(
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     printf("Reading program source from file: %s\n", fileName );
-    std::string kernelString = readStringFromFile("sample_kernel.cl");
+    std::string kernelString = readStringFromFile(fileName);
 
     printf("Building program with build options: %s\n",
         buildOptions ? buildOptions : "(none)" );
