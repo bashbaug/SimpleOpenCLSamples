@@ -36,5 +36,6 @@ add_subdirectory( 03_mandelbrot )
 add_subdirectory( 04_julia )
 add_subdirectory( 05_kernelfromfile )
 
-set(SAMPLES_CL_VERSION 220)
+set(SAMPLES_CL_VERSION 210)
+add_subdirectory( 05_spirvkernelfromfile )
 
