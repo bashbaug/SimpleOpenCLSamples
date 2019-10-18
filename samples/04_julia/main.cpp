@@ -260,14 +260,14 @@ int main(
     cl::Context context{devices};
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
-     cl::Program program{ context, kernelString };
+    cl::Program program{ context, kernelString };
     program.build();
 #if 0
     for( auto& device : devices )
     {
-        LogInfo("Program build log for device %s:\n",
+        printf("Program build log for device %s:\n",
             device.getInfo<CL_DEVICE_NAME>().c_str() );
-        LogInfo("%s\n",
+        printf("%s\n",
             program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
     }
 #endif
