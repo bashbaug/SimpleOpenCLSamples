@@ -95,7 +95,7 @@ static void checkResults()
 
     if( mismatches )
     {
-        fprintf(stderr,"Error: Found %d mismatches / %d values!!!\n",
+        fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
             mismatches,
             (unsigned int)gwx );
     }
