@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Ben Ashbaugh
+# Copyright (c) 2020 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,25 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SAMPLES_PLATFORM_NAME "x64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(SAMPLES_PLATFORM_NAME "x86")
-else()
-    set(SAMPLES_PLATFORM_NAME "Unknown")
-endif()
+add_subdirectory( libusm )
 
-set(SAMPLES_CL_VERSION 120)
+add_subdirectory( 00_usmqueries )
+add_subdirectory( 01_usmmeminfo )
 
-add_subdirectory( 00_enumopencl )
-add_subdirectory( 00_enumopenclpp )
-add_subdirectory( 01_copybuffer )
-add_subdirectory( 02_copybufferkernel )
-add_subdirectory( 03_mandelbrot )
-add_subdirectory( 04_julia )
-add_subdirectory( 05_kernelfromfile )
+add_subdirectory( 100_dmemhelloworld )
+add_subdirectory( 101_dmemlinkedlist )
 
-set(SAMPLES_CL_VERSION 210)
-add_subdirectory( 05_spirvkernelfromfile )
+add_subdirectory( 200_hmemhelloworld )
+add_subdirectory( 201_hmemlinkedlist )
 
-add_subdirectory( usm )
+add_subdirectory( 300_smemhelloworld )
+add_subdirectory( 301_smemlinkedlist )
+add_subdirectory( 310_usmmigratemem )

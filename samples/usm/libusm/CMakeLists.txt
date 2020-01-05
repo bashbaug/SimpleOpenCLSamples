@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Ben Ashbaugh
+# Copyright (c) 2020 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,25 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SAMPLES_PLATFORM_NAME "x64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(SAMPLES_PLATFORM_NAME "x86")
-else()
-    set(SAMPLES_PLATFORM_NAME "Unknown")
-endif()
+set(LIBUSM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include )
+set(LIBUSM_INCLUDE_DIR ${LIBUSM_INCLUDE_DIR} PARENT_SCOPE)
 
-set(SAMPLES_CL_VERSION 120)
+set( LIBUSM_SOURCE_FILES
+    include/libusm.h
+    src/libusm.cpp
+)
 
-add_subdirectory( 00_enumopencl )
-add_subdirectory( 00_enumopenclpp )
-add_subdirectory( 01_copybuffer )
-add_subdirectory( 02_copybufferkernel )
-add_subdirectory( 03_mandelbrot )
-add_subdirectory( 04_julia )
-add_subdirectory( 05_kernelfromfile )
+source_group( Source FILES ${LIBUSM_SOURCE_FILES} )
 
-set(SAMPLES_CL_VERSION 210)
-add_subdirectory( 05_spirvkernelfromfile )
+add_library( usm STATIC ${LIBUSM_SOURCE_FILES} )
+target_include_directories( usm PRIVATE ${OpenCL_INCLUDE_DIR} ${LIBUSM_INCLUDE_DIR} )
+target_compile_definitions( usm PRIVATE CL_TARGET_OPENCL_VERSION=120 )
 
-add_subdirectory( usm )
+set_target_properties( usm PROPERTIES FOLDER "Samples/USM/libusm" )
