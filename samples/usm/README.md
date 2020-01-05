@@ -48,7 +48,7 @@ Compared to Shared Virtual Memory (SVM), Unified Shared Memory provides:
 * [dmemhelloworld](./100_dmemhelloworld): Copy one "device" memory allocation to another.
 * [dmemlinkedlist](./101_dmemlinkedlist): Create and modify a linked list in "device" memory.
 * [hmemhelloworld](./200_hmemhelloworld): Copy one "host" memory allocation to another.
-* [hmemlinkedlist](./201_memlinkedlist): Create and modify a linked list in "host" memory.
+* [hmemlinkedlist](./201_hmemlinkedlist): Create and modify a linked list in "host" memory.
 * [smemhelloworld](./300_smemhelloworld): Copy one "shared" memory allocation to another.
 * [smemlinkedlist](./301_smemlinkedlist): Create and modify a linked list in "shared" memory.
 * [usmmigratemem](./310_usmmigratemem): Copy one "shared" memory allocation to another, with explicit calls to migrate memory.
