@@ -22,7 +22,6 @@ set(SAMPLE_NAME spirvkernelfromfile)
 set(SAMPLE_NUMBER 05)
 
 project(${SAMPLE_NAME})
-include_directories( ${OpenCL_INCLUDE_DIR} )
 add_executable( ${SAMPLE_NAME} main.cpp )
 
 target_include_directories( ${SAMPLE_NAME} PRIVATE ${OpenCL_INCLUDE_DIR} )

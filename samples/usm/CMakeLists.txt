@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Ben Ashbaugh
+# Copyright (c) 2020 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,20 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(SAMPLE_NAME enumopencl)
-set(SAMPLE_NUMBER 00)
+add_subdirectory( libusm )
 
-project(${SAMPLE_NAME})
-add_executable( ${SAMPLE_NAME} main.cpp )
+add_subdirectory( 00_usmqueries )
+add_subdirectory( 01_usmmeminfo )
 
-target_include_directories( ${SAMPLE_NAME} PRIVATE ${OpenCL_INCLUDE_DIR} )
-target_link_libraries( ${SAMPLE_NAME} OpenCL )
+add_subdirectory( 100_dmemhelloworld )
+add_subdirectory( 101_dmemlinkedlist )
 
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION} )
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION})
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${SAMPLES_CL_VERSION})
+add_subdirectory( 200_hmemhelloworld )
+add_subdirectory( 201_hmemlinkedlist )
 
-set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
-
-install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Debug   DESTINATION ${SAMPLES_PLATFORM_NAME}/Debug   )
-install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Release DESTINATION ${SAMPLES_PLATFORM_NAME}/Release )
+add_subdirectory( 300_smemhelloworld )
+add_subdirectory( 301_smemlinkedlist )
+add_subdirectory( 310_usmmigratemem )

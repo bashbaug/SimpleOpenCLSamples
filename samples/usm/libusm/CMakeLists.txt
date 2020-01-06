@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Ben Ashbaugh
+# Copyright (c) 2020 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,20 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(SAMPLE_NAME enumopencl)
-set(SAMPLE_NUMBER 00)
+set(LIBUSM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include )
+set(LIBUSM_INCLUDE_DIR ${LIBUSM_INCLUDE_DIR} PARENT_SCOPE)
 
-project(${SAMPLE_NAME})
-add_executable( ${SAMPLE_NAME} main.cpp )
+set( LIBUSM_SOURCE_FILES
+    include/libusm.h
+    src/libusm.cpp
+)
 
-target_include_directories( ${SAMPLE_NAME} PRIVATE ${OpenCL_INCLUDE_DIR} )
-target_link_libraries( ${SAMPLE_NAME} OpenCL )
+source_group( Source FILES ${LIBUSM_SOURCE_FILES} )
 
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION} )
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION})
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${SAMPLES_CL_VERSION})
+add_library( usm STATIC ${LIBUSM_SOURCE_FILES} )
+target_include_directories( usm PRIVATE ${OpenCL_INCLUDE_DIR} ${LIBUSM_INCLUDE_DIR} )
+target_compile_definitions( usm PRIVATE CL_TARGET_OPENCL_VERSION=120 )
 
-set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
-
-install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Debug   DESTINATION ${SAMPLES_PLATFORM_NAME}/Debug   )
-install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS Release DESTINATION ${SAMPLES_PLATFORM_NAME}/Release )
+set_target_properties( usm PROPERTIES FOLDER "Samples/USM/libusm" )

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019 Ben Ashbaugh
+// Copyright (c) 2020 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,11 +21,13 @@
 */
 
 #include <CL/cl2.hpp>
+#include "libusm.h"
 
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
-cl::Buffer deviceMemSrc;
-cl::Buffer deviceMemDst;
+cl_uint* h_buf;
+cl_uint* d_src;
+cl_uint* d_dst;
 
 size_t  gwx = 1024*1024;
 
@@ -39,27 +41,34 @@ kernel void CopyBuffer( global uint* dst, global uint* src )
 
 static void init( void )
 {
-    cl_uint*    pSrc = (cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemSrc,
-        CL_TRUE,
-        CL_MAP_WRITE_INVALIDATE_REGION,
-        0,
-        gwx * sizeof(cl_uint) );
-
     for( size_t i = 0; i < gwx; i++ )
     {
-        pSrc[i] = (cl_uint)(i);
+        h_buf[i] = (cl_uint)(i);
     }
 
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemSrc,
-        pSrc );
+    clEnqueueMemcpyINTEL(
+        commandQueue(),
+        CL_TRUE,
+        d_src,
+        h_buf,
+        gwx * sizeof(cl_uint),
+        0,
+        nullptr,
+        nullptr );
+
+    memset( h_buf, 0, gwx * sizeof(cl_uint) );
 }
 
 static void go()
 {
-    kernel.setArg(0, deviceMemDst);
-    kernel.setArg(1, deviceMemSrc);
+    clSetKernelArgMemPointerINTEL(
+        kernel(),
+        0,
+        d_dst );
+    clSetKernelArgMemPointerINTEL(
+        kernel(),
+        1,
+        d_src );
 
     commandQueue.enqueueNDRangeKernel(
         kernel,
@@ -69,24 +78,27 @@ static void go()
 
 static void checkResults()
 {
-    const cl_uint*  pDst = (const cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemDst,
+    clEnqueueMemcpyINTEL(
+        commandQueue(),
         CL_TRUE,
-        CL_MAP_READ,
+        h_buf,
+        d_dst,
+        gwx * sizeof(cl_uint),
         0,
-        gwx * sizeof(cl_uint) );
+        nullptr,
+        nullptr );
 
     unsigned int    mismatches = 0;
 
     for( size_t i = 0; i < gwx; i++ )
     {
-        if( pDst[i] != i )
+        if( h_buf[i] != i )
         {
             if( mismatches < 16 )
             {
                 fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
                     (unsigned int)i,
-                    pDst[i],
+                    h_buf[i],
                     (unsigned int)i );
             }
             mismatches++;
@@ -103,10 +115,6 @@ static void checkResults()
     {
         printf("Success.\n");
     }
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)pDst ); // TODO: Why isn't this a const void* in the API?
 }
 
 int main(
@@ -127,16 +135,14 @@ int main(
         {
             if( !strcmp( argv[i], "-d" ) )
             {
-                ++i;
-                if( i < argc )
+                if( ++i < argc )
                 {
                     deviceIndex = strtol(argv[i], NULL, 10);
                 }
             }
             else if( !strcmp( argv[i], "-p" ) )
             {
-                ++i;
-                if( i < argc )
+                if( ++i < argc )
                 {
                     platformIndex = strtol(argv[i], NULL, 10);
                 }
@@ -150,7 +156,7 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: copybufferkernel    [options]\n"
+            "Usage: dmemhelloworld  [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
@@ -164,6 +170,7 @@ int main(
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
+    libusm::initialize(platforms[platformIndex]());
 
     std::vector<cl::Device> devices;
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
@@ -171,7 +178,7 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    cl::Context context{devices};
+    cl::Context context{devices[deviceIndex]};
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
@@ -187,19 +194,44 @@ int main(
 #endif
     kernel = cl::Kernel{ program, "CopyBuffer" };
 
-    deviceMemSrc = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    h_buf = new cl_uint[gwx];
 
-    deviceMemDst = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    d_src = (cl_uint*)clDeviceMemAllocINTEL(
+        context(),
+        devices[deviceIndex](),
+        nullptr,
+        gwx * sizeof(cl_uint),
+        0,
+        nullptr );
+    d_dst = (cl_uint*)clDeviceMemAllocINTEL(
+        context(),
+        devices[deviceIndex](),
+        nullptr,
+        gwx * sizeof(cl_uint),
+        0,
+        nullptr );
 
-    init();
-    go();
-    checkResults();
+    if( h_buf && d_src && d_dst )
+    {
+        init();
+        go();
+        checkResults();
+    }
+    else
+    {
+        printf("Allocation failed - does this device support Unified Shared Memory?\n");
+    }
+
+    printf("Cleaning up...\n");
+
+    delete [] h_buf;
+
+    clMemFreeINTEL(
+        context(),
+        d_src );
+    clMemFreeINTEL(
+        context(),
+        d_dst );
 
     return 0;
 }

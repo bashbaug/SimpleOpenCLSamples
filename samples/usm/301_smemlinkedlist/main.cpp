@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019 Ben Ashbaugh
+// Copyright (c) 2020 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,92 +21,146 @@
 */
 
 #include <CL/cl2.hpp>
+#include "libusm.h"
 
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
-cl::Buffer deviceMemSrc;
-cl::Buffer deviceMemDst;
 
-size_t  gwx = 1024*1024;
+cl_uint numNodes = 4;
+
+struct Node {
+    Node() :
+        pNext( nullptr ),
+        Num( 0xDEADBEEF ) {}
+
+    Node*   pNext;
+    cl_uint Num;
+};
+
+Node*   s_head;
 
 static const char kernelString[] = R"CLC(
-kernel void CopyBuffer( global uint* dst, global uint* src )
+struct Node {
+    global struct Node* pNext;
+    uint Num;
+};
+kernel void WalkLinkedList( global struct Node* pHead )
 {
-    uint id = get_global_id(0);
-    dst[id] = src[id];
+    uint count = 0;
+    while( pHead )
+    {
+        ++count;
+        pHead->Num = pHead->Num * 2 + 1;
+        pHead = pHead->pNext;
+    }
 }
 )CLC";
 
-static void init( void )
+static void init( cl::Context& context, cl::Device& device )
 {
-    cl_uint*    pSrc = (cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemSrc,
-        CL_TRUE,
-        CL_MAP_WRITE_INVALIDATE_REGION,
-        0,
-        gwx * sizeof(cl_uint) );
+    Node*   s_cur = nullptr;
 
-    for( size_t i = 0; i < gwx; i++ )
+    for( cl_uint i = 0; i < numNodes; i++ )
     {
-        pSrc[i] = (cl_uint)(i);
-    }
+        if( i == 0 )
+        {
+            s_head = (Node*)clSharedMemAllocINTEL(
+                context(),
+                device(),
+                nullptr,
+                sizeof(Node),
+                0,
+                nullptr );
+            s_cur = s_head;
+        }
 
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemSrc,
-        pSrc );
+        s_cur->Num = i * 2;
+
+        if( i != numNodes - 1 )
+        {
+            s_cur->pNext = (Node*)clSharedMemAllocINTEL(
+                context(),
+                device(),
+                nullptr,
+                sizeof(Node),
+                0,
+                nullptr );
+        }
+        else
+        {
+            s_cur->pNext = nullptr;
+        }
+
+        s_cur = s_cur->pNext;
+    }
 }
 
 static void go()
 {
-    kernel.setArg(0, deviceMemDst);
-    kernel.setArg(1, deviceMemSrc);
+    clSetKernelArgMemPointerINTEL(
+        kernel(),
+        0,
+        s_head );
 
     commandQueue.enqueueNDRangeKernel(
         kernel,
         cl::NullRange,
-        cl::NDRange{gwx} );
+        cl::NDRange{1} );
 }
 
 static void checkResults()
 {
-    const cl_uint*  pDst = (const cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemDst,
-        CL_TRUE,
-        CL_MAP_READ,
-        0,
-        gwx * sizeof(cl_uint) );
+    commandQueue.finish();
+
+    const Node* s_cur = s_head;
 
     unsigned int    mismatches = 0;
-
-    for( size_t i = 0; i < gwx; i++ )
+    for( cl_uint i = 0; i < numNodes; i++ )
     {
-        if( pDst[i] != i )
+        const cl_uint want = i * 4 + 1;
+        if( s_cur->Num != want )
         {
             if( mismatches < 16 )
             {
-                fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
-                    (unsigned int)i,
-                    pDst[i],
-                    (unsigned int)i );
+                fprintf(stderr, "MisMatch at node %u!  got %08X, want %08X\n",
+                    i,
+                    s_cur->Num,
+                    want );
             }
             mismatches++;
         }
+
+        s_cur = s_cur->pNext;
     }
 
     if( mismatches )
     {
         fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
             mismatches,
-            (unsigned int)gwx );
+            numNodes );
     }
     else
     {
         printf("Success.\n");
     }
+}
 
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)pDst ); // TODO: Why isn't this a const void* in the API?
+void cleanup( cl::Context& context )
+{
+    Node*   s_cur = s_head;
+
+    while( s_cur != nullptr )
+    {
+        Node*   s_next = s_cur->pNext;
+
+        clMemFreeINTEL(
+            context(),
+            s_cur );
+
+        s_cur = s_next;
+    }
+
+    s_head = nullptr;
 }
 
 int main(
@@ -127,18 +181,24 @@ int main(
         {
             if( !strcmp( argv[i], "-d" ) )
             {
-                ++i;
-                if( i < argc )
+                if( ++i < argc )
                 {
                     deviceIndex = strtol(argv[i], NULL, 10);
                 }
             }
             else if( !strcmp( argv[i], "-p" ) )
             {
-                ++i;
-                if( i < argc )
+                if( ++i < argc )
                 {
                     platformIndex = strtol(argv[i], NULL, 10);
+                }
+            }
+            else if (!strcmp(argv[i], "-n"))
+            {
+                ++i;
+                if (i < argc)
+                {
+                    numNodes = strtol(argv[i], NULL, 10);
                 }
             }
             else
@@ -150,10 +210,11 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: copybufferkernel    [options]\n"
+            "Usage: smemlinkedlist  [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
+            "      -n: Number of Linked List nodes\n"
             );
 
         return -1;
@@ -164,6 +225,7 @@ int main(
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
+    libusm::initialize(platforms[platformIndex]());
 
     std::vector<cl::Device> devices;
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
@@ -171,7 +233,7 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    cl::Context context{devices};
+    cl::Context context{devices[deviceIndex]};
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
@@ -185,21 +247,20 @@ int main(
             program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
     }
 #endif
-    kernel = cl::Kernel{ program, "CopyBuffer" };
+    kernel = cl::Kernel{ program, "WalkLinkedList" };
+    bool enableIndirectAccess = CL_TRUE;
+    clSetKernelExecInfo(
+        kernel(),
+        CL_KERNEL_EXEC_INFO_INDIRECT_SHARED_ACCESS_INTEL,
+        sizeof(enableIndirectAccess),
+        &enableIndirectAccess );
 
-    deviceMemSrc = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
-
-    deviceMemDst = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
-
-    init();
+    init( context, devices[deviceIndex] );
     go();
     checkResults();
+
+    printf("Cleaning up...\n");
+    cleanup( context );
 
     return 0;
 }

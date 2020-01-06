@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019 Ben Ashbaugh
+// Copyright (c) 2020 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,82 +21,18 @@
 */
 
 #include <CL/cl2.hpp>
+#include "libusm.h"
 
-cl::CommandQueue commandQueue;
-cl::Buffer deviceMemSrc;
-cl::Buffer deviceMemDst;
-
-size_t  gwx = 1024*1024;
-
-static void init( void )
+void PrintUSMCaps(
+    const char* label,
+    cl_unified_shared_memory_capabilities_intel usmcaps )
 {
-    cl_uint*    pSrc = (cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemSrc,
-        CL_TRUE,
-        CL_MAP_WRITE_INVALIDATE_REGION,
-        0,
-        gwx * sizeof(cl_uint) );
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        pSrc[i] = (cl_uint)(i);
-    }
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemSrc,
-        pSrc );
-}
-
-static void go()
-{
-    commandQueue.enqueueCopyBuffer(
-        deviceMemSrc,
-        deviceMemDst,
-        0,
-        0,
-        gwx * sizeof(cl_uint) );
-}
-
-static void checkResults()
-{
-    const cl_uint*  pDst = (const cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemDst,
-        CL_TRUE,
-        CL_MAP_READ,
-        0,
-        gwx * sizeof(cl_uint) );
-
-    unsigned int    mismatches = 0;
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        if( pDst[i] != i )
-        {
-            if( mismatches < 16 )
-            {
-                fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
-                    (unsigned int)i,
-                    pDst[i],
-                    (unsigned int)i );
-            }
-            mismatches++;
-        }
-    }
-
-    if( mismatches )
-    {
-        fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
-            mismatches,
-            (unsigned int)gwx );
-    }
-    else
-    {
-        printf("Success.\n");
-    }
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)pDst ); // TODO: Why isn't this a const void* in the API?
+    printf("%s: %s%s%s%s\n",
+        label,
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL                   ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL"                   : "",
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL            ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL"            : "",
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL        ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL"        : "",
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL" : "" );
 }
 
 int main(
@@ -117,16 +53,14 @@ int main(
         {
             if( !strcmp( argv[i], "-d" ) )
             {
-                ++i;
-                if( i < argc )
+                if( ++i < argc )
                 {
                     deviceIndex = strtol(argv[i], NULL, 10);
                 }
             }
             else if( !strcmp( argv[i], "-p" ) )
             {
-                ++i;
-                if( i < argc )
+                if( ++i < argc )
                 {
                     platformIndex = strtol(argv[i], NULL, 10);
                 }
@@ -140,7 +74,7 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: copybuffer      [options]\n"
+            "Usage: usmqueries  [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
@@ -154,6 +88,7 @@ int main(
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
+    libusm::initialize(platforms[platformIndex]());
 
     std::vector<cl::Device> devices;
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
@@ -161,22 +96,49 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    cl::Context context{devices};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl_unified_shared_memory_capabilities_intel usmcaps = 0;
 
-    deviceMemSrc = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,
+        sizeof(usmcaps),
+        &usmcaps,
+        nullptr );
+    PrintUSMCaps( "CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL", usmcaps );
 
-    deviceMemDst = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL,
+        sizeof(usmcaps),
+        &usmcaps,
+        nullptr );
+    PrintUSMCaps( "CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL", usmcaps );
 
-    init();
-    go();
-    checkResults();
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
+        sizeof(usmcaps),
+        &usmcaps,
+        nullptr );
+    PrintUSMCaps( "CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
+
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
+        sizeof(usmcaps),
+        &usmcaps,
+        nullptr );
+    PrintUSMCaps( "CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
+
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL,
+        sizeof(usmcaps),
+        &usmcaps,
+        nullptr );
+    PrintUSMCaps( "CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL", usmcaps );
+
+    printf("Cleaning up...\n");
 
     return 0;
 }
