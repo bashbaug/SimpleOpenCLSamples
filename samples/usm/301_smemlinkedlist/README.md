@@ -2,13 +2,13 @@
 
 ## Sample Purpose
 
-This sample demonstrates how to build and initialize a linked list using shared Unified Shared Memory, access and modify the linked list in a kernel, then access and check the contents of the linked list on the host.
+This sample demonstrates how to build a linked list on the host in shared Unified Shared Memory, access and modify the linked list in a kernel, then access and check the contents of the linked list on the host.
 
 Because shared Unified Shared Memory can be directly read from and written to on the host, this samples is just as straightforward as the sample that builds the linked list in host memory, and is much more straightforward than the equivalent sample that builds the linked list in device memory.
 
 ## Key APIs and Concepts
 
-This sample demonstrates how indicate that a kernel may access any shared Unified Shared Memory allocation using `clSetKernelExecInfo` and `CL_KERNEL_EXEC_INFO_INDIRECT_SHARED_ACCESS_INTEL`, without specifying all allocations explicitly.
+This sample demonstrates how to indicate that a kernel may access any shared Unified Shared Memory allocation using `clSetKernelExecInfo` and `CL_KERNEL_EXEC_INFO_INDIRECT_SHARED_ACCESS_INTEL`, without specifying all allocations explicitly.
 For kernels that operate on complex data structures consisting of many Unified Shared Memory allocations, this can considerably improve API efficiency.
 
 Since Unified Shared Memory is an OpenCL extension, this sample uses the `libusm` library to query the extension APIs.

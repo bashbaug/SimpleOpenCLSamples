@@ -3,7 +3,7 @@
 ## Sample Purpose
 
 This sample queries and prints the Unified Shared Memory capabilities of a device.
-Many USM samples require specific USM capabilities and this sample can be used to verify check if it will or will not run on a device.
+Many USM samples require specific USM capabilities and this sample can be used to verify if it will or will not run on a device.
 
 ## Key APIs and Concepts
 
