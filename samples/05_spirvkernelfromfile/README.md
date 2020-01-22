@@ -70,7 +70,8 @@ What are the differences between the 32-bit and 64-bit SPIR-V files?
 2. Download and build clang and the SPIR-V LLVM Translator.
 Can you generate your own SPIR-V files from the sample kernel?
 3. Add a template function to your kernel and compile it using "C++ for OpenCL in Clang".
-Hint: At the time of this writing, you should pass `-cl-std=c++` to Clang to compile your file for C++ for OpenCL in Clang. vs. standard OpenCL C.
+Hint: At the time of this writing, you should pass `-cl-std=clc++` to Clang to compile your file for C++ for OpenCL in Clang. vs. standard OpenCL C.
+See example [here](https://godbolt.org/z/hEogpZ).
 
 ## Command Line Options
 
