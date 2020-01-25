@@ -26,6 +26,9 @@ else()
     set(SAMPLES_PLATFORM_NAME "Unknown")
 endif()
 
+add_subdirectory( images )
+add_subdirectory( usm )
+
 set(SAMPLES_CL_VERSION 120)
 
 add_subdirectory( 00_enumopencl )
@@ -38,5 +41,3 @@ add_subdirectory( 05_kernelfromfile )
 
 set(SAMPLES_CL_VERSION 210)
 add_subdirectory( 05_spirvkernelfromfile )
-
-add_subdirectory( usm )
