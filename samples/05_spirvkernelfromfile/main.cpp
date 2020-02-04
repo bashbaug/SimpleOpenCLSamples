@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019 Ben Ashbaugh
+// Copyright (c) 2019-2020 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -256,10 +256,13 @@ int main(
         buildOptions ? buildOptions : "(none)" );
     cl::Program program = createProgramWithIL( context, spirv );
     program.build(buildOptions);
-    printf("Program build log for device %s:\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-    printf("%s\n",
-        program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[deviceIndex]).c_str() );
+    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
+    {
+        printf("Program build log for device %s:\n",
+            devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+        printf("%s\n",
+            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[deviceIndex]).c_str() );
+    }
     printf("Creating kernel: %s\n", kernelName );
     kernel = cl::Kernel{ program, kernelName };
 

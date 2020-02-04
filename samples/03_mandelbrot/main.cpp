@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019 Ben Ashbaugh
+// Copyright (c) 2019-2020 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -177,13 +177,13 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    cl::Context context{devices};
+    cl::Context context{devices[deviceIndex]};
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
 #if 0
-    for( auto& device : devices )
+    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
     {
         printf("Program build log for device %s:\n",
             device.getInfo<CL_DEVICE_NAME>().c_str() );

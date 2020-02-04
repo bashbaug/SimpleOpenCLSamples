@@ -165,7 +165,7 @@ int main(
     cl::Program program{ context, kernelString };
     program.build();
 #if 0
-    for( auto& device : devices )
+    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
     {
         printf("Program build log for device %s:\n",
             device.getInfo<CL_DEVICE_NAME>().c_str() );
