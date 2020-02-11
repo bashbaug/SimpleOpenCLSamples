@@ -29,7 +29,8 @@
 /*! \file
  *
  *   \brief C++ bindings for OpenCL 1.0 (rev 48), OpenCL 1.1 (rev 33),
- *       OpenCL 1.2 (rev 15), OpenCL 2.0 (rev 29) and OpenCL 2.1 (rev 17).
+ *       OpenCL 1.2 (rev 15), OpenCL 2.0 (rev 29), OpenCL 2.1 (rev 17),
+ *       and OpenCL 2.2 (V2.2-11).
  *   \author Lee Howes and Bruce Merry
  *
  *   Derived from the OpenCL 1.x C++ bindings written by
@@ -40,8 +41,8 @@
  *       Bruce Merry, February 2013.
  *       Tom Deakin and Simon McIntosh-Smith, July 2013
  *       James Price, 2015-
- *   \version 2.1.0
- *   \date 2018-12-07
+ *   \version 2.2.0
+ *   \date 2019-09-18
  *
  *   Optional extension support
  *
@@ -446,13 +447,18 @@
 
 /* Detect which version to target */
 #if !defined(CL_HPP_TARGET_OPENCL_VERSION)
-# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 210 (OpenCL 2.1)")
-# define CL_HPP_TARGET_OPENCL_VERSION 210
+# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 220 (OpenCL 2.2)")
+# define CL_HPP_TARGET_OPENCL_VERSION 220
 #endif
-#if CL_HPP_TARGET_OPENCL_VERSION != 100 && CL_HPP_TARGET_OPENCL_VERSION != 110 && CL_HPP_TARGET_OPENCL_VERSION != 120 && CL_HPP_TARGET_OPENCL_VERSION != 200 && CL_HPP_TARGET_OPENCL_VERSION != 210
-# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200 or 210). It will be set to 210")
+#if CL_HPP_TARGET_OPENCL_VERSION != 100 && \
+    CL_HPP_TARGET_OPENCL_VERSION != 110 && \
+    CL_HPP_TARGET_OPENCL_VERSION != 120 && \
+    CL_HPP_TARGET_OPENCL_VERSION != 200 && \
+    CL_HPP_TARGET_OPENCL_VERSION != 210 && \
+    CL_HPP_TARGET_OPENCL_VERSION != 220
+# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210 or 220). It will be set to 220")
 # undef CL_HPP_TARGET_OPENCL_VERSION
-# define CL_HPP_TARGET_OPENCL_VERSION 210
+# define CL_HPP_TARGET_OPENCL_VERSION 220
 #endif
 
 /* Forward target OpenCL version to C headers if necessary */
@@ -469,8 +475,13 @@
 #if !defined(CL_HPP_MINIMUM_OPENCL_VERSION)
 # define CL_HPP_MINIMUM_OPENCL_VERSION 200
 #endif
-#if CL_HPP_MINIMUM_OPENCL_VERSION != 100 && CL_HPP_MINIMUM_OPENCL_VERSION != 110 && CL_HPP_MINIMUM_OPENCL_VERSION != 120 && CL_HPP_MINIMUM_OPENCL_VERSION != 200 && CL_HPP_MINIMUM_OPENCL_VERSION != 210
-# pragma message("cl2.hpp: CL_HPP_MINIMUM_OPENCL_VERSION is not a valid value (100, 110, 120, 200 or 210). It will be set to 100")
+#if CL_HPP_MINIMUM_OPENCL_VERSION != 100 && \
+    CL_HPP_MINIMUM_OPENCL_VERSION != 110 && \
+    CL_HPP_MINIMUM_OPENCL_VERSION != 120 && \
+    CL_HPP_MINIMUM_OPENCL_VERSION != 200 && \
+    CL_HPP_MINIMUM_OPENCL_VERSION != 210 && \
+    CL_HPP_MINIMUM_OPENCL_VERSION != 220
+# pragma message("cl2.hpp: CL_HPP_MINIMUM_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210 or 220). It will be set to 100")
 # undef CL_HPP_MINIMUM_OPENCL_VERSION
 # define CL_HPP_MINIMUM_OPENCL_VERSION 100
 #endif
@@ -492,6 +503,9 @@
 #endif
 #if CL_HPP_MINIMUM_OPENCL_VERSION <= 210 && !defined(CL_USE_DEPRECATED_OPENCL_2_1_APIS)
 # define CL_USE_DEPRECATED_OPENCL_2_1_APIS
+#endif
+#if CL_HPP_MINIMUM_OPENCL_VERSION <= 220 && !defined(CL_USE_DEPRECATED_OPENCL_2_2_APIS)
+# define CL_USE_DEPRECATED_OPENCL_2_2_APIS
 #endif
 
 #ifdef _WIN32
@@ -535,6 +549,8 @@
 
 #if defined(_MSC_VER)
 # define CL_HPP_DEFINE_STATIC_MEMBER_ __declspec(selectany)
+#elif defined(__MINGW32__)
+# define CL_HPP_DEFINE_STATIC_MEMBER_ __attribute__((selectany))
 #else
 # define CL_HPP_DEFINE_STATIC_MEMBER_ __attribute__((weak))
 #endif // !_MSC_VER
@@ -852,7 +868,7 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 #define __CREATE_PROGRAM_WITH_BINARY_ERR    CL_HPP_ERR_STR_(clCreateProgramWithBinary)
 #if CL_HPP_TARGET_OPENCL_VERSION >= 210
 #define __CREATE_PROGRAM_WITH_IL_ERR        CL_HPP_ERR_STR_(clCreateProgramWithIL)
-#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
 #define __CREATE_PROGRAM_WITH_BUILT_IN_KERNELS_ERR    CL_HPP_ERR_STR_(clCreateProgramWithBuiltInKernels)
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
@@ -892,7 +908,7 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 #if CL_HPP_TARGET_OPENCL_VERSION >= 210
 #define __ENQUEUE_MIGRATE_SVM_ERR   CL_HPP_ERR_STR_(clEnqueueSVMMigrateMem)
 #define __SET_DEFAULT_DEVICE_COMMAND_QUEUE_ERR   CL_HPP_ERR_STR_(clSetDefaultDeviceCommandQueue)
-#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
 
 
 #define __ENQUEUE_ACQUIRE_GL_ERR            CL_HPP_ERR_STR_(clEnqueueAcquireGLObjects)
@@ -911,6 +927,10 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 #if CL_HPP_TARGET_OPENCL_VERSION >= 210
 #define __GET_HOST_TIMER_ERR           CL_HPP_ERR_STR_(clGetHostTimer)
 #define __GET_DEVICE_AND_HOST_TIMER_ERR           CL_HPP_ERR_STR_(clGetDeviceAndHostTimer)
+#endif
+#if CL_HPP_TARGET_OPENCL_VERSION >= 220
+#define __SET_PROGRAM_RELEASE_CALLBACK_ERR          CL_HPP_ERR_STR_(clSetProgramReleaseCallback)
+#define __SET_PROGRAM_SPECIALIZATION_CONSTANT_ERR   CL_HPP_ERR_STR_(clSetProgramSpecializationConstant)
 #endif
 
 
@@ -956,7 +976,7 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 
 #if CL_HPP_TARGET_OPENCL_VERSION >= 210
 #define __CLONE_KERNEL_ERR     CL_HPP_ERR_STR_(clCloneKernel)
-#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
 
 #endif // CL_HPP_USER_OVERRIDE_ERROR_STRINGS
 //! \endcond
@@ -1353,10 +1373,15 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_kernel_info, CL_KERNEL_COMPILE_NUM_SUB_GROUPS, size_type) \
     F(cl_device_info, CL_DEVICE_MAX_NUM_SUB_GROUPS, cl_uint) \
     F(cl_device_info, CL_DEVICE_IL_VERSION, string) \
+    F(cl_device_info, CL_DEVICE_SUB_GROUP_INDEPENDENT_FORWARD_PROGRESS, cl_bool) \
     F(cl_command_queue_info, CL_QUEUE_DEVICE_DEFAULT, cl::DeviceCommandQueue) \
     F(cl_kernel_sub_group_info, CL_KERNEL_MAX_SUB_GROUP_SIZE_FOR_NDRANGE, size_type) \
     F(cl_kernel_sub_group_info, CL_KERNEL_SUB_GROUP_COUNT_FOR_NDRANGE, size_type) \
     F(cl_kernel_sub_group_info, CL_KERNEL_LOCAL_SIZE_FOR_SUB_GROUP_COUNT, cl::detail::size_t_array)
+
+#define CL_HPP_PARAM_NAME_INFO_2_2_(F) \
+    F(cl_program_info, CL_PROGRAM_SCOPE_GLOBAL_CTORS_PRESENT, cl_bool) \
+    F(cl_program_info, CL_PROGRAM_SCOPE_GLOBAL_DTORS_PRESENT, cl_bool)
 
 #define CL_HPP_PARAM_NAME_DEVICE_FISSION_(F) \
     F(cl_device_info, CL_DEVICE_PARENT_DEVICE_EXT, cl_device_id) \
@@ -1393,13 +1418,16 @@ CL_HPP_PARAM_NAME_INFO_1_1_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
 CL_HPP_PARAM_NAME_INFO_1_2_(CL_HPP_DECLARE_PARAM_TRAITS_)
-#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200
 CL_HPP_PARAM_NAME_INFO_2_0_(CL_HPP_DECLARE_PARAM_TRAITS_)
-#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
 #if CL_HPP_TARGET_OPENCL_VERSION >= 210
 CL_HPP_PARAM_NAME_INFO_2_1_(CL_HPP_DECLARE_PARAM_TRAITS_)
-#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
+#if CL_HPP_TARGET_OPENCL_VERSION >= 220
+CL_HPP_PARAM_NAME_INFO_2_2_(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 220
 
 #if defined(CL_HPP_USE_CL_SUB_GROUPS_KHR) && CL_HPP_TARGET_OPENCL_VERSION < 210
 CL_HPP_PARAM_NAME_INFO_SUBGROUP_KHR_(CL_HPP_DECLARE_PARAM_TRAITS_)
@@ -1477,6 +1505,13 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_LOCAL_MEM_SIZE_PER_COMPUT
 #endif
 #ifdef CL_DEVICE_LOCAL_MEM_BANKS_AMD
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_LOCAL_MEM_BANKS_AMD, cl_uint)
+#endif
+
+#ifdef CL_DEVICE_COMPUTE_UNITS_BITFIELD_ARM
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_COMPUTE_UNITS_BITFIELD_ARM, cl_ulong)
+#endif
+#ifdef CL_DEVICE_JOB_SLOTS_ARM
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_JOB_SLOTS_ARM, cl_uint)
 #endif
 
 #ifdef CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV
@@ -1789,10 +1824,7 @@ public:
 
     cl_type& operator ()() { return object_; }
 
-    const cl_type get() const { return object_; }
-
-    cl_type get() { return object_; }
-
+    cl_type get() const { return object_; }
 
 protected:
     template<typename Func, typename U>
@@ -2201,6 +2233,7 @@ public:
         if (error) {
             *error = err;
         }
+        return retVal;
     }
 
     /**
@@ -2224,6 +2257,7 @@ public:
         if (error) {
             *error = err;
         }
+        return retVal;
     }
 #endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 210
 
@@ -3737,7 +3771,7 @@ cl::pointer<T, detail::Deleter<Alloc>> allocate_pointer(const Alloc &alloc_, Arg
 
         return cl::pointer<T, detail::Deleter<Alloc>>(tmp, detail::Deleter<Alloc>{alloc, copies});
     }
-    catch (std::bad_alloc b)
+    catch (std::bad_alloc& b)
     {
         std::allocator_traits<Alloc>::deallocate(alloc, tmp, copies);
         throw;
@@ -6739,6 +6773,62 @@ public:
         }
         return CL_SUCCESS;
     }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 220
+    /*! \brief Registers a callback function to be called when destructors for
+     *         program scope global variables are complete and before the
+     *         program is released.
+     *
+     *  Wraps clSetProgramReleaseCallback().
+     *
+     *  Each call to this function registers the specified user callback function
+     *  on a callback stack associated with program. The registered user callback
+     *  functions are called in the reverse order in which they were registered.
+     */
+    cl_int setReleaseCallback(
+        void (CL_CALLBACK * pfn_notify)(cl_program program, void * user_data),
+        void * user_data = NULL)
+    {
+        return detail::errHandler(
+            ::clSetProgramReleaseCallback(
+                object_,
+                pfn_notify,
+                user_data),
+            __SET_PROGRAM_RELEASE_CALLBACK_ERR);
+    }
+
+    /*! \brief Sets a SPIR-V specialization constant.
+     *
+     *  Wraps clSetProgramSpecializationConstant().
+     */
+    template <typename T>
+    typename std::enable_if<!std::is_pointer<T>::value, cl_int>::type
+        setSpecializationConstant(cl_uint index, const T &value)
+    {
+        return detail::errHandler(
+            ::clSetProgramSpecializationConstant(
+                object_,
+                index,
+                sizeof(value),
+                &value),
+            __SET_PROGRAM_SPECIALIZATION_CONSTANT_ERR);
+    }
+
+    /*! \brief Sets a SPIR-V specialization constant.
+     *
+     *  Wraps clSetProgramSpecializationConstant().
+     */
+    cl_int setSpecializationConstant(cl_uint index, size_type size, const void* value)
+    {
+        return detail::errHandler(
+            ::clSetProgramSpecializationConstant(
+                object_,
+                index,
+                size,
+                value),
+            __SET_PROGRAM_SPECIALIZATION_CONSTANT_ERR);
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 220
 };
 
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
@@ -6859,6 +6949,22 @@ inline vector<vector<unsigned char>> cl::Program::getInfo<CL_PROGRAM_BINARIES>(c
     }
     return binariesVectors;
 }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 220
+// Template specialization for clSetProgramSpecializationConstant
+template <>
+inline cl_int cl::Program::setSpecializationConstant(cl_uint index, const bool &value)
+{
+    cl_uchar ucValue = value ? CL_UCHAR_MAX : 0;
+    return detail::errHandler(
+        ::clSetProgramSpecializationConstant(
+            object_,
+            index,
+            sizeof(ucValue),
+            &ucValue),
+        __SET_PROGRAM_SPECIALIZATION_CONSTANT_ERR);
+}
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 220
 
 inline Kernel::Kernel(const Program& program, const char* name, cl_int* err)
 {
@@ -8296,7 +8402,6 @@ public:
         const vector<Event>* events = NULL,
         Event* event = NULL) const
     {
-        cl_event tmp;
         cl::vector<void*> svmRawPointers;
         svmRawPointers.reserve(svmPointers.size());
         for (auto p : svmPointers) {
@@ -8334,7 +8439,6 @@ public:
         const vector<Event>* events = NULL,
         Event* event = NULL) const
     {
-        cl_event tmp;
         cl::vector<void*> svmRawPointers;
         svmRawPointers.reserve(svmContainers.size());
         for (auto p : svmContainers) {
