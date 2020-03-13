@@ -237,7 +237,7 @@ int main(
     cl::Program program{ context, kernelString };
     program.build();
 #if 0
-    for( auto& device : devices )
+    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
     {
         printf("Program build log for device %s:\n",
             device.getInfo<CL_DEVICE_NAME>().c_str() );
@@ -246,7 +246,7 @@ int main(
     }
 #endif
     kernel = cl::Kernel{ program, "WalkLinkedList" };
-    bool enableIndirectAccess = CL_TRUE;
+    cl_bool enableIndirectAccess = CL_TRUE;
     clSetKernelExecInfo(
         kernel(),
         CL_KERNEL_EXEC_INFO_INDIRECT_HOST_ACCESS_INTEL,
