@@ -57,6 +57,9 @@ static cl_int PrintDeviceInfoSummary(
         printf("\tVendor:         %s\n", devices[i].getInfo<CL_DEVICE_VENDOR>().c_str() );
         printf("\tDevice Version: %s\n", devices[i].getInfo<CL_DEVICE_VERSION>().c_str() );
         printf("\tDriver Version: %s\n", devices[i].getInfo<CL_DRIVER_VERSION>().c_str() );
+        printf("\tVendor ID:      %u (%04X)\n",
+            devices[i].getInfo<CL_DEVICE_VENDOR_ID>(),
+            devices[i].getInfo<CL_DEVICE_VENDOR_ID>());
     }
 
     return CL_SUCCESS;
