@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020 Ben Ashbaugh
+# Copyright (c) 2020 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,21 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(SAMPLE_NAME copybuffer)
-set(SAMPLE_NUMBER 01)
+# Require OpenCL 2.0, for read-write images:
+set(SAMPLES_CL_VERSION 200)
 
-project(${SAMPLE_NAME})
-add_executable( ${SAMPLE_NAME} main.cpp )
-
-target_include_directories( ${SAMPLE_NAME} PRIVATE ${OpenCL_INCLUDE_DIR} )
-target_link_libraries( ${SAMPLE_NAME} OpenCL )
-
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION} )
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION})
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${SAMPLES_CL_VERSION})
-
-set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
-
-foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
-    install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS ${CONFIG} DESTINATION ${SAMPLES_PLATFORM_NAME}/${CONFIG})
-endforeach()
+add_subdirectory( 00_enumimageformats )

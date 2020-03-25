@@ -259,9 +259,9 @@ int main(
     for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
     {
         printf("Program build log for device %s:\n",
-            devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+            device.getInfo<CL_DEVICE_NAME>().c_str() );
         printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[deviceIndex]).c_str() );
+            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
     }
     printf("Creating kernel: %s\n", kernelName );
     kernel = cl::Kernel{ program, kernelName };

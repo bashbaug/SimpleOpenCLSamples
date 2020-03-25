@@ -18,6 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# Require OpenCL 2.0, for clSetKernelExecInfo:
+set(SAMPLES_CL_VERSION 200)
+
 add_subdirectory( libusm )
 
 add_subdirectory( 00_usmqueries )

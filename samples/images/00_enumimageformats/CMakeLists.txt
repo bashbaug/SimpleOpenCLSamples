@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020 Ben Ashbaugh
+# Copyright (c) 2019 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,8 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(SAMPLE_NAME copybuffer)
-set(SAMPLE_NUMBER 01)
+set(SAMPLE_NAME enumimageformats)
+set(SAMPLE_NUMBER 00)
 
 project(${SAMPLE_NAME})
 add_executable( ${SAMPLE_NAME} main.cpp )
@@ -31,7 +31,7 @@ target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_TARGET_OPENCL_VERSION=${SA
 target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION})
 target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${SAMPLES_CL_VERSION})
 
-set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
+set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/Images/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
 
 foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS ${CONFIG} DESTINATION ${SAMPLES_PLATFORM_NAME}/${CONFIG})
