@@ -355,6 +355,7 @@ void initialize( cl_platform_id platform )
     GET_EXTENSION( clDeviceMemAllocINTEL );
     GET_EXTENSION( clSharedMemAllocINTEL );
     GET_EXTENSION( clMemFreeINTEL );
+    GET_EXTENSION( clMemBlockingFreeINTEL );
     GET_EXTENSION( clGetMemAllocInfoINTEL );
     GET_EXTENSION( clSetKernelArgMemPointerINTEL );
     GET_EXTENSION( clEnqueueMemsetINTEL );
