@@ -116,11 +116,29 @@ static clMemFreeINTEL_fn pfn_clMemFreeINTEL = NULL;
 CL_API_ENTRY cl_int CL_API_CALL
 clMemFreeINTEL(
             cl_context context,
-            const void* ptr) // TBD: const?
+            void* ptr)
 {
     if( pfn_clMemFreeINTEL )
     {
         return pfn_clMemFreeINTEL(
+            context,
+            ptr );
+    }
+    else
+    {
+        return CL_INVALID_OPERATION;
+    }
+}
+
+static clMemBlockingFreeINTEL_fn pfn_clMemBlockingFreeINTEL  = NULL;
+CL_API_ENTRY cl_int CL_API_CALL
+clMemBlockingFreeINTEL(
+            cl_context context,
+            void* ptr)
+{
+    if( pfn_clMemBlockingFreeINTEL )
+    {
+        return pfn_clMemBlockingFreeINTEL(
             context,
             ptr );
     }

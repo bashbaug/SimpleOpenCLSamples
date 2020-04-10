@@ -167,7 +167,7 @@ static void checkResults()
 
 void cleanup( cl::Context& context )
 {
-    const Node*	d_cur = d_head;
+    Node*   d_cur = d_head;
     Node    h_cur;
 
     while( d_cur != nullptr )
