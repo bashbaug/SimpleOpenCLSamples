@@ -25,7 +25,7 @@
 
 void PrintUSMCaps(
     const char* label,
-    cl_unified_shared_memory_capabilities_intel usmcaps )
+    cl_device_unified_shared_memory_capabilities_intel usmcaps )
 {
     printf("%s: %s%s%s%s\n",
         label,
@@ -96,7 +96,7 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    cl_unified_shared_memory_capabilities_intel usmcaps = 0;
+    cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
 
     clGetDeviceInfo(
         devices[deviceIndex](),

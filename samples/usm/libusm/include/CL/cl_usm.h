@@ -35,7 +35,7 @@ extern "C" {
 * cl_intel_unified_shared_memory extension *
 ********************************************/
 
-/* These APIs are in sync with Revision H of the cl_intel_unified_shared_memory spec! */
+/* These APIs are in sync with Revision Q of the cl_intel_unified_shared_memory spec! */
 
 #define cl_intel_unified_shared_memory 1
 
@@ -46,8 +46,7 @@ extern "C" {
 #define CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL    0x4193
 #define CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL          0x4194
 
-// TODO: should this be cl_device_unified_shared_memory_capabilities_intel?
-typedef cl_bitfield cl_unified_shared_memory_capabilities_intel;
+typedef cl_bitfield cl_device_unified_shared_memory_capabilities_intel;
 
 /* cl_unified_shared_memory_capabilities_intel - bitfield */
 #define CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL                   (1 << 0)
@@ -73,6 +72,7 @@ typedef cl_uint cl_mem_info_intel;
 #define CL_MEM_ALLOC_BASE_PTR_INTEL     0x419B
 #define CL_MEM_ALLOC_SIZE_INTEL         0x419C
 #define CL_MEM_ALLOC_DEVICE_INTEL       0x419D
+/* CL_MEM_ALLOC_FLAGS_INTEL - defined above */
 #define CL_MEM_ALLOC_INFO_TBD0_INTEL    0x419E  /* reserved for future */
 #define CL_MEM_ALLOC_INFO_TBD1_INTEL    0x419F  /* reserved for future */
 
@@ -163,12 +163,22 @@ clSharedMemAllocINTEL_fn)(
 extern CL_API_ENTRY cl_int CL_API_CALL
 clMemFreeINTEL(
             cl_context context,
-            const void* ptr); // TBD: const?
+            void* ptr);
 
 typedef CL_API_ENTRY cl_int (CL_API_CALL *
 clMemFreeINTEL_fn)(
             cl_context context,
-            const void* ptr); // TBD: const?
+            void* ptr);
+
+extern CL_API_ENTRY cl_int CL_API_CALL
+clMemBlockingFreeINTEL(
+            cl_context context,
+            void* ptr);
+
+typedef CL_API_ENTRY cl_int (CL_API_CALL *
+clMemBlockingFreeINTEL_fn)(
+            cl_context context,
+            void* ptr);
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clGetMemAllocInfoINTEL(

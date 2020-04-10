@@ -158,7 +158,7 @@ int main(
 
     cl::Context context{devices[deviceIndex]};
 
-    cl_unified_shared_memory_capabilities_intel usmcaps = 0;
+    cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
     cl_int errCode;
     
     errCode = clGetDeviceInfo(
