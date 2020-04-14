@@ -18,27 +18,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SAMPLES_PLATFORM_NAME "x64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(SAMPLES_PLATFORM_NAME "x86")
+set(SAMPLE_NAME emptykernel)
+set(SAMPLE_NUMBER 02)
+
+project(${SAMPLE_NAME})
+add_executable( ${SAMPLE_NAME} main.cpp )
+
+target_include_directories( ${SAMPLE_NAME} PRIVATE ${OpenCL_INCLUDE_DIR} )
+target_link_libraries( ${SAMPLE_NAME} OpenCL )
+
+target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION} )
+target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION})
+target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${SAMPLES_CL_VERSION})
+
+set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
+
+if(CMAKE_CONFIGURATION_TYPES)
+    set(SAMPLE_CONFIGS ${CMAKE_CONFIGURATION_TYPES})
 else()
-    set(SAMPLES_PLATFORM_NAME "Unknown")
+    set(SAMPLE_CONFIGS ${CMAKE_BUILD_TYPE})
 endif()
-
-add_subdirectory( images )
-add_subdirectory( usm )
-
-set(SAMPLES_CL_VERSION 120)
-
-add_subdirectory( 00_enumopencl )
-add_subdirectory( 00_enumopenclpp )
-add_subdirectory( 01_copybuffer )
-add_subdirectory( 02_copybufferkernel )
-add_subdirectory( 02_emptykernel )
-add_subdirectory( 03_mandelbrot )
-add_subdirectory( 04_julia )
-add_subdirectory( 05_kernelfromfile )
-
-set(SAMPLES_CL_VERSION 210)
-add_subdirectory( 05_spirvkernelfromfile )
+foreach(CONFIG ${SAMPLE_CONFIGS})
+    install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS ${CONFIG} DESTINATION ${SAMPLES_PLATFORM_NAME}/${CONFIG})
+endforeach()
