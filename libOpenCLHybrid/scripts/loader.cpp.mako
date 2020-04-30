@@ -338,7 +338,7 @@ static inline cl_platform_id _sclGetPlatfromFromContextProperties(
 extern "C" {
 #endif
 
-cl_int clGetPlatformIDs(
+CL_API_ENTRY cl_int CL_API_CALL clGetPlatformIDs(
     cl_uint num_entries,
     cl_platform_id* platforms,
     cl_uint* num_platforms)
@@ -414,7 +414,7 @@ cl_int clGetPlatformIDs(
 #endif
 }
 
-void* clGetExtensionFunctionAddress(
+CL_API_ENTRY void* CL_API_CALL clGetExtensionFunctionAddress(
     const char* function_name)
 {
 #if 0
@@ -429,7 +429,7 @@ void* clGetExtensionFunctionAddress(
     return NULL;
 }
 
-inline cl_int clUnloadCompiler(void)
+CL_API_ENTRY cl_int CL_API_CALL clUnloadCompiler(void)
 {
     return CL_SUCCESS;
 }
@@ -448,7 +448,7 @@ inline cl_int clUnloadCompiler(void)
 %>
 #ifdef ${apivers[api.Name]}
 
-${api.RetType} ${api.Name}(
+CL_API_ENTRY ${api.RetType} CL_API_CALL ${api.Name}(
 %for i, param in enumerate(api.Params):
 %  if i < len(api.Params)-1:
     ${param.Type} ${param.Name}${param.TypeEnd},

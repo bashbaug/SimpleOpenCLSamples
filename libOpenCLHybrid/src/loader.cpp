@@ -1542,7 +1542,7 @@ static inline cl_platform_id _sclGetPlatfromFromContextProperties(
 extern "C" {
 #endif
 
-cl_int clGetPlatformIDs(
+CL_API_ENTRY cl_int CL_API_CALL clGetPlatformIDs(
     cl_uint num_entries,
     cl_platform_id* platforms,
     cl_uint* num_platforms)
@@ -1618,7 +1618,7 @@ cl_int clGetPlatformIDs(
 #endif
 }
 
-void* clGetExtensionFunctionAddress(
+CL_API_ENTRY void* CL_API_CALL clGetExtensionFunctionAddress(
     const char* function_name)
 {
 #if 0
@@ -1633,7 +1633,7 @@ void* clGetExtensionFunctionAddress(
     return NULL;
 }
 
-inline cl_int clUnloadCompiler(void)
+CL_API_ENTRY cl_int CL_API_CALL clUnloadCompiler(void)
 {
     return CL_SUCCESS;
 }
@@ -1643,7 +1643,7 @@ inline cl_int clUnloadCompiler(void)
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetPlatformInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetPlatformInfo(
     cl_platform_id platform,
     cl_platform_info param_name,
     size_t param_value_size,
@@ -1665,7 +1665,7 @@ cl_int clGetPlatformInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetDeviceIDs(
+CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(
     cl_platform_id platform,
     cl_device_type device_type,
     cl_uint num_entries,
@@ -1687,7 +1687,7 @@ cl_int clGetDeviceIDs(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetDeviceInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetDeviceInfo(
     cl_device_id device,
     cl_device_info param_name,
     size_t param_value_size,
@@ -1709,7 +1709,7 @@ cl_int clGetDeviceInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_context clCreateContext(
+CL_API_ENTRY cl_context CL_API_CALL clCreateContext(
     const cl_context_properties* properties,
     cl_uint num_devices,
     const cl_device_id* devices,
@@ -1736,7 +1736,7 @@ cl_context clCreateContext(
 
 #ifdef CL_VERSION_1_0
 
-cl_context clCreateContextFromType(
+CL_API_ENTRY cl_context CL_API_CALL clCreateContextFromType(
     const cl_context_properties* properties,
     cl_device_type device_type,
     void (CL_CALLBACK* pfn_notify)(const char* errinfo, const void* private_info, size_t cb, void* user_data),
@@ -1759,7 +1759,7 @@ cl_context clCreateContextFromType(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clRetainContext(
+CL_API_ENTRY cl_int CL_API_CALL clRetainContext(
     cl_context context)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(context, CL_INVALID_CONTEXT);
@@ -1773,7 +1773,7 @@ cl_int clRetainContext(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clReleaseContext(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseContext(
     cl_context context)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(context, CL_INVALID_CONTEXT);
@@ -1787,7 +1787,7 @@ cl_int clReleaseContext(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetContextInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetContextInfo(
     cl_context context,
     cl_context_info param_name,
     size_t param_value_size,
@@ -1809,7 +1809,7 @@ cl_int clGetContextInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clRetainCommandQueue(
+CL_API_ENTRY cl_int CL_API_CALL clRetainCommandQueue(
     cl_command_queue command_queue)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(command_queue, CL_INVALID_COMMAND_QUEUE);
@@ -1823,7 +1823,7 @@ cl_int clRetainCommandQueue(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clReleaseCommandQueue(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseCommandQueue(
     cl_command_queue command_queue)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(command_queue, CL_INVALID_COMMAND_QUEUE);
@@ -1837,7 +1837,7 @@ cl_int clReleaseCommandQueue(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetCommandQueueInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetCommandQueueInfo(
     cl_command_queue command_queue,
     cl_command_queue_info param_name,
     size_t param_value_size,
@@ -1859,7 +1859,7 @@ cl_int clGetCommandQueueInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_mem clCreateBuffer(
+CL_API_ENTRY cl_mem CL_API_CALL clCreateBuffer(
     cl_context context,
     cl_mem_flags flags,
     size_t size,
@@ -1881,7 +1881,7 @@ cl_mem clCreateBuffer(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clRetainMemObject(
+CL_API_ENTRY cl_int CL_API_CALL clRetainMemObject(
     cl_mem memobj)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(memobj, CL_INVALID_MEM_OBJECT);
@@ -1895,7 +1895,7 @@ cl_int clRetainMemObject(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clReleaseMemObject(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseMemObject(
     cl_mem memobj)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(memobj, CL_INVALID_MEM_OBJECT);
@@ -1909,7 +1909,7 @@ cl_int clReleaseMemObject(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetSupportedImageFormats(
+CL_API_ENTRY cl_int CL_API_CALL clGetSupportedImageFormats(
     cl_context context,
     cl_mem_flags flags,
     cl_mem_object_type image_type,
@@ -1933,7 +1933,7 @@ cl_int clGetSupportedImageFormats(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetMemObjectInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetMemObjectInfo(
     cl_mem memobj,
     cl_mem_info param_name,
     size_t param_value_size,
@@ -1955,7 +1955,7 @@ cl_int clGetMemObjectInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetImageInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetImageInfo(
     cl_mem image,
     cl_image_info param_name,
     size_t param_value_size,
@@ -1977,7 +1977,7 @@ cl_int clGetImageInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clRetainSampler(
+CL_API_ENTRY cl_int CL_API_CALL clRetainSampler(
     cl_sampler sampler)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(sampler, CL_INVALID_SAMPLER);
@@ -1991,7 +1991,7 @@ cl_int clRetainSampler(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clReleaseSampler(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseSampler(
     cl_sampler sampler)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(sampler, CL_INVALID_SAMPLER);
@@ -2005,7 +2005,7 @@ cl_int clReleaseSampler(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetSamplerInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetSamplerInfo(
     cl_sampler sampler,
     cl_sampler_info param_name,
     size_t param_value_size,
@@ -2027,7 +2027,7 @@ cl_int clGetSamplerInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_program clCreateProgramWithSource(
+CL_API_ENTRY cl_program CL_API_CALL clCreateProgramWithSource(
     cl_context context,
     cl_uint count,
     const char** strings,
@@ -2049,7 +2049,7 @@ cl_program clCreateProgramWithSource(
 
 #ifdef CL_VERSION_1_0
 
-cl_program clCreateProgramWithBinary(
+CL_API_ENTRY cl_program CL_API_CALL clCreateProgramWithBinary(
     cl_context context,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -2075,7 +2075,7 @@ cl_program clCreateProgramWithBinary(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clRetainProgram(
+CL_API_ENTRY cl_int CL_API_CALL clRetainProgram(
     cl_program program)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(program, CL_INVALID_PROGRAM);
@@ -2089,7 +2089,7 @@ cl_int clRetainProgram(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clReleaseProgram(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseProgram(
     cl_program program)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(program, CL_INVALID_PROGRAM);
@@ -2103,7 +2103,7 @@ cl_int clReleaseProgram(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clBuildProgram(
+CL_API_ENTRY cl_int CL_API_CALL clBuildProgram(
     cl_program program,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -2127,7 +2127,7 @@ cl_int clBuildProgram(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetProgramInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetProgramInfo(
     cl_program program,
     cl_program_info param_name,
     size_t param_value_size,
@@ -2149,7 +2149,7 @@ cl_int clGetProgramInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetProgramBuildInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetProgramBuildInfo(
     cl_program program,
     cl_device_id device,
     cl_program_build_info param_name,
@@ -2173,7 +2173,7 @@ cl_int clGetProgramBuildInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_kernel clCreateKernel(
+CL_API_ENTRY cl_kernel CL_API_CALL clCreateKernel(
     cl_program program,
     const char* kernel_name,
     cl_int* errcode_ret)
@@ -2191,7 +2191,7 @@ cl_kernel clCreateKernel(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clCreateKernelsInProgram(
+CL_API_ENTRY cl_int CL_API_CALL clCreateKernelsInProgram(
     cl_program program,
     cl_uint num_kernels,
     cl_kernel* kernels,
@@ -2211,7 +2211,7 @@ cl_int clCreateKernelsInProgram(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clRetainKernel(
+CL_API_ENTRY cl_int CL_API_CALL clRetainKernel(
     cl_kernel kernel)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(kernel, CL_INVALID_KERNEL);
@@ -2225,7 +2225,7 @@ cl_int clRetainKernel(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clReleaseKernel(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseKernel(
     cl_kernel kernel)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(kernel, CL_INVALID_KERNEL);
@@ -2239,7 +2239,7 @@ cl_int clReleaseKernel(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clSetKernelArg(
+CL_API_ENTRY cl_int CL_API_CALL clSetKernelArg(
     cl_kernel kernel,
     cl_uint arg_index,
     size_t arg_size,
@@ -2259,7 +2259,7 @@ cl_int clSetKernelArg(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetKernelInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetKernelInfo(
     cl_kernel kernel,
     cl_kernel_info param_name,
     size_t param_value_size,
@@ -2281,7 +2281,7 @@ cl_int clGetKernelInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetKernelWorkGroupInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetKernelWorkGroupInfo(
     cl_kernel kernel,
     cl_device_id device,
     cl_kernel_work_group_info param_name,
@@ -2305,7 +2305,7 @@ cl_int clGetKernelWorkGroupInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clWaitForEvents(
+CL_API_ENTRY cl_int CL_API_CALL clWaitForEvents(
     cl_uint num_events,
     const cl_event* event_list)
 {
@@ -2324,7 +2324,7 @@ cl_int clWaitForEvents(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetEventInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetEventInfo(
     cl_event event,
     cl_event_info param_name,
     size_t param_value_size,
@@ -2346,7 +2346,7 @@ cl_int clGetEventInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clRetainEvent(
+CL_API_ENTRY cl_int CL_API_CALL clRetainEvent(
     cl_event event)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(event, CL_INVALID_EVENT);
@@ -2360,7 +2360,7 @@ cl_int clRetainEvent(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clReleaseEvent(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseEvent(
     cl_event event)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(event, CL_INVALID_EVENT);
@@ -2374,7 +2374,7 @@ cl_int clReleaseEvent(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clGetEventProfilingInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetEventProfilingInfo(
     cl_event event,
     cl_profiling_info param_name,
     size_t param_value_size,
@@ -2396,7 +2396,7 @@ cl_int clGetEventProfilingInfo(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clFlush(
+CL_API_ENTRY cl_int CL_API_CALL clFlush(
     cl_command_queue command_queue)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(command_queue, CL_INVALID_COMMAND_QUEUE);
@@ -2410,7 +2410,7 @@ cl_int clFlush(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clFinish(
+CL_API_ENTRY cl_int CL_API_CALL clFinish(
     cl_command_queue command_queue)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(command_queue, CL_INVALID_COMMAND_QUEUE);
@@ -2424,7 +2424,7 @@ cl_int clFinish(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueReadBuffer(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueReadBuffer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_read,
@@ -2454,7 +2454,7 @@ cl_int clEnqueueReadBuffer(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueWriteBuffer(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueWriteBuffer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_write,
@@ -2484,7 +2484,7 @@ cl_int clEnqueueWriteBuffer(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueCopyBuffer(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueCopyBuffer(
     cl_command_queue command_queue,
     cl_mem src_buffer,
     cl_mem dst_buffer,
@@ -2514,7 +2514,7 @@ cl_int clEnqueueCopyBuffer(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueReadImage(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueReadImage(
     cl_command_queue command_queue,
     cl_mem image,
     cl_bool blocking_read,
@@ -2548,7 +2548,7 @@ cl_int clEnqueueReadImage(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueWriteImage(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueWriteImage(
     cl_command_queue command_queue,
     cl_mem image,
     cl_bool blocking_write,
@@ -2582,7 +2582,7 @@ cl_int clEnqueueWriteImage(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueCopyImage(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueCopyImage(
     cl_command_queue command_queue,
     cl_mem src_image,
     cl_mem dst_image,
@@ -2612,7 +2612,7 @@ cl_int clEnqueueCopyImage(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueCopyImageToBuffer(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueCopyImageToBuffer(
     cl_command_queue command_queue,
     cl_mem src_image,
     cl_mem dst_buffer,
@@ -2642,7 +2642,7 @@ cl_int clEnqueueCopyImageToBuffer(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueCopyBufferToImage(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueCopyBufferToImage(
     cl_command_queue command_queue,
     cl_mem src_buffer,
     cl_mem dst_image,
@@ -2672,7 +2672,7 @@ cl_int clEnqueueCopyBufferToImage(
 
 #ifdef CL_VERSION_1_0
 
-void* clEnqueueMapBuffer(
+CL_API_ENTRY void* CL_API_CALL clEnqueueMapBuffer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_map,
@@ -2704,7 +2704,7 @@ void* clEnqueueMapBuffer(
 
 #ifdef CL_VERSION_1_0
 
-void* clEnqueueMapImage(
+CL_API_ENTRY void* CL_API_CALL clEnqueueMapImage(
     cl_command_queue command_queue,
     cl_mem image,
     cl_bool blocking_map,
@@ -2740,7 +2740,7 @@ void* clEnqueueMapImage(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueUnmapMemObject(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueUnmapMemObject(
     cl_command_queue command_queue,
     cl_mem memobj,
     void* mapped_ptr,
@@ -2764,7 +2764,7 @@ cl_int clEnqueueUnmapMemObject(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueNDRangeKernel(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueNDRangeKernel(
     cl_command_queue command_queue,
     cl_kernel kernel,
     cl_uint work_dim,
@@ -2794,7 +2794,7 @@ cl_int clEnqueueNDRangeKernel(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueNativeKernel(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueNativeKernel(
     cl_command_queue command_queue,
     void (CL_CALLBACK* user_func)(void*),
     void* args,
@@ -2826,7 +2826,7 @@ cl_int clEnqueueNativeKernel(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clSetCommandQueueProperty(
+CL_API_ENTRY cl_int CL_API_CALL clSetCommandQueueProperty(
     cl_command_queue command_queue,
     cl_command_queue_properties properties,
     cl_bool enable,
@@ -2846,7 +2846,7 @@ cl_int clSetCommandQueueProperty(
 
 #ifdef CL_VERSION_1_0
 
-cl_mem clCreateImage2D(
+CL_API_ENTRY cl_mem CL_API_CALL clCreateImage2D(
     cl_context context,
     cl_mem_flags flags,
     const cl_image_format* image_format,
@@ -2874,7 +2874,7 @@ cl_mem clCreateImage2D(
 
 #ifdef CL_VERSION_1_0
 
-cl_mem clCreateImage3D(
+CL_API_ENTRY cl_mem CL_API_CALL clCreateImage3D(
     cl_context context,
     cl_mem_flags flags,
     const cl_image_format* image_format,
@@ -2906,7 +2906,7 @@ cl_mem clCreateImage3D(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueMarker(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueMarker(
     cl_command_queue command_queue,
     cl_event* event)
 {
@@ -2922,7 +2922,7 @@ cl_int clEnqueueMarker(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueWaitForEvents(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueWaitForEvents(
     cl_command_queue command_queue,
     cl_uint num_events,
     const cl_event* event_list)
@@ -2940,7 +2940,7 @@ cl_int clEnqueueWaitForEvents(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueBarrier(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueBarrier(
     cl_command_queue command_queue)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(command_queue, CL_INVALID_COMMAND_QUEUE);
@@ -2954,7 +2954,7 @@ cl_int clEnqueueBarrier(
 
 #ifdef CL_VERSION_1_0
 
-cl_command_queue clCreateCommandQueue(
+CL_API_ENTRY cl_command_queue CL_API_CALL clCreateCommandQueue(
     cl_context context,
     cl_device_id device,
     cl_command_queue_properties properties,
@@ -2974,7 +2974,7 @@ cl_command_queue clCreateCommandQueue(
 
 #ifdef CL_VERSION_1_0
 
-cl_sampler clCreateSampler(
+CL_API_ENTRY cl_sampler CL_API_CALL clCreateSampler(
     cl_context context,
     cl_bool normalized_coords,
     cl_addressing_mode addressing_mode,
@@ -2996,7 +2996,7 @@ cl_sampler clCreateSampler(
 
 #ifdef CL_VERSION_1_0
 
-cl_int clEnqueueTask(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueTask(
     cl_command_queue command_queue,
     cl_kernel kernel,
     cl_uint num_events_in_wait_list,
@@ -3018,7 +3018,7 @@ cl_int clEnqueueTask(
 
 #ifdef CL_VERSION_1_1
 
-cl_mem clCreateSubBuffer(
+CL_API_ENTRY cl_mem CL_API_CALL clCreateSubBuffer(
     cl_mem buffer,
     cl_mem_flags flags,
     cl_buffer_create_type buffer_create_type,
@@ -3040,7 +3040,7 @@ cl_mem clCreateSubBuffer(
 
 #ifdef CL_VERSION_1_1
 
-cl_int clSetMemObjectDestructorCallback(
+CL_API_ENTRY cl_int CL_API_CALL clSetMemObjectDestructorCallback(
     cl_mem memobj,
     void (CL_CALLBACK* pfn_notify)(cl_mem memobj, void* user_data),
     void* user_data)
@@ -3058,7 +3058,7 @@ cl_int clSetMemObjectDestructorCallback(
 
 #ifdef CL_VERSION_1_1
 
-cl_event clCreateUserEvent(
+CL_API_ENTRY cl_event CL_API_CALL clCreateUserEvent(
     cl_context context,
     cl_int* errcode_ret)
 {
@@ -3074,7 +3074,7 @@ cl_event clCreateUserEvent(
 
 #ifdef CL_VERSION_1_1
 
-cl_int clSetUserEventStatus(
+CL_API_ENTRY cl_int CL_API_CALL clSetUserEventStatus(
     cl_event event,
     cl_int execution_status)
 {
@@ -3090,7 +3090,7 @@ cl_int clSetUserEventStatus(
 
 #ifdef CL_VERSION_1_1
 
-cl_int clSetEventCallback(
+CL_API_ENTRY cl_int CL_API_CALL clSetEventCallback(
     cl_event event,
     cl_int command_exec_callback_type,
     void (CL_CALLBACK* pfn_notify)(cl_event event, cl_int event_command_status, void *user_data),
@@ -3110,7 +3110,7 @@ cl_int clSetEventCallback(
 
 #ifdef CL_VERSION_1_1
 
-cl_int clEnqueueReadBufferRect(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueReadBufferRect(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_read,
@@ -3150,7 +3150,7 @@ cl_int clEnqueueReadBufferRect(
 
 #ifdef CL_VERSION_1_1
 
-cl_int clEnqueueWriteBufferRect(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueWriteBufferRect(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_write,
@@ -3190,7 +3190,7 @@ cl_int clEnqueueWriteBufferRect(
 
 #ifdef CL_VERSION_1_1
 
-cl_int clEnqueueCopyBufferRect(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueCopyBufferRect(
     cl_command_queue command_queue,
     cl_mem src_buffer,
     cl_mem dst_buffer,
@@ -3228,7 +3228,7 @@ cl_int clEnqueueCopyBufferRect(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clCreateSubDevices(
+CL_API_ENTRY cl_int CL_API_CALL clCreateSubDevices(
     cl_device_id in_device,
     const cl_device_partition_property* properties,
     cl_uint num_devices,
@@ -3250,7 +3250,7 @@ cl_int clCreateSubDevices(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clRetainDevice(
+CL_API_ENTRY cl_int CL_API_CALL clRetainDevice(
     cl_device_id device)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(device, CL_INVALID_DEVICE);
@@ -3264,7 +3264,7 @@ cl_int clRetainDevice(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clReleaseDevice(
+CL_API_ENTRY cl_int CL_API_CALL clReleaseDevice(
     cl_device_id device)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(device, CL_INVALID_DEVICE);
@@ -3278,7 +3278,7 @@ cl_int clReleaseDevice(
 
 #ifdef CL_VERSION_1_2
 
-cl_mem clCreateImage(
+CL_API_ENTRY cl_mem CL_API_CALL clCreateImage(
     cl_context context,
     cl_mem_flags flags,
     const cl_image_format* image_format,
@@ -3302,7 +3302,7 @@ cl_mem clCreateImage(
 
 #ifdef CL_VERSION_1_2
 
-cl_program clCreateProgramWithBuiltInKernels(
+CL_API_ENTRY cl_program CL_API_CALL clCreateProgramWithBuiltInKernels(
     cl_context context,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -3324,7 +3324,7 @@ cl_program clCreateProgramWithBuiltInKernels(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clCompileProgram(
+CL_API_ENTRY cl_int CL_API_CALL clCompileProgram(
     cl_program program,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -3354,7 +3354,7 @@ cl_int clCompileProgram(
 
 #ifdef CL_VERSION_1_2
 
-cl_program clLinkProgram(
+CL_API_ENTRY cl_program CL_API_CALL clLinkProgram(
     cl_context context,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -3384,7 +3384,7 @@ cl_program clLinkProgram(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clUnloadPlatformCompiler(
+CL_API_ENTRY cl_int CL_API_CALL clUnloadPlatformCompiler(
     cl_platform_id platform)
 {
     _SCL_VALIDATE_HANDLE_RETURN_ERROR(platform, CL_INVALID_PLATFORM);
@@ -3398,7 +3398,7 @@ cl_int clUnloadPlatformCompiler(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clGetKernelArgInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetKernelArgInfo(
     cl_kernel kernel,
     cl_uint arg_indx,
     cl_kernel_arg_info param_name,
@@ -3422,7 +3422,7 @@ cl_int clGetKernelArgInfo(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clEnqueueFillBuffer(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueFillBuffer(
     cl_command_queue command_queue,
     cl_mem buffer,
     const void* pattern,
@@ -3452,7 +3452,7 @@ cl_int clEnqueueFillBuffer(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clEnqueueFillImage(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueFillImage(
     cl_command_queue command_queue,
     cl_mem image,
     const void* fill_color,
@@ -3480,7 +3480,7 @@ cl_int clEnqueueFillImage(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clEnqueueMigrateMemObjects(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueMigrateMemObjects(
     cl_command_queue command_queue,
     cl_uint num_mem_objects,
     const cl_mem* mem_objects,
@@ -3506,7 +3506,7 @@ cl_int clEnqueueMigrateMemObjects(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clEnqueueMarkerWithWaitList(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueMarkerWithWaitList(
     cl_command_queue command_queue,
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
@@ -3526,7 +3526,7 @@ cl_int clEnqueueMarkerWithWaitList(
 
 #ifdef CL_VERSION_1_2
 
-cl_int clEnqueueBarrierWithWaitList(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueBarrierWithWaitList(
     cl_command_queue command_queue,
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
@@ -3546,7 +3546,7 @@ cl_int clEnqueueBarrierWithWaitList(
 
 #ifdef CL_VERSION_1_2
 
-void* clGetExtensionFunctionAddressForPlatform(
+CL_API_ENTRY void* CL_API_CALL clGetExtensionFunctionAddressForPlatform(
     cl_platform_id platform,
     const char* func_name)
 {
@@ -3562,7 +3562,7 @@ void* clGetExtensionFunctionAddressForPlatform(
 
 #ifdef CL_VERSION_2_0
 
-cl_command_queue clCreateCommandQueueWithProperties(
+CL_API_ENTRY cl_command_queue CL_API_CALL clCreateCommandQueueWithProperties(
     cl_context context,
     cl_device_id device,
     const cl_queue_properties* properties,
@@ -3582,7 +3582,7 @@ cl_command_queue clCreateCommandQueueWithProperties(
 
 #ifdef CL_VERSION_2_0
 
-cl_mem clCreatePipe(
+CL_API_ENTRY cl_mem CL_API_CALL clCreatePipe(
     cl_context context,
     cl_mem_flags flags,
     cl_uint pipe_packet_size,
@@ -3606,7 +3606,7 @@ cl_mem clCreatePipe(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clGetPipeInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetPipeInfo(
     cl_mem pipe,
     cl_pipe_info param_name,
     size_t param_value_size,
@@ -3628,7 +3628,7 @@ cl_int clGetPipeInfo(
 
 #ifdef CL_VERSION_2_0
 
-void* clSVMAlloc(
+CL_API_ENTRY void* CL_API_CALL clSVMAlloc(
     cl_context context,
     cl_svm_mem_flags flags,
     size_t size,
@@ -3648,7 +3648,7 @@ void* clSVMAlloc(
 
 #ifdef CL_VERSION_2_0
 
-void clSVMFree(
+CL_API_ENTRY void CL_API_CALL clSVMFree(
     cl_context context,
     void* svm_pointer)
 {
@@ -3664,7 +3664,7 @@ void clSVMFree(
 
 #ifdef CL_VERSION_2_0
 
-cl_sampler clCreateSamplerWithProperties(
+CL_API_ENTRY cl_sampler CL_API_CALL clCreateSamplerWithProperties(
     cl_context context,
     const cl_sampler_properties* sampler_properties,
     cl_int* errcode_ret)
@@ -3682,7 +3682,7 @@ cl_sampler clCreateSamplerWithProperties(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clSetKernelArgSVMPointer(
+CL_API_ENTRY cl_int CL_API_CALL clSetKernelArgSVMPointer(
     cl_kernel kernel,
     cl_uint arg_index,
     const void* arg_value)
@@ -3700,7 +3700,7 @@ cl_int clSetKernelArgSVMPointer(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clSetKernelExecInfo(
+CL_API_ENTRY cl_int CL_API_CALL clSetKernelExecInfo(
     cl_kernel kernel,
     cl_kernel_exec_info param_name,
     size_t param_value_size,
@@ -3720,7 +3720,7 @@ cl_int clSetKernelExecInfo(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clEnqueueSVMFree(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueSVMFree(
     cl_command_queue command_queue,
     cl_uint num_svm_pointers,
     void* svm_pointers[],
@@ -3748,7 +3748,7 @@ cl_int clEnqueueSVMFree(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clEnqueueSVMMemcpy(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueSVMMemcpy(
     cl_command_queue command_queue,
     cl_bool blocking_copy,
     void* dst_ptr,
@@ -3776,7 +3776,7 @@ cl_int clEnqueueSVMMemcpy(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clEnqueueSVMMemFill(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueSVMMemFill(
     cl_command_queue command_queue,
     void* svm_ptr,
     const void* pattern,
@@ -3804,7 +3804,7 @@ cl_int clEnqueueSVMMemFill(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clEnqueueSVMMap(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueSVMMap(
     cl_command_queue command_queue,
     cl_bool blocking_map,
     cl_map_flags flags,
@@ -3832,7 +3832,7 @@ cl_int clEnqueueSVMMap(
 
 #ifdef CL_VERSION_2_0
 
-cl_int clEnqueueSVMUnmap(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueSVMUnmap(
     cl_command_queue command_queue,
     void* svm_ptr,
     cl_uint num_events_in_wait_list,
@@ -3854,7 +3854,7 @@ cl_int clEnqueueSVMUnmap(
 
 #ifdef CL_VERSION_2_1
 
-cl_int clSetDefaultDeviceCommandQueue(
+CL_API_ENTRY cl_int CL_API_CALL clSetDefaultDeviceCommandQueue(
     cl_context context,
     cl_device_id device,
     cl_command_queue command_queue)
@@ -3872,7 +3872,7 @@ cl_int clSetDefaultDeviceCommandQueue(
 
 #ifdef CL_VERSION_2_1
 
-cl_int clGetDeviceAndHostTimer(
+CL_API_ENTRY cl_int CL_API_CALL clGetDeviceAndHostTimer(
     cl_device_id device,
     cl_ulong* device_timestamp,
     cl_ulong* host_timestamp)
@@ -3890,7 +3890,7 @@ cl_int clGetDeviceAndHostTimer(
 
 #ifdef CL_VERSION_2_1
 
-cl_int clGetHostTimer(
+CL_API_ENTRY cl_int CL_API_CALL clGetHostTimer(
     cl_device_id device,
     cl_ulong* host_timestamp)
 {
@@ -3906,7 +3906,7 @@ cl_int clGetHostTimer(
 
 #ifdef CL_VERSION_2_1
 
-cl_program clCreateProgramWithIL(
+CL_API_ENTRY cl_program CL_API_CALL clCreateProgramWithIL(
     cl_context context,
     const void* il,
     size_t length,
@@ -3926,7 +3926,7 @@ cl_program clCreateProgramWithIL(
 
 #ifdef CL_VERSION_2_1
 
-cl_kernel clCloneKernel(
+CL_API_ENTRY cl_kernel CL_API_CALL clCloneKernel(
     cl_kernel source_kernel,
     cl_int* errcode_ret)
 {
@@ -3942,7 +3942,7 @@ cl_kernel clCloneKernel(
 
 #ifdef CL_VERSION_2_1
 
-cl_int clGetKernelSubGroupInfo(
+CL_API_ENTRY cl_int CL_API_CALL clGetKernelSubGroupInfo(
     cl_kernel kernel,
     cl_device_id device,
     cl_kernel_sub_group_info param_name,
@@ -3970,7 +3970,7 @@ cl_int clGetKernelSubGroupInfo(
 
 #ifdef CL_VERSION_2_1
 
-cl_int clEnqueueSVMMigrateMem(
+CL_API_ENTRY cl_int CL_API_CALL clEnqueueSVMMigrateMem(
     cl_command_queue command_queue,
     cl_uint num_svm_pointers,
     const void** svm_pointers,
@@ -3998,7 +3998,7 @@ cl_int clEnqueueSVMMigrateMem(
 
 #ifdef CL_VERSION_2_2
 
-cl_int clSetProgramReleaseCallback(
+CL_API_ENTRY cl_int CL_API_CALL clSetProgramReleaseCallback(
     cl_program program,
     void (CL_CALLBACK* pfn_notify)(cl_program program, void* user_data),
     void* user_data)
@@ -4016,7 +4016,7 @@ cl_int clSetProgramReleaseCallback(
 
 #ifdef CL_VERSION_2_2
 
-cl_int clSetProgramSpecializationConstant(
+CL_API_ENTRY cl_int CL_API_CALL clSetProgramSpecializationConstant(
     cl_program program,
     cl_uint spec_id,
     size_t spec_size,
@@ -4036,7 +4036,7 @@ cl_int clSetProgramSpecializationConstant(
 
 #ifdef CL_VERSION_3_0
 
-cl_mem clCreateBufferWithProperties(
+CL_API_ENTRY cl_mem CL_API_CALL clCreateBufferWithProperties(
     cl_context context,
     const cl_mem_properties* properties,
     cl_mem_flags flags,
@@ -4060,7 +4060,7 @@ cl_mem clCreateBufferWithProperties(
 
 #ifdef CL_VERSION_3_0
 
-cl_mem clCreateImageWithProperties(
+CL_API_ENTRY cl_mem CL_API_CALL clCreateImageWithProperties(
     cl_context context,
     const cl_mem_properties* properties,
     cl_mem_flags flags,
