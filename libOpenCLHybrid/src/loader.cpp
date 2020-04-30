@@ -1538,6 +1538,10 @@ static inline cl_platform_id _sclGetPlatfromFromContextProperties(
     return NULL;
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 cl_int clGetPlatformIDs(
     cl_uint num_entries,
     cl_platform_id* platforms,
@@ -4079,3 +4083,7 @@ cl_mem clCreateImageWithProperties(
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+
+#ifdef __cplusplus
+}
+#endif

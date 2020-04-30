@@ -31,3 +31,8 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     # TODO
 endif()
+
+install (TARGETS OpenCLHybrid
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)
