@@ -45,6 +45,7 @@ set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
 set_target_properties(OpenCLDriverStub PROPERTIES FOLDER "OpenCL-ICD-Loader")
 
 add_subdirectory(samples)
+add_subdirectory(libOpenCLHybrid)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/install" CACHE PATH "Install Path" FORCE)
