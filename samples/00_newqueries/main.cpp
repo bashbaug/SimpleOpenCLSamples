@@ -26,7 +26,7 @@
 #include <CL/cl.h>
 #include <CL/cl_ext.h>
 
-#if defined(CL_NAME_VERSION_MAX_NAME_SIZE_KHR)
+#if defined(CL_VERSION_3_0)
 
 static cl_int AllocateAndGetPlatformInfoString(
     cl_platform_id platformId,
@@ -113,43 +113,43 @@ static cl_int PrintPlatformInfoSummary(
     printf("\tDriver Version: %s\n", platformVersion );
 
     {
-        cl_version_khr version;
+        cl_version version;
         clGetPlatformInfo(
             platformId,
-            CL_PLATFORM_NUMERIC_VERSION_KHR,
+            CL_PLATFORM_NUMERIC_VERSION,
             sizeof(version),
             &version,
-            nullptr );
+            NULL );
         printf("\tPlatform Numeric Version: %u.%u.%u\n",
-            CL_VERSION_MAJOR_KHR(version),
-            CL_VERSION_MINOR_KHR(version),
-            CL_VERSION_PATCH_KHR(version));
+            CL_VERSION_MAJOR(version),
+            CL_VERSION_MINOR(version),
+            CL_VERSION_PATCH(version));
     }
     {
         size_t  sizeInBytes = 0;
         clGetPlatformInfo(
             platformId,
-            CL_PLATFORM_EXTENSIONS_WITH_VERSION_KHR,
+            CL_PLATFORM_EXTENSIONS_WITH_VERSION,
             0,
-            nullptr,
+            NULL,
             &sizeInBytes );
 
-        size_t  numExtensions = sizeInBytes / sizeof(cl_name_version_khr);
-        std::vector<cl_name_version_khr>  extensions{ numExtensions };
+        size_t  numExtensions = sizeInBytes / sizeof(cl_name_version);
+        std::vector<cl_name_version>  extensions{ numExtensions };
         clGetPlatformInfo(
             platformId,
-            CL_PLATFORM_EXTENSIONS_WITH_VERSION_KHR,
+            CL_PLATFORM_EXTENSIONS_WITH_VERSION,
             sizeInBytes,
             extensions.data(),
-            nullptr );
+            NULL );
 
         for( auto& extension : extensions )
         {
             printf("\t\tExtension (version): %s (%u.%u.%u)\n",
                 extension.name,
-                CL_VERSION_MAJOR_KHR(extension.version),
-                CL_VERSION_MINOR_KHR(extension.version),
-                CL_VERSION_PATCH_KHR(extension.version) );
+                CL_VERSION_MAJOR(extension.version),
+                CL_VERSION_MINOR(extension.version),
+                CL_VERSION_PATCH(extension.version) );
         }
     }
 
@@ -222,6 +222,21 @@ static cl_int AllocateAndGetDeviceInfoString(
     return errorCode;
 }
 
+void PrintDeviceAtomicCapabilities(
+    const char* label,
+    cl_device_atomic_capabilities caps )
+{
+    printf("%s: %s%s%s%s%s%s%s\n",
+        label,
+        ( caps & CL_DEVICE_ATOMIC_ORDER_RELAXED     ) ? "\n\t\tCL_DEVICE_ATOMIC_ORDER_RELAXED"      : "",
+        ( caps & CL_DEVICE_ATOMIC_ORDER_ACQ_REL     ) ? "\n\t\tCL_DEVICE_ATOMIC_ORDER_ACQ_REL"      : "",
+        ( caps & CL_DEVICE_ATOMIC_ORDER_SEQ_CST     ) ? "\n\t\tCL_DEVICE_ATOMIC_ORDER_SEQ_CST"      : "",
+        ( caps & CL_DEVICE_ATOMIC_SCOPE_WORK_ITEM   ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_WORK_ITEM"    : "",
+        ( caps & CL_DEVICE_ATOMIC_SCOPE_WORK_GROUP  ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_WORK_GROUP"   : "",
+        ( caps & CL_DEVICE_ATOMIC_SCOPE_DEVICE      ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_DEVICE"       : "",
+        ( caps & CL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES"  : "");
+}
+
 static cl_int PrintDeviceInfoSummary(
     cl_device_id* devices,
     size_t numDevices )
@@ -285,112 +300,232 @@ static cl_int PrintDeviceInfoSummary(
             printf("\tDriver Version:   %s\n", driverVersion );
 
             {
-                cl_version_khr version;
+                cl_version version;
                 clGetDeviceInfo(
                     devices[i],
-                    CL_DEVICE_NUMERIC_VERSION_KHR,
+                    CL_DEVICE_NUMERIC_VERSION,
                     sizeof(version),
                     &version,
-                    nullptr );
+                    NULL );
                 printf("\tDevice Numeric Version:   %u.%u.%u\n",
-                    CL_VERSION_MAJOR_KHR(version),
-                    CL_VERSION_MINOR_KHR(version),
-                    CL_VERSION_PATCH_KHR(version));
-            }
-            {
-                cl_version_khr version;
-                clGetDeviceInfo(
-                    devices[i],
-                    CL_DEVICE_OPENCL_C_NUMERIC_VERSION_KHR,
-                    sizeof(version),
-                    &version,
-                    nullptr );
-                printf("\tOpenCL C Numeric Version: %u.%u.%u\n",
-                    CL_VERSION_MAJOR_KHR(version),
-                    CL_VERSION_MINOR_KHR(version),
-                    CL_VERSION_PATCH_KHR(version));
+                    CL_VERSION_MAJOR(version),
+                    CL_VERSION_MINOR(version),
+                    CL_VERSION_PATCH(version));
             }
             {
                 size_t  sizeInBytes = 0;
                 clGetDeviceInfo(
                     devices[i],
-                    CL_DEVICE_EXTENSIONS_WITH_VERSION_KHR,
+                    CL_DEVICE_OPENCL_C_ALL_VERSIONS,
                     0,
-                    nullptr,
+                    NULL,
                     &sizeInBytes );
 
-                size_t  numExtensions = sizeInBytes / sizeof(cl_name_version_khr);
-                std::vector<cl_name_version_khr>  extensions{ numExtensions };
+                size_t  numCLCVersions = sizeInBytes / sizeof(cl_name_version);
+                std::vector<cl_name_version>  clcVersions{ numCLCVersions };
                 clGetDeviceInfo(
                     devices[i],
-                    CL_DEVICE_EXTENSIONS_WITH_VERSION_KHR,
+                    CL_DEVICE_OPENCL_C_ALL_VERSIONS,
+                    sizeInBytes,
+                    clcVersions.data(),
+                    NULL );
+
+                for( auto& clcVersion : clcVersions )
+                {
+                    printf("\t\tOpenCL C (version): %s (%u.%u.%u)\n",
+                        clcVersion.name,
+                        CL_VERSION_MAJOR(clcVersion.version),
+                        CL_VERSION_MINOR(clcVersion.version),
+                        CL_VERSION_PATCH(clcVersion.version) );
+                }
+            }
+            {
+                size_t  sizeInBytes = 0;
+                clGetDeviceInfo(
+                    devices[i],
+                    CL_DEVICE_OPENCL_C_FEATURES,
+                    0,
+                    NULL,
+                    &sizeInBytes );
+
+                size_t  numCLCFeatures = sizeInBytes / sizeof(cl_name_version);
+                std::vector<cl_name_version>  clcFeatures{ numCLCFeatures };
+                clGetDeviceInfo(
+                    devices[i],
+                    CL_DEVICE_OPENCL_C_FEATURES,
+                    sizeInBytes,
+                    clcFeatures.data(),
+                    NULL );
+
+                for( auto& clcFeature : clcFeatures )
+                {
+                    printf("\t\tOpenCL C Feature (version): %s (%u.%u.%u)\n",
+                        clcFeature.name,
+                        CL_VERSION_MAJOR(clcFeature.version),
+                        CL_VERSION_MINOR(clcFeature.version),
+                        CL_VERSION_PATCH(clcFeature.version) );
+                }
+            }
+            {
+                size_t  sizeInBytes = 0;
+                clGetDeviceInfo(
+                    devices[i],
+                    CL_DEVICE_EXTENSIONS_WITH_VERSION,
+                    0,
+                    NULL,
+                    &sizeInBytes );
+
+                size_t  numExtensions = sizeInBytes / sizeof(cl_name_version);
+                std::vector<cl_name_version>  extensions{ numExtensions };
+                clGetDeviceInfo(
+                    devices[i],
+                    CL_DEVICE_EXTENSIONS_WITH_VERSION,
                     sizeInBytes,
                     extensions.data(),
-                    nullptr );
+                    NULL );
 
                 for( auto& extension : extensions )
                 {
                     printf("\t\tExtension (version): %s (%u.%u.%u)\n",
                         extension.name,
-                        CL_VERSION_MAJOR_KHR(extension.version),
-                        CL_VERSION_MINOR_KHR(extension.version),
-                        CL_VERSION_PATCH_KHR(extension.version) );
+                        CL_VERSION_MAJOR(extension.version),
+                        CL_VERSION_MINOR(extension.version),
+                        CL_VERSION_PATCH(extension.version) );
                 }
             }
             {
                 size_t  sizeInBytes = 0;
                 clGetDeviceInfo(
                     devices[i],
-                    CL_DEVICE_ILS_WITH_VERSION_KHR,
+                    CL_DEVICE_ILS_WITH_VERSION,
                     0,
-                    nullptr,
+                    NULL,
                     &sizeInBytes );
 
-                size_t  numILs = sizeInBytes / sizeof(cl_name_version_khr);
-                std::vector<cl_name_version_khr> ils{ numILs };
+                size_t  numILs = sizeInBytes / sizeof(cl_name_version);
+                std::vector<cl_name_version> ils{ numILs };
                 clGetDeviceInfo(
                     devices[i],
-                    CL_DEVICE_ILS_WITH_VERSION_KHR,
+                    CL_DEVICE_ILS_WITH_VERSION,
                     sizeInBytes,
                     ils.data(),
-                    nullptr );
+                    NULL );
 
                 for( auto& il : ils )
                 {
                     printf("\t\tIL (version): %s (%u.%u.%u)\n",
                         il.name,
-                        CL_VERSION_MAJOR_KHR(il.version),
-                        CL_VERSION_MINOR_KHR(il.version),
-                        CL_VERSION_PATCH_KHR(il.version) );
+                        CL_VERSION_MAJOR(il.version),
+                        CL_VERSION_MINOR(il.version),
+                        CL_VERSION_PATCH(il.version) );
                 }
             }
             {
                 size_t  sizeInBytes = 0;
                 clGetDeviceInfo(
                     devices[i],
-                    CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION_KHR,
+                    CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION,
                     0,
-                    nullptr,
+                    NULL,
                     &sizeInBytes );
 
-                size_t  numBuiltInKernels = sizeInBytes / sizeof(cl_name_version_khr);
-                std::vector<cl_name_version_khr> builtInKernels{ numBuiltInKernels };
+                size_t  numBuiltInKernels = sizeInBytes / sizeof(cl_name_version);
+                std::vector<cl_name_version> builtInKernels{ numBuiltInKernels };
                 clGetDeviceInfo(
                     devices[i],
-                    CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION_KHR,
+                    CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION,
                     sizeInBytes,
                     builtInKernels.data(),
-                    nullptr );
+                    NULL );
 
                 for( auto& builtInFunction : builtInKernels )
                 {
                     printf("\t\tBuilt-in Function (version): %s (%u.%u.%u)\n",
                         builtInFunction.name,
-                        CL_VERSION_MAJOR_KHR(builtInFunction.version),
-                        CL_VERSION_MINOR_KHR(builtInFunction.version),
-                        CL_VERSION_PATCH_KHR(builtInFunction.version) );
+                        CL_VERSION_MAJOR(builtInFunction.version),
+                        CL_VERSION_MINOR(builtInFunction.version),
+                        CL_VERSION_PATCH(builtInFunction.version) );
                 }
             }
+
+            cl_device_atomic_capabilities   deviceAtomicMemoryCapabilities = 0;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_ATOMIC_MEMORY_CAPABILITIES,
+                sizeof(deviceAtomicMemoryCapabilities),
+                &deviceAtomicMemoryCapabilities,
+                NULL );
+            PrintDeviceAtomicCapabilities("\tAtomic Memory Capabilities", deviceAtomicMemoryCapabilities);
+
+            cl_device_atomic_capabilities   deviceAtomicFenceCapabilities = 0;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_ATOMIC_FENCE_CAPABILITIES,
+                sizeof(deviceAtomicFenceCapabilities),
+                &deviceAtomicFenceCapabilities,
+                NULL );
+            PrintDeviceAtomicCapabilities("\tAtomic Fence Capabilities", deviceAtomicFenceCapabilities);
+
+            size_t  devicePreferredWorkGroupSizeMultiple = 0;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
+                sizeof(devicePreferredWorkGroupSizeMultiple),
+                &devicePreferredWorkGroupSizeMultiple,
+                NULL );
+
+            cl_bool deviceNonUniformWorkGroupSupport = CL_FALSE;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_NON_UNIFORM_WORK_GROUP_SUPPORT,
+                sizeof(deviceNonUniformWorkGroupSupport),
+                &deviceNonUniformWorkGroupSupport,
+                NULL );
+
+            cl_bool deviceWorkGroupCollectiveFunctionsSupport = CL_FALSE;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_WORK_GROUP_COLLECTIVE_FUNCTIONS_SUPPORT,
+                sizeof(deviceWorkGroupCollectiveFunctionsSupport),
+                &deviceWorkGroupCollectiveFunctionsSupport,
+                NULL );
+
+            cl_bool deviceGenericAddressSpaceSupport = CL_FALSE;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_GENERIC_ADDRESS_SPACE_SUPPORT,
+                sizeof(deviceGenericAddressSpaceSupport),
+                &deviceGenericAddressSpaceSupport,
+                NULL );
+
+            cl_bool deviceDeviceEnqueueSupport = CL_FALSE;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_DEVICE_ENQUEUE_SUPPORT,
+                sizeof(deviceDeviceEnqueueSupport),
+                &deviceDeviceEnqueueSupport,
+                NULL );
+
+            cl_bool devicePipeSupport = CL_FALSE;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_PIPE_SUPPORT,
+                sizeof(devicePipeSupport),
+                &devicePipeSupport,
+                NULL );
+
+            printf("\tPreferred Work Group Size Multiple:       %u\n",
+                (cl_uint)devicePreferredWorkGroupSizeMultiple);
+            printf("\tNon-Uniform Work Group Support:           %s\n",
+                deviceNonUniformWorkGroupSupport ? "CL_TRUE" : "CL_FALSE" );
+            printf("\tWork Group Collective Functions Support:  %s\n",
+                deviceWorkGroupCollectiveFunctionsSupport ? "CL_TRUE" : "CL_FALSE" );
+            printf("\tGeneric Address Space Support:            %s\n",
+                deviceGenericAddressSpaceSupport ? "CL_TRUE" : "CL_FALSE" );
+            printf("\tDevice Enqueue Support:                   %s\n",
+                deviceDeviceEnqueueSupport ? "CL_TRUE" : "CL_FALSE" );
+            printf("\tPipe Support:                             %s\n",
+                devicePipeSupport ? "CL_TRUE" : "CL_FALSE" );
         }
         else
         {
@@ -473,11 +608,11 @@ int main(
 
 #else
 
-#pragma message("newqueries: cl_khr_extended_versioning APIS not found.  Please update your OpenCL headers.")
+#pragma message("newqueries: OpenCL 3.0 not found.  Please update your OpenCL headers.")
 
 int main()
 {
-    printf("newqueries: cl_khr_extended_versioning APIS not found.  Please update your OpenCL headers.\n");
+    printf("newqueries: OpenCL 3.0 not found.  Please update your OpenCL headers.\n");
     return 0;
 };
 

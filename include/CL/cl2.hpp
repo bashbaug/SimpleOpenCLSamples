@@ -443,8 +443,9 @@
     CL_HPP_TARGET_OPENCL_VERSION != 120 && \
     CL_HPP_TARGET_OPENCL_VERSION != 200 && \
     CL_HPP_TARGET_OPENCL_VERSION != 210 && \
-    CL_HPP_TARGET_OPENCL_VERSION != 220
-# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210 or 220). It will be set to 220")
+    CL_HPP_TARGET_OPENCL_VERSION != 220 && \
+    CL_HPP_TARGET_OPENCL_VERSION != 300
+# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 220")
 # undef CL_HPP_TARGET_OPENCL_VERSION
 # define CL_HPP_TARGET_OPENCL_VERSION 220
 #endif
@@ -468,8 +469,9 @@
     CL_HPP_MINIMUM_OPENCL_VERSION != 120 && \
     CL_HPP_MINIMUM_OPENCL_VERSION != 200 && \
     CL_HPP_MINIMUM_OPENCL_VERSION != 210 && \
-    CL_HPP_MINIMUM_OPENCL_VERSION != 220
-# pragma message("cl2.hpp: CL_HPP_MINIMUM_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210 or 220). It will be set to 100")
+    CL_HPP_MINIMUM_OPENCL_VERSION != 220 && \
+    CL_HPP_MINIMUM_OPENCL_VERSION != 300
+# pragma message("cl2.hpp: CL_HPP_MINIMUM_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 100")
 # undef CL_HPP_MINIMUM_OPENCL_VERSION
 # define CL_HPP_MINIMUM_OPENCL_VERSION 100
 #endif
@@ -1390,6 +1392,31 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_ILS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>) \
     F(cl_device_info, CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>)
 
+#define CL_HPP_PARAM_NAME_INFO_3_0_(F) \
+    F(cl_platform_info, CL_PLATFORM_NUMERIC_VERSION, cl_version) \
+    F(cl_platform_info, CL_PLATFORM_EXTENSIONS_WITH_VERSION, cl::vector<cl_name_version>) \
+    \
+    F(cl_device_info, CL_DEVICE_NUMERIC_VERSION, cl_version) \
+    F(cl_device_info, CL_DEVICE_EXTENSIONS_WITH_VERSION, cl::vector<cl_name_version>) \
+    F(cl_device_info, CL_DEVICE_ILS_WITH_VERSION, cl::vector<cl_name_version>) \
+    F(cl_device_info, CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION, cl::vector<cl_name_version>) \
+    F(cl_device_info, CL_DEVICE_ATOMIC_MEMORY_CAPABILITIES, cl_device_atomic_capabilities) \
+    F(cl_device_info, CL_DEVICE_ATOMIC_FENCE_CAPABILITIES, cl_device_atomic_capabilities) \
+    F(cl_device_info, CL_DEVICE_NON_UNIFORM_WORK_GROUP_SUPPORT, cl_bool) \
+    F(cl_device_info, CL_DEVICE_OPENCL_C_ALL_VERSIONS, cl::vector<cl_name_version>) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, size_type) \
+    F(cl_device_info, CL_DEVICE_WORK_GROUP_COLLECTIVE_FUNCTIONS_SUPPORT, cl_bool) \
+    F(cl_device_info, CL_DEVICE_GENERIC_ADDRESS_SPACE_SUPPORT, cl_bool) \
+    F(cl_device_info, CL_DEVICE_OPENCL_C_FEATURES, cl::vector<cl_name_version>) \
+    F(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_SUPPORT, cl_bool) \
+    F(cl_device_info, CL_DEVICE_PIPE_SUPPORT, cl_bool) \
+    \
+    F(cl_command_queue_info, CL_QUEUE_PROPERTIES_ARRAY, cl::vector<cl_queue_properties>) \
+    F(cl_mem_info, CL_MEM_PROPERTIES, cl::vector<cl_mem_properties>) \
+    F(cl_pipe_info, CL_PIPE_PROPERTIES, cl::vector<cl_pipe_properties>) \
+    F(cl_sampler_info, CL_SAMPLER_PROPERTIES, cl::vector<cl_sampler_properties>)
+
+
 template <typename enum_type, cl_int Name>
 struct param_traits {};
 
@@ -1418,6 +1445,10 @@ CL_HPP_PARAM_NAME_INFO_2_1_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #if CL_HPP_TARGET_OPENCL_VERSION >= 220
 CL_HPP_PARAM_NAME_INFO_2_2_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 220
+#if CL_HPP_TARGET_OPENCL_VERSION >= 300
+CL_HPP_PARAM_NAME_INFO_3_0_(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 300
+
 
 #if defined(CL_HPP_USE_CL_SUB_GROUPS_KHR) && CL_HPP_TARGET_OPENCL_VERSION < 210
 CL_HPP_PARAM_NAME_INFO_SUBGROUP_KHR_(CL_HPP_DECLARE_PARAM_TRAITS_)
@@ -1454,9 +1485,9 @@ CL_HPP_PARAM_NAME_INFO_1_2_DEPRECATED_IN_2_0_(CL_HPP_DECLARE_PARAM_TRAITS_)
 CL_HPP_PARAM_NAME_DEVICE_FISSION_(CL_HPP_DECLARE_PARAM_TRAITS_);
 #endif // CL_HPP_USE_CL_DEVICE_FISSION
 
-#if defined(CL_NAME_VERSION_MAX_NAME_SIZE_KHR)  // cl_khr_extended_versioning
+#if defined(cl_khr_extended_versioning) && CL_HPP_TARGET_OPENCL_VERSION < 300
 CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_(CL_HPP_DECLARE_PARAM_TRAITS_);
-#endif // CL_NAME_VERSION_MAX_NAME_SIZE_KHR
+#endif // cl_khr_extended_versioning
 
 #ifdef CL_PLATFORM_ICD_SUFFIX_KHR
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_ICD_SUFFIX_KHR, string)
@@ -6543,7 +6574,7 @@ public:
     Program() { }
     
 
-    /*! \brief Constructor from cl_mem - takes ownership.
+    /*! \brief Constructor from cl_program - takes ownership.
      *
      * \param retainObject will cause the constructor to retain its cl object.
      *                     Defaults to false to maintain compatibility with
@@ -7439,7 +7470,7 @@ public:
     CommandQueue() { }
 
 
-    /*! \brief Constructor from cl_mem - takes ownership.
+    /*! \brief Constructor from cl_command_queue - takes ownership.
      *
      * \param retainObject will cause the constructor to retain its cl object.
      *                     Defaults to false to maintain compatibility with

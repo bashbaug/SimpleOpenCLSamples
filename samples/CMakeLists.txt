@@ -33,8 +33,6 @@ set(SAMPLES_CL_VERSION 120)
 
 add_subdirectory( 00_enumopencl )
 add_subdirectory( 00_enumopenclpp )
-add_subdirectory( 00_newqueries )
-add_subdirectory( 00_newqueriespp )
 add_subdirectory( 01_copybuffer )
 add_subdirectory( 02_copybufferkernel )
 add_subdirectory( 03_mandelbrot )
@@ -43,3 +41,7 @@ add_subdirectory( 05_kernelfromfile )
 
 set(SAMPLES_CL_VERSION 210)
 add_subdirectory( 05_spirvkernelfromfile )
+
+set(SAMPLES_CL_VERSION 300)
+add_subdirectory( 00_newqueries )
+add_subdirectory( 00_newqueriespp )
