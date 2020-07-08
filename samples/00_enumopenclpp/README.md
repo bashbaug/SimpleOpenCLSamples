@@ -13,7 +13,7 @@ This sample should produce the same output as the sample that uses the OpenCL C 
 
 The most important concept to understand from this sample are how the OpenCL C++ API bindings can be used to write code that is more concise and (at least, in this author's opinion) easier to author and understand, compared to OpenCL code written using the OpenCL C APIs.
 
-This isn't the way to write code with a higher level model that eventually generates OpenCL API calls, but it is one that is well-supported and documented.
+This isn't the only way to write code with a higher level model that eventually generates OpenCL API calls, but it is one that is well-supported and documented.
 Most of the samples in this repo will use the OpenCL C++ API bindings.
 
 ```c
