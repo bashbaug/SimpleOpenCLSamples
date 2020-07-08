@@ -1382,15 +1382,17 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_REFERENCE_COUNT_EXT , cl_uint) \
     F(cl_device_info, CL_DEVICE_PARTITION_STYLE_EXT, cl::vector<cl_device_partition_property_ext>)
 
-#define CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_(F) \
+#define CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_SHARED_(F) \
     F(cl_platform_info, CL_PLATFORM_NUMERIC_VERSION_KHR, cl_version_khr) \
     F(cl_platform_info, CL_PLATFORM_EXTENSIONS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>) \
     \
     F(cl_device_info, CL_DEVICE_NUMERIC_VERSION_KHR, cl_version_khr) \
-    F(cl_device_info, CL_DEVICE_OPENCL_C_NUMERIC_VERSION_KHR, cl_version_khr) \
     F(cl_device_info, CL_DEVICE_EXTENSIONS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>) \
     F(cl_device_info, CL_DEVICE_ILS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>) \
     F(cl_device_info, CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>)
+
+#define CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_UNIQUE_(F) \
+    F(cl_device_info, CL_DEVICE_OPENCL_C_NUMERIC_VERSION_KHR, cl_version_khr)
 
 #define CL_HPP_PARAM_NAME_INFO_3_0_(F) \
     F(cl_platform_info, CL_PLATFORM_NUMERIC_VERSION, cl_version) \
@@ -1408,13 +1410,15 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_WORK_GROUP_COLLECTIVE_FUNCTIONS_SUPPORT, cl_bool) \
     F(cl_device_info, CL_DEVICE_GENERIC_ADDRESS_SPACE_SUPPORT, cl_bool) \
     F(cl_device_info, CL_DEVICE_OPENCL_C_FEATURES, cl::vector<cl_name_version>) \
-    F(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_SUPPORT, cl_bool) \
     F(cl_device_info, CL_DEVICE_PIPE_SUPPORT, cl_bool) \
     \
     F(cl_command_queue_info, CL_QUEUE_PROPERTIES_ARRAY, cl::vector<cl_queue_properties>) \
     F(cl_mem_info, CL_MEM_PROPERTIES, cl::vector<cl_mem_properties>) \
     F(cl_pipe_info, CL_PIPE_PROPERTIES, cl::vector<cl_pipe_properties>) \
     F(cl_sampler_info, CL_SAMPLER_PROPERTIES, cl::vector<cl_sampler_properties>)
+
+// TODO: Add this to CL_HPP_PARAM_NAME_INFO_3_0_ once CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES is in the headers!
+//    F(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES, cl_device_device_enqueue_capabilities) \
 
 
 template <typename enum_type, cl_int Name>
@@ -1447,6 +1451,14 @@ CL_HPP_PARAM_NAME_INFO_2_2_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 220
 #if CL_HPP_TARGET_OPENCL_VERSION >= 300
 CL_HPP_PARAM_NAME_INFO_3_0_(CL_HPP_DECLARE_PARAM_TRAITS_)
+// TODO: Remove this when the headers are updated!
+#if defined(CL_DEVICE_DEVICE_ENQUEUE_SUPPORT)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_SUPPORT, cl_bool)
+#endif // CL_DEVICE_DEVICE_ENQUEUE_SUPPORT
+// TODO: Move this into CL_HPP_PARAM_NAME_INFO_3_0_ when the headers are updated!
+#if defined(CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES, cl_device_device_enqueue_capabilities)
+#endif // CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 300
 
 
@@ -1485,8 +1497,11 @@ CL_HPP_PARAM_NAME_INFO_1_2_DEPRECATED_IN_2_0_(CL_HPP_DECLARE_PARAM_TRAITS_)
 CL_HPP_PARAM_NAME_DEVICE_FISSION_(CL_HPP_DECLARE_PARAM_TRAITS_);
 #endif // CL_HPP_USE_CL_DEVICE_FISSION
 
-#if defined(cl_khr_extended_versioning) && CL_HPP_TARGET_OPENCL_VERSION < 300
-CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_(CL_HPP_DECLARE_PARAM_TRAITS_);
+#if defined(cl_khr_extended_versioning)
+#if CL_HPP_TARGET_OPENCL_VERSION < 300
+CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_SHARED_(CL_HPP_DECLARE_PARAM_TRAITS_);
+#endif // CL_HPP_TARGET_OPENCL_VERSION < 300
+CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_UNIQUE_(CL_HPP_DECLARE_PARAM_TRAITS_);
 #endif // cl_khr_extended_versioning
 
 #ifdef CL_PLATFORM_ICD_SUFFIX_KHR

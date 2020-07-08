@@ -86,7 +86,7 @@ static cl_int AllocateAndGetPlatformInfoString(
     return errorCode;
 }
 
-static cl_int PrintPlatformInfoSummary(
+static void PrintPlatformInfoSummary(
     cl_platform_id platformId )
 {
     cl_int  errorCode = CL_SUCCESS;
@@ -112,18 +112,29 @@ static cl_int PrintPlatformInfoSummary(
     printf("\tVendor:         %s\n", platformVendor );
     printf("\tDriver Version: %s\n", platformVersion );
 
+    // Use the query for the platform numeric version as a test for
+    // OpenCL 3.0 support.  If this query fails then this probably
+    // isn't an OpenCL 3.0 platform:
     {
-        cl_version version;
-        clGetPlatformInfo(
+        cl_version version = 0;
+        cl_int test = clGetPlatformInfo(
             platformId,
             CL_PLATFORM_NUMERIC_VERSION,
             sizeof(version),
             &version,
             NULL );
-        printf("\tPlatform Numeric Version: %u.%u.%u\n",
-            CL_VERSION_MAJOR(version),
-            CL_VERSION_MINOR(version),
-            CL_VERSION_PATCH(version));
+        if( test == CL_SUCCESS )
+        {
+            printf("\tPlatform Numeric Version: %u.%u.%u\n",
+                CL_VERSION_MAJOR(version),
+                CL_VERSION_MINOR(version),
+                CL_VERSION_PATCH(version));
+        }
+        else
+        {
+            printf("Query for CL_PLATFORM_NUMERIC_VERSION failed.\n");
+            goto Cleanup;
+        }
     }
     {
         size_t  sizeInBytes = 0;
@@ -153,6 +164,7 @@ static cl_int PrintPlatformInfoSummary(
         }
     }
 
+Cleanup:
     delete [] platformName;
     delete [] platformVendor;
     delete [] platformVersion;
@@ -160,8 +172,6 @@ static cl_int PrintPlatformInfoSummary(
     platformName = NULL;
     platformVendor = NULL;
     platformVersion = NULL;
-
-    return errorCode;
 }
 
 static cl_int AllocateAndGetDeviceInfoString(
@@ -237,12 +247,22 @@ void PrintDeviceAtomicCapabilities(
         ( caps & CL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES"  : "");
 }
 
-static cl_int PrintDeviceInfoSummary(
+#if defined(CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES)
+void PrintDeviceDeviceEnqueueCapabilities(
+    const char* label,
+    cl_device_device_enqueue_capabilities caps )
+{
+    printf("%s: %s%s\n",
+        label,
+        ( caps & CL_DEVICE_QUEUE_SUPPORTED          ) ? "\n\t\tCL_DEVICE_QUEUE_SUPPORTED"           : "",
+        ( caps & CL_DEVICE_QUEUE_REPLACEABLE_DEFAULT) ? "\n\t\tCL_DEVICE_QUEUE_REPLACEABLE_DEFAULT" : "");
+}
+#endif
+
+static void PrintDeviceInfoSummary(
     cl_device_id* devices,
     size_t numDevices )
 {
-    cl_int  errorCode = CL_SUCCESS;
-
     cl_device_type  deviceType;
     char*           deviceName = NULL;
     char*           deviceVendor = NULL;
@@ -253,6 +273,8 @@ static cl_int PrintDeviceInfoSummary(
     size_t  i = 0;
     for( i = 0; i < numDevices; i++ )
     {
+        cl_int  errorCode = CL_SUCCESS;
+
         errorCode |= clGetDeviceInfo(
             devices[i],
             CL_DEVICE_TYPE,
@@ -299,18 +321,29 @@ static cl_int PrintDeviceInfoSummary(
             printf("\tOpenCL C Version: %s\n", deviceOpenCLCVersion );
             printf("\tDriver Version:   %s\n", driverVersion );
 
+            // Use the query for the device numeric version as a test for
+            // OpenCL 3.0 support.  If this query fails then this probably
+            // isn't an OpenCL 3.0 device:
             {
-                cl_version version;
-                clGetDeviceInfo(
+                cl_version version = 0;
+                cl_int test = clGetDeviceInfo(
                     devices[i],
                     CL_DEVICE_NUMERIC_VERSION,
                     sizeof(version),
                     &version,
                     NULL );
-                printf("\tDevice Numeric Version:   %u.%u.%u\n",
-                    CL_VERSION_MAJOR(version),
-                    CL_VERSION_MINOR(version),
-                    CL_VERSION_PATCH(version));
+                if( test == CL_SUCCESS )
+                {
+                    printf("\tDevice Numeric Version:   %u.%u.%u\n",
+                        CL_VERSION_MAJOR(version),
+                        CL_VERSION_MINOR(version),
+                        CL_VERSION_PATCH(version));
+                }
+                else
+                {
+                    printf("Query for CL_DEVICE_NUMERIC_VERSION failed.\n");
+                    goto Cleanup;
+                }
             }
             {
                 size_t  sizeInBytes = 0;
@@ -455,7 +488,9 @@ static cl_int PrintDeviceInfoSummary(
                 sizeof(deviceAtomicMemoryCapabilities),
                 &deviceAtomicMemoryCapabilities,
                 NULL );
-            PrintDeviceAtomicCapabilities("\tAtomic Memory Capabilities", deviceAtomicMemoryCapabilities);
+            PrintDeviceAtomicCapabilities(
+                "\tAtomic Memory Capabilities",
+                deviceAtomicMemoryCapabilities);
 
             cl_device_atomic_capabilities   deviceAtomicFenceCapabilities = 0;
             clGetDeviceInfo(
@@ -464,7 +499,9 @@ static cl_int PrintDeviceInfoSummary(
                 sizeof(deviceAtomicFenceCapabilities),
                 &deviceAtomicFenceCapabilities,
                 NULL );
-            PrintDeviceAtomicCapabilities("\tAtomic Fence Capabilities", deviceAtomicFenceCapabilities);
+            PrintDeviceAtomicCapabilities(
+                "\tAtomic Fence Capabilities",
+                deviceAtomicFenceCapabilities);
 
             size_t  devicePreferredWorkGroupSizeMultiple = 0;
             clGetDeviceInfo(
@@ -498,6 +535,9 @@ static cl_int PrintDeviceInfoSummary(
                 &deviceGenericAddressSpaceSupport,
                 NULL );
 
+// This is an older query that should eventually be removed.
+// It was replaced by CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES.
+#if defined(CL_DEVICE_DEVICE_ENQUEUE_SUPPORT)
             cl_bool deviceDeviceEnqueueSupport = CL_FALSE;
             clGetDeviceInfo(
                 devices[i],
@@ -505,6 +545,19 @@ static cl_int PrintDeviceInfoSummary(
                 sizeof(deviceDeviceEnqueueSupport),
                 &deviceDeviceEnqueueSupport,
                 NULL );
+#endif
+
+// This is the newer query.
+// The ifdefs are only needed until this enum is in the official headers.
+#if defined(CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES)
+            cl_device_device_enqueue_capabilities deviceDeviceEnqueueCapabilities = 0;
+            clGetDeviceInfo(
+                devices[i],
+                CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES,
+                sizeof(deviceDeviceEnqueueCapabilities),
+                &deviceDeviceEnqueueCapabilities,
+                NULL );
+#endif
 
             cl_bool devicePipeSupport = CL_FALSE;
             clGetDeviceInfo(
@@ -522,8 +575,14 @@ static cl_int PrintDeviceInfoSummary(
                 deviceWorkGroupCollectiveFunctionsSupport ? "CL_TRUE" : "CL_FALSE" );
             printf("\tGeneric Address Space Support:            %s\n",
                 deviceGenericAddressSpaceSupport ? "CL_TRUE" : "CL_FALSE" );
+#if defined(CL_DEVICE_DEVICE_ENQUEUE_SUPPORT)
             printf("\tDevice Enqueue Support:                   %s\n",
                 deviceDeviceEnqueueSupport ? "CL_TRUE" : "CL_FALSE" );
+#endif
+#if defined(CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES)
+            PrintDeviceDeviceEnqueueCapabilities("\tDevice Enqueue Capabilities",
+                deviceDeviceEnqueueCapabilities);
+#endif
             printf("\tPipe Support:                             %s\n",
                 devicePipeSupport ? "CL_TRUE" : "CL_FALSE" );
         }
@@ -532,6 +591,7 @@ static cl_int PrintDeviceInfoSummary(
             fprintf(stderr, "Error getting device info for device %d.\n", (int)i );
         }
 
+Cleanup:
         delete [] deviceName;
         delete [] deviceVendor;
         delete [] deviceVersion;
@@ -542,8 +602,6 @@ static cl_int PrintDeviceInfoSummary(
         deviceVersion = NULL;
         driverVersion = NULL;
     }
-
-    return errorCode;
 }
 
 int main(
