@@ -66,7 +66,20 @@ static void PrintPlatformInfoSummary(
     }
 }
 
-void PrintDeviceAtomicCapabilities(
+static void PrintDeviceType(
+    const char* label,
+    cl_device_type type )
+{
+    printf("%s%s%s%s%s%s\n",
+        label,
+        ( type & CL_DEVICE_TYPE_DEFAULT     ) ? "DEFAULT "      : "",
+        ( type & CL_DEVICE_TYPE_CPU         ) ? "CPU "          : "",
+        ( type & CL_DEVICE_TYPE_GPU         ) ? "GPU "          : "",
+        ( type & CL_DEVICE_TYPE_ACCELERATOR ) ? "ACCELERATOR "  : "",
+        ( type & CL_DEVICE_TYPE_CUSTOM      ) ? "CUSTOM "       : "");
+}
+
+static void PrintDeviceAtomicCapabilities(
     const char* label,
     cl_device_atomic_capabilities caps )
 {
@@ -82,7 +95,7 @@ void PrintDeviceAtomicCapabilities(
 }
 
 #if defined(CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES)
-void PrintDeviceDeviceEnqueueCapabilities(
+static void PrintDeviceDeviceEnqueueCapabilities(
     const char* label,
     cl_device_device_enqueue_capabilities caps )
 {
@@ -102,14 +115,7 @@ static void PrintDeviceInfoSummary(
         printf("Device[%d]:\n", (int)i );
 
         cl_device_type  deviceType = devices[i].getInfo<CL_DEVICE_TYPE>();
-        switch( deviceType )
-        {
-        case CL_DEVICE_TYPE_DEFAULT:    printf("\tType:             %s\n", "DEFAULT" );      break;
-        case CL_DEVICE_TYPE_CPU:        printf("\tType:             %s\n", "CPU" );          break;
-        case CL_DEVICE_TYPE_GPU:        printf("\tType:             %s\n", "GPU" );          break;
-        case CL_DEVICE_TYPE_ACCELERATOR:printf("\tType:             %s\n", "ACCELERATOR" );  break;
-        default:                        printf("\tType:             %s\n", "***UNKNOWN***" );break;
-        }
+        PrintDeviceType("\tType:           ", deviceType);
 
         printf("\tName:             %s\n", devices[i].getInfo<CL_DEVICE_NAME>().c_str() );
         printf("\tVendor:           %s\n", devices[i].getInfo<CL_DEVICE_VENDOR>().c_str() );
