@@ -45,7 +45,7 @@ static std::vector<cl_uchar> readSPIRVFromFile(
     filesize = (size_t)is.tellg();
     is.seekg(0, std::ios::beg);
 
-    ret.resize(filesize);
+    ret.reserve(filesize);
     ret.insert(
         ret.begin(),
         std::istreambuf_iterator<char>(is),
