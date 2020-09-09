@@ -16,6 +16,6 @@ before_build:
   - cmake -H. -Bbuild -A%PLATFORM%
 
 build:
-  project: build\SimpleOpenCLSample.sln
+  project: build\SimpleOpenCLSamples.sln
   parallel: true
   verbosity: normal
