@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_CXX_STANDARD 14)
@@ -30,7 +30,7 @@ endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-project(SimpleOpenCLSample)
+project(SimpleOpenCLSamples VERSION 1.0)
 
 set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
 find_package(OpenCL)
@@ -39,7 +39,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OpenCL_INCLUDE_DIR})
 
 add_subdirectory(external/opencl-icd-loader)
-set_target_properties(OpenCL           PROPERTIES FOLDER "OpenCL-ICD-Loader")
+set_target_properties(OpenCL PROPERTIES FOLDER "OpenCL-ICD-Loader")
 
 add_subdirectory(samples)
 
