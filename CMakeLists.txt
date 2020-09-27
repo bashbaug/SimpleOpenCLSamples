@@ -38,7 +38,7 @@ find_package(OpenCL)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OpenCL_INCLUDE_DIR})
 
-option(USE_RUNTIME_LOADER "Enable cliloader Support and Build the Executable")
+option(USE_RUNTIME_LOADER "Build with the OpenCL Runtime Loader")
 if (USE_RUNTIME_LOADER)
 add_subdirectory(external/opencl-runtime-loader)
 set(OpenCL_LIBRARIES OpenCLRuntimeLoader ${CMAKE_DL_LIBS})
