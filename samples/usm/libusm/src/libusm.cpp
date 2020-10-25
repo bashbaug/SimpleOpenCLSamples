@@ -57,7 +57,7 @@ CL_API_ENTRY void* CL_API_CALL
 clDeviceMemAllocINTEL(
             cl_context context,
             cl_device_id device,
-			const cl_mem_properties_intel* properties,
+            const cl_mem_properties_intel* properties,
             size_t size,
             cl_uint alignment,
             cl_int* errcode_ret)

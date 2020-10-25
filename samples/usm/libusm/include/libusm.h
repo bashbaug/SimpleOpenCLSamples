@@ -26,7 +26,7 @@
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS
 #include "CL/cl.h"
 #include "CL/cl_ext.h"
-#include "CL/cl_usm.h"
+#include "CL/cl_ext_intel.h"
 
 #ifdef __cplusplus
 namespace libusm {
