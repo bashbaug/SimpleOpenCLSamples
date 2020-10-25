@@ -32,4 +32,4 @@ add_library( usm STATIC ${LIBUSM_SOURCE_FILES} )
 target_include_directories( usm PRIVATE ${OpenCL_INCLUDE_DIR} ${LIBUSM_INCLUDE_DIR} )
 target_compile_definitions( usm PRIVATE CL_TARGET_OPENCL_VERSION=120 )
 
-set_target_properties( usm PROPERTIES FOLDER "Samples/USM/libusm" )
+set_target_properties( usm PROPERTIES FOLDER "Samples/usm/libusm" )

@@ -73,23 +73,26 @@ static void init( cl::Context& context, cl::Device& device )
             h_cur = h_head;
         }
 
-        h_cur->Num = i * 2;
-
-        if( i != numNodes - 1 )
+        if( h_cur != nullptr )
         {
-            h_cur->pNext = (Node*)clHostMemAllocINTEL(
-                context(),
-                nullptr,
-                sizeof(Node),
-                0,
-                nullptr );
-        }
-        else
-        {
-            h_cur->pNext = nullptr;
-        }
+            h_cur->Num = i * 2;
 
-        h_cur = h_cur->pNext;
+            if( i != numNodes - 1 )
+            {
+                h_cur->pNext = (Node*)clHostMemAllocINTEL(
+                    context(),
+                    nullptr,
+                    sizeof(Node),
+                    0,
+                    nullptr );
+            }
+            else
+            {
+                h_cur->pNext = nullptr;
+            }
+
+            h_cur = h_cur->pNext;
+        }
     }
 }
 
@@ -116,19 +119,30 @@ static void checkResults()
     for( cl_uint i = 0; i < numNodes; i++ )
     {
         const cl_uint want = i * 4 + 1;
-        if( h_cur->Num != want )
+        if( h_cur == nullptr )
         {
             if( mismatches < 16 )
             {
-                fprintf(stderr, "MisMatch at node %u!  got %08X, want %08X\n",
-                    i,
-                    h_cur->Num,
-                    want );
+                fprintf(stderr, "Node %u is NULL!\n", i);
             }
             mismatches++;
         }
+        else
+        {
+            if( h_cur->Num != want )
+            {
+                if( mismatches < 16 )
+                {
+                    fprintf(stderr, "MisMatch at node %u!  got %08X, want %08X\n",
+                        i,
+                        h_cur->Num,
+                        want );
+                }
+                mismatches++;
+            }
 
-        h_cur = h_cur->pNext;
+            h_cur = h_cur->pNext;
+        }
     }
 
     if( mismatches )

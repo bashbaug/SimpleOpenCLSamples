@@ -37,6 +37,7 @@ static std::vector<cl_uchar> readSPIRVFromFile(
     std::ifstream is(filename, std::ios::binary);
     std::vector<cl_uchar> ret;
     if (!is.good()) {
+        printf("Couldn't open file '%s'!\n", filename.c_str());
         return ret;
     }
 

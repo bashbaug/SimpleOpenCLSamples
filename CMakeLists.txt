@@ -40,6 +40,11 @@ include_directories(${OpenCL_INCLUDE_DIR})
 
 add_subdirectory(external/opencl-icd-loader)
 set_target_properties(OpenCL PROPERTIES FOLDER "OpenCL-ICD-Loader")
+set(OpenCL_LIBRARIES OpenCL)
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    enable_testing()
+endif()
 
 add_subdirectory(samples)
 

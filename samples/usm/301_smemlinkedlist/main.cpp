@@ -74,24 +74,27 @@ static void init( cl::Context& context, cl::Device& device )
             s_cur = s_head;
         }
 
-        s_cur->Num = i * 2;
-
-        if( i != numNodes - 1 )
+        if( s_cur != nullptr )
         {
-            s_cur->pNext = (Node*)clSharedMemAllocINTEL(
-                context(),
-                device(),
-                nullptr,
-                sizeof(Node),
-                0,
-                nullptr );
-        }
-        else
-        {
-            s_cur->pNext = nullptr;
-        }
+            s_cur->Num = i * 2;
 
-        s_cur = s_cur->pNext;
+            if( i != numNodes - 1 )
+            {
+                s_cur->pNext = (Node*)clSharedMemAllocINTEL(
+                    context(),
+                    device(),
+                    nullptr,
+                    sizeof(Node),
+                    0,
+                    nullptr );
+            }
+            else
+            {
+                s_cur->pNext = nullptr;
+            }
+
+            s_cur = s_cur->pNext;
+        }
     }
 }
 
@@ -118,19 +121,30 @@ static void checkResults()
     for( cl_uint i = 0; i < numNodes; i++ )
     {
         const cl_uint want = i * 4 + 1;
-        if( s_cur->Num != want )
+        if( s_cur == nullptr )
         {
             if( mismatches < 16 )
             {
-                fprintf(stderr, "MisMatch at node %u!  got %08X, want %08X\n",
-                    i,
-                    s_cur->Num,
-                    want );
+                fprintf(stderr, "Node %u is NULL!\n", i);
             }
             mismatches++;
         }
+        else
+        {
+            if( s_cur->Num != want )
+            {
+                if( mismatches < 16 )
+                {
+                    fprintf(stderr, "MisMatch at node %u!  got %08X, want %08X\n",
+                        i,
+                        s_cur->Num,
+                        want );
+                }
+                mismatches++;
+            }
 
-        s_cur = s_cur->pNext;
+            s_cur = s_cur->pNext;
+        }
     }
 
     if( mismatches )

@@ -18,26 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(SAMPLE_NAME enumimageformats)
-set(SAMPLE_NUMBER 00)
-
-project(${SAMPLE_NAME})
-add_executable( ${SAMPLE_NAME} main.cpp )
-
-target_include_directories( ${SAMPLE_NAME} PRIVATE ${OpenCL_INCLUDE_DIR} )
-target_link_libraries( ${SAMPLE_NAME} OpenCL )
-
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION} )
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${SAMPLES_CL_VERSION})
-target_compile_definitions( ${SAMPLE_NAME} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${SAMPLES_CL_VERSION})
-
-set_target_properties( ${SAMPLE_NAME} PROPERTIES FOLDER "Samples/Images/${SAMPLE_NUMBER}_${SAMPLE_NAME}" )
-
-if(CMAKE_CONFIGURATION_TYPES)
-    set(SAMPLE_CONFIGS ${CMAKE_CONFIGURATION_TYPES})
-else()
-    set(SAMPLE_CONFIGS ${CMAKE_BUILD_TYPE})
-endif()
-foreach(CONFIG ${SAMPLE_CONFIGS})
-    install(TARGETS ${SAMPLE_NAME} CONFIGURATIONS ${CONFIG} DESTINATION ${SAMPLES_PLATFORM_NAME}/${CONFIG})
-endforeach()
+add_opencl_sample(
+    TEST
+    NUMBER 00
+    TARGET enumimageformats
+    VERSION 120
+    CATEGORY images
+    SOURCES main.cpp)

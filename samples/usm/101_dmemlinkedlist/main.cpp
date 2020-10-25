@@ -75,34 +75,37 @@ static void init( cl::Context& context, cl::Device& device )
             d_cur = d_head;
         }
 
-        h_cur.Num = i * 2;
-
-        if( i != numNodes - 1 )
+        if( d_cur != nullptr )
         {
-            h_cur.pNext = (Node*)clDeviceMemAllocINTEL(
-                context(),
-                device(),
-                nullptr,
+            h_cur.Num = i * 2;
+
+            if( i != numNodes - 1 )
+            {
+                h_cur.pNext = (Node*)clDeviceMemAllocINTEL(
+                    context(),
+                    device(),
+                    nullptr,
+                    sizeof(Node),
+                    0,
+                    nullptr );
+            }
+            else
+            {
+                h_cur.pNext = nullptr;
+            }
+
+            clEnqueueMemcpyINTEL(
+                commandQueue(),
+                CL_TRUE,
+                d_cur,
+                &h_cur,
                 sizeof(Node),
                 0,
+                nullptr,
                 nullptr );
-        }
-        else
-        {
-            h_cur.pNext = nullptr;
-        }
 
-        clEnqueueMemcpyINTEL(
-            commandQueue(),
-            CL_TRUE,
-            d_cur,
-            &h_cur,
-            sizeof(Node),
-            0,
-            nullptr,
-            nullptr );
-
-        d_cur = h_cur.pNext;
+            d_cur = h_cur.pNext;
+        }
     }
 }
 
