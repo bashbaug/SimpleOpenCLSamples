@@ -36,7 +36,8 @@ static std::string readStringFromFile(
 {
     std::ifstream is(filename, std::ios::binary);
     if (!is.good()) {
-        return nullptr;
+        printf("Couldn't open file '%s'!\n", filename.c_str());
+        return "";
     }
 
     size_t filesize = 0;
