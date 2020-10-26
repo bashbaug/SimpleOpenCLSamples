@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include <CL/cl2.hpp>
+#include <CL/opencl.hpp>
 
 #if defined(CL_VERSION_3_0)
 

@@ -394,48 +394,48 @@
  * both and hence work with either version of the bindings.
  */
 #if !defined(CL_HPP_USE_DX_INTEROP) && defined(USE_DX_INTEROP)
-# pragma message("cl2.hpp: USE_DX_INTEROP is deprecated. Define CL_HPP_USE_DX_INTEROP instead")
+# pragma message("opencl.hpp: USE_DX_INTEROP is deprecated. Define CL_HPP_USE_DX_INTEROP instead")
 # define CL_HPP_USE_DX_INTEROP
 #endif
 #if !defined(CL_HPP_USE_CL_DEVICE_FISSION) && defined(USE_CL_DEVICE_FISSION)
-# pragma message("cl2.hpp: USE_CL_DEVICE_FISSION is deprecated. Define CL_HPP_USE_CL_DEVICE_FISSION instead")
+# pragma message("opencl.hpp: USE_CL_DEVICE_FISSION is deprecated. Define CL_HPP_USE_CL_DEVICE_FISSION instead")
 # define CL_HPP_USE_CL_DEVICE_FISSION
 #endif
 #if !defined(CL_HPP_ENABLE_EXCEPTIONS) && defined(__CL_ENABLE_EXCEPTIONS)
-# pragma message("cl2.hpp: __CL_ENABLE_EXCEPTIONS is deprecated. Define CL_HPP_ENABLE_EXCEPTIONS instead")
+# pragma message("opencl.hpp: __CL_ENABLE_EXCEPTIONS is deprecated. Define CL_HPP_ENABLE_EXCEPTIONS instead")
 # define CL_HPP_ENABLE_EXCEPTIONS
 #endif
 #if !defined(CL_HPP_NO_STD_VECTOR) && defined(__NO_STD_VECTOR)
-# pragma message("cl2.hpp: __NO_STD_VECTOR is deprecated. Define CL_HPP_NO_STD_VECTOR instead")
+# pragma message("opencl.hpp: __NO_STD_VECTOR is deprecated. Define CL_HPP_NO_STD_VECTOR instead")
 # define CL_HPP_NO_STD_VECTOR
 #endif
 #if !defined(CL_HPP_NO_STD_STRING) && defined(__NO_STD_STRING)
-# pragma message("cl2.hpp: __NO_STD_STRING is deprecated. Define CL_HPP_NO_STD_STRING instead")
+# pragma message("opencl.hpp: __NO_STD_STRING is deprecated. Define CL_HPP_NO_STD_STRING instead")
 # define CL_HPP_NO_STD_STRING
 #endif
 #if defined(VECTOR_CLASS)
-# pragma message("cl2.hpp: VECTOR_CLASS is deprecated. Alias cl::vector instead")
+# pragma message("opencl.hpp: VECTOR_CLASS is deprecated. Alias cl::vector instead")
 #endif
 #if defined(STRING_CLASS)
-# pragma message("cl2.hpp: STRING_CLASS is deprecated. Alias cl::string instead.")
+# pragma message("opencl.hpp: STRING_CLASS is deprecated. Alias cl::string instead.")
 #endif
 #if !defined(CL_HPP_USER_OVERRIDE_ERROR_STRINGS) && defined(__CL_USER_OVERRIDE_ERROR_STRINGS)
-# pragma message("cl2.hpp: __CL_USER_OVERRIDE_ERROR_STRINGS is deprecated. Define CL_HPP_USER_OVERRIDE_ERROR_STRINGS instead")
+# pragma message("opencl.hpp: __CL_USER_OVERRIDE_ERROR_STRINGS is deprecated. Define CL_HPP_USER_OVERRIDE_ERROR_STRINGS instead")
 # define CL_HPP_USER_OVERRIDE_ERROR_STRINGS
 #endif
 
 /* Warn about features that are no longer supported
  */
 #if defined(__USE_DEV_VECTOR)
-# pragma message("cl2.hpp: __USE_DEV_VECTOR is no longer supported. Expect compilation errors")
+# pragma message("opencl.hpp: __USE_DEV_VECTOR is no longer supported. Expect compilation errors")
 #endif
 #if defined(__USE_DEV_STRING)
-# pragma message("cl2.hpp: __USE_DEV_STRING is no longer supported. Expect compilation errors")
+# pragma message("opencl.hpp: __USE_DEV_STRING is no longer supported. Expect compilation errors")
 #endif
 
 /* Detect which version to target */
 #if !defined(CL_HPP_TARGET_OPENCL_VERSION)
-# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 220 (OpenCL 2.2)")
+# pragma message("opencl.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 220 (OpenCL 2.2)")
 # define CL_HPP_TARGET_OPENCL_VERSION 220
 #endif
 #if CL_HPP_TARGET_OPENCL_VERSION != 100 && \
@@ -445,7 +445,7 @@
     CL_HPP_TARGET_OPENCL_VERSION != 210 && \
     CL_HPP_TARGET_OPENCL_VERSION != 220 && \
     CL_HPP_TARGET_OPENCL_VERSION != 300
-# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 220")
+# pragma message("opencl.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 220")
 # undef CL_HPP_TARGET_OPENCL_VERSION
 # define CL_HPP_TARGET_OPENCL_VERSION 220
 #endif
@@ -471,7 +471,7 @@
     CL_HPP_MINIMUM_OPENCL_VERSION != 210 && \
     CL_HPP_MINIMUM_OPENCL_VERSION != 220 && \
     CL_HPP_MINIMUM_OPENCL_VERSION != 300
-# pragma message("cl2.hpp: CL_HPP_MINIMUM_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 100")
+# pragma message("opencl.hpp: CL_HPP_MINIMUM_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 100")
 # undef CL_HPP_MINIMUM_OPENCL_VERSION
 # define CL_HPP_MINIMUM_OPENCL_VERSION 100
 #endif
@@ -1344,6 +1344,7 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_PREFERRED_PLATFORM_ATOMIC_ALIGNMENT, cl_uint) \
     F(cl_device_info, CL_DEVICE_PREFERRED_GLOBAL_ATOMIC_ALIGNMENT, cl_uint) \
     F(cl_device_info, CL_DEVICE_PREFERRED_LOCAL_ATOMIC_ALIGNMENT, cl_uint) \
+    F(cl_profiling_info, CL_PROFILING_COMMAND_COMPLETE, cl_ulong) \
     F(cl_command_queue_info, CL_QUEUE_SIZE, cl_uint) \
     F(cl_mem_info, CL_MEM_USES_SVM_POINTER, cl_bool) \
     F(cl_program_build_info, CL_PROGRAM_BUILD_GLOBAL_VARIABLE_TOTAL_SIZE, size_type) \
@@ -6658,6 +6659,26 @@ public:
     }
 
     cl_int build(
+        const Device& device,
+        const char* options = NULL,
+        void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
+        void* data = NULL) const
+    {
+        cl_device_id deviceID = device();
+        cl_int buildError = ::clBuildProgram(
+            object_,
+            1,
+            &deviceID,
+            options,
+            notifyFptr,
+            data);
+
+        BuildLogType buildLog(1);
+        buildLog.push_back(std::make_pair(device, getBuildInfo<CL_PROGRAM_BUILD_LOG>(device)));
+        return detail::buildErrHandler(buildError, __BUILD_PROGRAM_ERR, buildLog);
+    }
+
+    cl_int build(
         const char* options = NULL,
         void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
         void* data = NULL) const
@@ -10116,7 +10137,7 @@ public:
 
 namespace compatibility {
     /**
-     * Backward compatibility class to ensure that cl.hpp code works with cl2.hpp.
+     * Backward compatibility class to ensure that cl.hpp code works with opencl.hpp.
      * Please use KernelFunctor directly.
      */
     template<typename... Ts>

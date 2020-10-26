@@ -20,10 +20,10 @@
 // SOFTWARE.
 */
 
-#include <CL/cl2.hpp>
+#include <CL/opencl.hpp>
 #include "libusm.h"
 
-// Each of these functions should eventually move into cl2.hpp:
+// Each of these functions should eventually move into opencl.hpp:
 
 static cl_unified_shared_memory_type_intel
 getMEM_ALLOC_TYPE_INTEL( cl::Context& context, const void* ptr )

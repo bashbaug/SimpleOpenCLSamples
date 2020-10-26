@@ -20,7 +20,7 @@
 // SOFTWARE.
 */
 
-#include <CL/cl2.hpp>
+#include <CL/opencl.hpp>
 
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;

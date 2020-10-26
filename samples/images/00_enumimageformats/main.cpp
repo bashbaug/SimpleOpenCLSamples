@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include <CL/cl2.hpp>
+#include <CL/opencl.hpp>
 
 #define CASE_TO_STRING(_e) case _e: return #_e;
 
