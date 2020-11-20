@@ -18,22 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Require OpenCL 2.0, for clSetKernelExecInfo:
-set(SAMPLES_CL_VERSION 200)
-
-add_subdirectory( libusm )
-
-add_subdirectory( 00_usmqueries )
-add_subdirectory( 01_usmmeminfo )
-
-add_subdirectory( 100_dmemhelloworld )
-add_subdirectory( 101_dmemlinkedlist )
-
-add_subdirectory( 200_hmemhelloworld )
-add_subdirectory( 201_hmemlinkedlist )
-
-add_subdirectory( 300_smemhelloworld )
-add_subdirectory( 301_smemlinkedlist )
-add_subdirectory( 310_usmmigratemem )
-
-add_subdirectory( 999_bigusm )
+add_opencl_sample(
+    TEST
+    TARGET bigusm
+    VERSION 120
+    CATEGORY usm
+    SOURCES main.cpp
+    INCLUDES ${LIBUSM_INCLUDE_DIR}
+    LIBS usm)
