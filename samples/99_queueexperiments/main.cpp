@@ -146,7 +146,7 @@ static void go_kernelx1_ooq( cl::Context& context, cl::Device& device )
     printf("%s: ", __FUNCTION__); fflush(stdout);
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
-    if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE == 0) {
+    if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
         printf("Skipping (device does not support out-of-order queues).\n");
         return;
     }
@@ -179,7 +179,7 @@ static void go_kernelx2_ooq( cl::Context& context, cl::Device& device )
     printf("%s: ", __FUNCTION__); fflush(stdout);
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
-    if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE == 0) {
+    if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
         printf("Skipping (device does not support out-of-order queues).\n");
         return;
     }
@@ -212,7 +212,7 @@ static void go_kernelx4_ooq( cl::Context& context, cl::Device& device )
     printf("%s: ", __FUNCTION__); fflush(stdout);
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
-    if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE == 0) {
+    if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
         printf("Skipping (device does not support out-of-order queues).\n");
         return;
     }
@@ -245,7 +245,7 @@ static void go_kernelx4_ooq_events( cl::Context& context, cl::Device& device )
     printf("%s: ", __FUNCTION__); fflush(stdout);
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
-    if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE == 0) {
+    if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
         printf("Skipping (device does not support out-of-order queues).\n");
         return;
     }
