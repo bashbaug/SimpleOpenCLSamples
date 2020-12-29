@@ -16,9 +16,8 @@
 
 /*! \file
  *
- *   \brief C++ bindings for OpenCL 1.0 (rev 48), OpenCL 1.1 (rev 33),
- *       OpenCL 1.2 (rev 15), OpenCL 2.0 (rev 29), OpenCL 2.1 (rev 17),
- *       and OpenCL 2.2 (V2.2-11).
+ *   \brief C++ bindings for OpenCL 1.0, OpenCL 1.1, OpenCL 1.2,
+ *       OpenCL 2.0, OpenCL 2.1, OpenCL 2.2, and OpenCL 3.0.
  *   \author Lee Howes and Bruce Merry
  *
  *   Derived from the OpenCL 1.x C++ bindings written by
@@ -61,10 +60,10 @@
  * For many large applications C++ is the language of choice and so it seems
  * reasonable to define C++ bindings for OpenCL.
  *
- * The interface is contained with a single C++ header file \em cl2.hpp and all
+ * The interface is contained with a single C++ header file \em opencl.hpp and all
  * definitions are contained within the namespace \em cl. There is no additional
  * requirement to include \em cl.h and to use either the C++ or original C
- * bindings; it is enough to simply include \em cl2.hpp.
+ * bindings; it is enough to simply include \em opencl.hpp.
  *
  * The bindings themselves are lightweight and correspond closely to the
  * underlying C API. Using the C++ bindings introduces no additional execution
@@ -73,7 +72,7 @@
  * There are numerous compatibility, portability and memory management
  * fixes in the new header as well as additional OpenCL 2.0 features.
  * As a result the header is not directly backward compatible and for this
- * reason we release it as cl2.hpp rather than a new version of cl.hpp.
+ * reason we release it as opencl.hpp rather than a new version of cl.hpp.
  * 
  *
  * \section compatibility Compatibility
@@ -145,26 +144,26 @@
  * - CL_HPP_NO_STD_STRING
  *
  *   Do not use the standard library string class. cl::string is not
- *   defined and may be defined by the user before cl2.hpp is
+ *   defined and may be defined by the user before opencl.hpp is
  *   included.
  *
  * - CL_HPP_NO_STD_VECTOR
  *
  *   Do not use the standard library vector class. cl::vector is not
- *   defined and may be defined by the user before cl2.hpp is
+ *   defined and may be defined by the user before opencl.hpp is
  *   included.
  *
  * - CL_HPP_NO_STD_ARRAY
  *
  *   Do not use the standard library array class. cl::array is not
- *   defined and may be defined by the user before cl2.hpp is
+ *   defined and may be defined by the user before opencl.hpp is
  *   included.
  *
  * - CL_HPP_NO_STD_UNIQUE_PTR
  *
  *   Do not use the standard library unique_ptr class. cl::pointer and
  *   the cl::allocate_pointer functions are not defined and may be
- *   defined by the user before cl2.hpp is included.
+ *   defined by the user before opencl.hpp is included.
  *
  * - CL_HPP_ENABLE_DEVICE_FISSION
  *
@@ -215,7 +214,7 @@
     #define CL_HPP_ENABLE_EXCEPTIONS
     #define CL_HPP_TARGET_OPENCL_VERSION 200
 
-    #include <CL/cl2.hpp>
+    #include <CL/opencl.hpp>
     #include <iostream>
     #include <vector>
     #include <memory>
@@ -435,8 +434,8 @@
 
 /* Detect which version to target */
 #if !defined(CL_HPP_TARGET_OPENCL_VERSION)
-# pragma message("opencl.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 220 (OpenCL 2.2)")
-# define CL_HPP_TARGET_OPENCL_VERSION 220
+# pragma message("opencl.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 300 (OpenCL 3.0)")
+# define CL_HPP_TARGET_OPENCL_VERSION 300
 #endif
 #if CL_HPP_TARGET_OPENCL_VERSION != 100 && \
     CL_HPP_TARGET_OPENCL_VERSION != 110 && \
@@ -445,9 +444,9 @@
     CL_HPP_TARGET_OPENCL_VERSION != 210 && \
     CL_HPP_TARGET_OPENCL_VERSION != 220 && \
     CL_HPP_TARGET_OPENCL_VERSION != 300
-# pragma message("opencl.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 220")
+# pragma message("opencl.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120, 200, 210, 220 or 300). It will be set to 300 (OpenCL 3.0).")
 # undef CL_HPP_TARGET_OPENCL_VERSION
-# define CL_HPP_TARGET_OPENCL_VERSION 220
+# define CL_HPP_TARGET_OPENCL_VERSION 300
 #endif
 
 /* Forward target OpenCL version to C headers if necessary */
@@ -1319,6 +1318,7 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_kernel_arg_info, CL_KERNEL_ARG_TYPE_QUALIFIER, cl_kernel_arg_type_qualifier) \
     \
     F(cl_device_info, CL_DEVICE_PARENT_DEVICE, cl::Device) \
+    F(cl_device_info, CL_DEVICE_PARTITION_MAX_SUB_DEVICES, cl_uint) \
     F(cl_device_info, CL_DEVICE_PARTITION_PROPERTIES, cl::vector<cl_device_partition_property>) \
     F(cl_device_info, CL_DEVICE_PARTITION_TYPE, cl::vector<cl_device_partition_property>)  \
     F(cl_device_info, CL_DEVICE_REFERENCE_COUNT, cl_uint) \
@@ -1345,6 +1345,8 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_PREFERRED_GLOBAL_ATOMIC_ALIGNMENT, cl_uint) \
     F(cl_device_info, CL_DEVICE_PREFERRED_LOCAL_ATOMIC_ALIGNMENT, cl_uint) \
     F(cl_profiling_info, CL_PROFILING_COMMAND_COMPLETE, cl_ulong) \
+    F(cl_kernel_exec_info, CL_KERNEL_EXEC_INFO_SVM_FINE_GRAIN_SYSTEM, cl_bool) \
+    F(cl_kernel_exec_info, CL_KERNEL_EXEC_INFO_SVM_PTRS, void**) \
     F(cl_command_queue_info, CL_QUEUE_SIZE, cl_uint) \
     F(cl_mem_info, CL_MEM_USES_SVM_POINTER, cl_bool) \
     F(cl_program_build_info, CL_PROGRAM_BUILD_GLOBAL_VARIABLE_TOTAL_SIZE, size_type) \
@@ -1383,7 +1385,7 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_REFERENCE_COUNT_EXT , cl_uint) \
     F(cl_device_info, CL_DEVICE_PARTITION_STYLE_EXT, cl::vector<cl_device_partition_property_ext>)
 
-#define CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_SHARED_(F) \
+#define CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_CL3_SHARED_(F) \
     F(cl_platform_info, CL_PLATFORM_NUMERIC_VERSION_KHR, cl_version_khr) \
     F(cl_platform_info, CL_PLATFORM_EXTENSIONS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>) \
     \
@@ -1392,7 +1394,7 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_ILS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>) \
     F(cl_device_info, CL_DEVICE_BUILT_IN_KERNELS_WITH_VERSION_KHR, cl::vector<cl_name_version_khr>)
 
-#define CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_UNIQUE_(F) \
+#define CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_KHRONLY_(F) \
     F(cl_device_info, CL_DEVICE_OPENCL_C_NUMERIC_VERSION_KHR, cl_version_khr)
 
 #define CL_HPP_PARAM_NAME_INFO_3_0_(F) \
@@ -1411,16 +1413,14 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_WORK_GROUP_COLLECTIVE_FUNCTIONS_SUPPORT, cl_bool) \
     F(cl_device_info, CL_DEVICE_GENERIC_ADDRESS_SPACE_SUPPORT, cl_bool) \
     F(cl_device_info, CL_DEVICE_OPENCL_C_FEATURES, cl::vector<cl_name_version>) \
+    F(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES, cl_device_device_enqueue_capabilities) \
     F(cl_device_info, CL_DEVICE_PIPE_SUPPORT, cl_bool) \
+    F(cl_device_info, CL_DEVICE_LATEST_CONFORMANCE_VERSION_PASSED, string) \
     \
     F(cl_command_queue_info, CL_QUEUE_PROPERTIES_ARRAY, cl::vector<cl_queue_properties>) \
     F(cl_mem_info, CL_MEM_PROPERTIES, cl::vector<cl_mem_properties>) \
     F(cl_pipe_info, CL_PIPE_PROPERTIES, cl::vector<cl_pipe_properties>) \
     F(cl_sampler_info, CL_SAMPLER_PROPERTIES, cl::vector<cl_sampler_properties>)
-
-// TODO: Add this to CL_HPP_PARAM_NAME_INFO_3_0_ once CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES is in the headers!
-//    F(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES, cl_device_device_enqueue_capabilities) \
-
 
 template <typename enum_type, cl_int Name>
 struct param_traits {};
@@ -1452,16 +1452,7 @@ CL_HPP_PARAM_NAME_INFO_2_2_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 220
 #if CL_HPP_TARGET_OPENCL_VERSION >= 300
 CL_HPP_PARAM_NAME_INFO_3_0_(CL_HPP_DECLARE_PARAM_TRAITS_)
-// TODO: Remove this when the headers are updated!
-#if defined(CL_DEVICE_DEVICE_ENQUEUE_SUPPORT)
-CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_SUPPORT, cl_bool)
-#endif // CL_DEVICE_DEVICE_ENQUEUE_SUPPORT
-// TODO: Move this into CL_HPP_PARAM_NAME_INFO_3_0_ when the headers are updated!
-#if defined(CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES)
-CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES, cl_device_device_enqueue_capabilities)
-#endif // CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 300
-
 
 #if defined(CL_HPP_USE_CL_SUB_GROUPS_KHR) && CL_HPP_TARGET_OPENCL_VERSION < 210
 CL_HPP_PARAM_NAME_INFO_SUBGROUP_KHR_(CL_HPP_DECLARE_PARAM_TRAITS_)
@@ -1500,9 +1491,9 @@ CL_HPP_PARAM_NAME_DEVICE_FISSION_(CL_HPP_DECLARE_PARAM_TRAITS_);
 
 #if defined(cl_khr_extended_versioning)
 #if CL_HPP_TARGET_OPENCL_VERSION < 300
-CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_SHARED_(CL_HPP_DECLARE_PARAM_TRAITS_);
+CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_CL3_SHARED_(CL_HPP_DECLARE_PARAM_TRAITS_);
 #endif // CL_HPP_TARGET_OPENCL_VERSION < 300
-CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_UNIQUE_(CL_HPP_DECLARE_PARAM_TRAITS_);
+CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_KHRONLY_(CL_HPP_DECLARE_PARAM_TRAITS_);
 #endif // cl_khr_extended_versioning
 
 #ifdef CL_PLATFORM_ICD_SUFFIX_KHR
@@ -1549,6 +1540,15 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_COMPUTE_UNITS_BITFIELD_AR
 #endif
 #ifdef CL_DEVICE_JOB_SLOTS_ARM
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_JOB_SLOTS_ARM, cl_uint)
+#endif
+#ifdef CL_DEVICE_SCHEDULING_CONTROLS_CAPABILITIES_ARM
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_SCHEDULING_CONTROLS_CAPABILITIES_ARM, cl_bitfield)
+#endif
+#ifdef CL_KERNEL_EXEC_INFO_WORKGROUP_BATCH_SIZE_ARM
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_kernel_exec_info, CL_KERNEL_EXEC_INFO_WORKGROUP_BATCH_SIZE_ARM, cl_uint)
+#endif
+#ifdef CL_KERNEL_EXEC_INFO_WORKGROUP_BATCH_SIZE_MODIFIER_ARM
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_kernel_exec_info, CL_KERNEL_EXEC_INFO_WORKGROUP_BATCH_SIZE_MODIFIER_ARM, cl_int)
 #endif
 
 #ifdef CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV
@@ -2880,6 +2880,10 @@ public:
         }
     }
 
+    /*! \brief Constructs a context including a specific device.
+     *
+     *  Wraps clCreateContext().
+     */
     Context(
         const Device& device,
         cl_context_properties* properties = NULL,
@@ -3278,7 +3282,7 @@ public:
      */
     cl_int setCallback(
         cl_int type,
-        void (CL_CALLBACK * pfn_notify)(cl_event, cl_int, void *),		
+        void (CL_CALLBACK * pfn_notify)(cl_event, cl_int, void *),
         void * user_data = NULL)
     {
         return detail::errHandler(
@@ -3467,7 +3471,7 @@ public:
      *  value - not the Memory class instance.
      */
     cl_int setDestructorCallback(
-        void (CL_CALLBACK * pfn_notify)(cl_mem, void *),		
+        void (CL_CALLBACK * pfn_notify)(cl_mem, void *),
         void * user_data = NULL)
     {
         return detail::errHandler(
@@ -4058,7 +4062,7 @@ public:
         }
 
         return result;
-    }		
+    }
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
 };
 
@@ -6186,6 +6190,23 @@ public:
             sizeof(void*)*(1 + sizeof...(Ts)),
             pointerList.data()));
     }
+
+    template<typename T>
+    cl_int setExecInfo(cl_kernel_exec_info param_name, const T& val)
+    {
+        return detail::errHandler(
+            ::clSetKernelExecInfo(
+            object_,
+            param_name,
+            sizeof(T),
+            &val));
+    }
+
+    template<cl_kernel_exec_info name>
+    cl_int setExecInfo(typename detail::param_traits<detail::cl_kernel_exec_info, name>::param_type& val)
+    {
+        return setExecInfo(name, val);
+    }
 #endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
 
 #if CL_HPP_TARGET_OPENCL_VERSION >= 210
@@ -6665,6 +6686,7 @@ public:
         void* data = NULL) const
     {
         cl_device_id deviceID = device();
+
         cl_int buildError = ::clBuildProgram(
             object_,
             1,
@@ -6690,7 +6712,6 @@ public:
             options,
             notifyFptr,
             data);
-
 
         return detail::buildErrHandler(buildError, __BUILD_PROGRAM_ERR, getBuildInfo<CL_PROGRAM_BUILD_LOG>());
     }
@@ -8193,7 +8214,7 @@ public:
     {
         cl_event tmp;
         cl_int err = detail::errHandler(::clEnqueueSVMMap(
-            object_, blocking, flags, static_cast<void*>(container.data()), container.size(),
+            object_, blocking, flags, static_cast<void*>(container.data()), container.size()*sizeof(T),
             (events != NULL) ? (cl_uint)events->size() : 0,
             (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
             (event != NULL) ? &tmp : NULL),
