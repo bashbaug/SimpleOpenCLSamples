@@ -29,6 +29,9 @@
 const char* filename = "sinjulia.bmp";
 
 size_t iterations = 16;
+// Part 4: Fix the global work size.
+// Solution: Choose the 4K resolution 3840 x 2160 instead of a resolution that
+// is prime in both dimensions.
 size_t gwx = 3840;
 size_t gwy = 2160;
 size_t lwx = 0;
@@ -41,11 +44,13 @@ cl::CommandQueue commandQueue;
 cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
+// Part 2: Fix the OpenCL Kernel Code.
+// Solution: Fix the typo.
 static const char kernelString[] = R"CLC(
 kernel void SinJulia(global uchar4* dst, float cr, float ci)
 {
-    const int cMaxX = get_global_size(0);
-    const int cMaxY = get_global_size(1);
+    const int xMax = get_global_size(0);
+    const int yMax = get_global_size(1);
 
     const int x = get_global_id(0);
     const int y = get_global_id(1);
@@ -53,8 +58,8 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
     const float zMin = -M_PI_F / 2;
     const float zMax =  M_PI_F / 2;
 
-    float zr = (float)x / cMaxX * (zMax - zMin) + zMin;
-    float zi = (float)y / cMaxY * (zMax - zMin) + zMin;
+    float zr = (float)x / xMax * (zMax - zMin) + zMin;
+    float zi = (float)y / yMax * (zMax - zMin) + zMin;
 
     const int cIterations = 64;
     const float cThreshold = 50.0f;
@@ -86,7 +91,7 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
         result * result,
         1.0f );
     
-    dst[ y * cMaxX + x ] = convert_uchar4(color * 255.0f);
+    dst[ y * xMax + x ] = convert_uchar4(color * 255.0f);
 }
 )CLC";
 
@@ -127,6 +132,7 @@ static void go()
             cl::NullRange,
             cl::NDRange{gwx, gwy},
             lws);
+        commandQueue.flush();
     }
 
     // Enqueue all processing is complete before stopping the timer.
@@ -139,6 +145,9 @@ static void go()
 
 static void checkResults()
 {
+    // Part 3: Fix the map flags.
+    // Solution: Use the map flag CL_MAP_READ instead of
+    // CL_MAP_WRITE_INVALIDATE_REGION.
     auto buf = reinterpret_cast<const uint32_t*>(
         commandQueue.enqueueMapBuffer(
             deviceMemDst,
@@ -153,6 +162,7 @@ static void checkResults()
     commandQueue.enqueueUnmapMemObject(
         deviceMemDst,
         (void*)buf );
+    commandQueue.finish();
 }
 
 int main(
@@ -241,8 +251,8 @@ int main(
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
             "      -i: Number of Iterations (default = 16)\n"
-            "      -gwx: Global Work Size X AKA Image Width (default = 512)\n"
-            "      -gwy: Global Work Size Y AKA Image Height (default = 512)\n"
+            "      -gwx: Global Work Size X AKA Image Width\n"
+            "      -gwy: Global Work Size Y AKA Image Height\n"
             "      -lwx: Local Work Size X (default = 0 = NULL Local Work Size)\n"
             "      -lwy: Local Work Size Y (default = 0 = Null Local Work size)\n"
             );
@@ -257,6 +267,8 @@ int main(
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 
     std::vector<cl::Device> devices;
+    // Part 1: Query the devices in this platform.
+    // Solution: Query for CL_DEVICE_TYPE_ALL, not CL_DEVICE_TYPE.
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
     printf("Running on device: %s\n",
@@ -266,12 +278,16 @@ int main(
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
-    program.build();
+
+    // Part 6: Experiment with build options.
+    // Solution: Use the "-cl-fast-relaxed-math" build options.
+    program.build("-cl-fast-relaxed-math");
+
     kernel = cl::Kernel{ program, "SinJulia" };
 
     deviceMemDst = cl::Buffer{
         context,
-        CL_MEM_ALLOC_HOST_PTR,
+        CL_MEM_READ_WRITE,
         gwx * gwy * sizeof(cl_uchar4) };
 
     init();

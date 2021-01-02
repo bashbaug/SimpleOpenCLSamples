@@ -12,7 +12,13 @@ When we are done we will generate a cool [sine-based Julia Set](http://paulbourk
 This tutorial has multiple parts, with each part building upon the previous part.
 If you get stuck, solutions are provided for each part.
 
-* Part 0: [Building and Running the Tutorial](part1.md)
+* Part 0: [Building and Running the Tutorial](part0.md)
+* Part 1: [Fixing an OpenCL Error](part1.md)
+* Part 2: [Fixing an OpenCL Program Build Error](part2.md)
+* Part 3: [Fixing an OpenCL Map Error](part3.md)
+* Part 4: [Profiling and Improving Performance](part4.md)
+* Part 5: [Improving Performance More](part5.md)
+* Part 6: [Final Words and Additional Things to Try](part6.md)
 
 ## Command Line Options
 

@@ -50,7 +50,7 @@ cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
 // Part 2: Fix the program.
-// Can you find and fix the typo in the program below?
+// There are a few typos in the program below that need to be fixed.
 static const char kernelString[] = R"CLC(
 kernel void SinJulia(global uchar4* dst, float cr, float ci)
 {
@@ -63,7 +63,7 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
     const float zMin = -M_PI_F / 2;
     const float zMax =  M_PI_F / 2;
 
-    float zr = (float)x / xMx  * (zMax - zMin) + zMin;
+    float zr = (float)x / xMax * (zMax - zMin) + zMin;
     float zi = (float)y / yMax * (zMax - zMin) + zMin;
 
     const int cIterations = 64;
@@ -132,12 +132,15 @@ static void go()
     auto start = std::chrono::system_clock::now();
     for( int i = 0; i < iterations; i++ )
     {
+        // Part 3: Fix the ND-Range.
+        // The C++ bindings are great and save a lot of typing, but sometimes
+        // they can save too much!  The arguments below are incorrect and
+        // generate a bad call to clEnqueueNDRangeKernel.  What is needed to fix
+        // it?
         commandQueue.enqueueNDRangeKernel(
             kernel,
-            cl::NullRange,
             cl::NDRange{gwx, gwy},
             lws);
-        commandQueue.flush();
     }
 
     // Enqueue all processing is complete before stopping the timer.
@@ -150,7 +153,7 @@ static void go()
 
 static void checkResults()
 {
-    // Part 3: Fix the map flags.
+    // Part 4: Fix the map flags.
     // We want to read the results of our kernel and save them to a bitmap. The
     // map flags below are more typically used to initialize a buffer. What map
     // flag should be used instead?
@@ -273,12 +276,10 @@ int main(
 
     std::vector<cl::Device> devices;
     // Part 1: Query the devices in this platform.
-    // When querying for OpenCL devices we need to pass in the types of devices
-    // we want to query. This will either be a specific device type, e.g.
-    // CL_DEVICE_TYPE_CPU, or we can pass in CL_DEVICE_TYPE_ALL, which will get
-    // all devices. Passing CL_DEVICE_TYPE isn't a valid device type. What
-    // should we pass instead?
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE, &devices);
+    // We will usually pass in a specific device type, e.g. CL_DEVICE_TYPE_CPU.
+    // We can also pass in CL_DEVICE_TYPE_ALL, which will get all devices.
+    // Passing CL_DEVICE_TYPE isn't a valid device type...
+    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
@@ -290,7 +291,7 @@ int main(
 
     // Part 6: Experiment with build options.
     // By default, OpenCL kernels use precise math functions.  For images like
-    // the ones we are generating, though, fast math is usually sufficient.  If
+    // the ones we are generating though, fast math is usually sufficient.  If
     // you pass build options to use fast math do you see a performance
     // improvement?
     program.build();
@@ -299,7 +300,7 @@ int main(
 
     deviceMemDst = cl::Buffer{
         context,
-        CL_MEM_READ_WRITE,
+        CL_MEM_ALLOC_HOST_PTR,
         gwx * gwy * sizeof(cl_uchar4) };
 
     init();
