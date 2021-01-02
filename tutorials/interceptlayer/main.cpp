@@ -48,8 +48,8 @@ cl::CommandQueue commandQueue;
 cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
-// Part 2: Fix the program.
-// Where is the typo in the program below?
+// Part 2: Fix the OpenCL Kernel Code.
+// Solution: Fix the typo.
 static const char kernelString[] = R"CLC(
 kernel void SinJulia(global uchar4* dst, float cr, float ci)
 {
@@ -62,7 +62,7 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
     const float zMin = -M_PI_F / 2;
     const float zMax =  M_PI_F / 2;
 
-    float zr = (float)x / xMx  * (zMax - zMin) + zMin;
+    float zr = (float)x / xMax * (zMax - zMin) + zMin;
     float zi = (float)y / yMax * (zMax - zMin) + zMin;
 
     const int cIterations = 64;

@@ -28,11 +28,11 @@ After setting this control, re-run the tutorial application.
 $ cliloader ./sinjulia
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
-CLintercept file location: /home/bashbaug/bin/../lib/libOpenCL.so
+CLIntercept file location: /home/bashbaug/bin/../lib/libOpenCL.so
 CLIntercept URL: https://github.com/intel/opencl-intercept-layer
-CLIntercept git description: v3.0.0-10-g77d82ba
+CLIntercept git description: v3.0.0-11-gd73caba
 CLIntercept git refspec: refs/heads/master
-CLInterecpt git hash: 77d82ba5adbfdd47f762bf7a7137f8b6da561122
+CLIntercept git hash: d73caba0273207c47d3094865c1a9e145acf2018
 CLIntercept optional features:
     cliloader(supported)
     cliprof(supported)
@@ -54,14 +54,14 @@ Control ReportToStderr is set to non-default value: true
 Timer Started!
 ... loading complete.
 <snip>
->>>> clBuildProgram: program = 0x55b13ff88b10, pfn_notify = (nil)
+>>>> clBuildProgram: program = 0x56131b0feb10, pfn_notify = (nil)
 ERROR! clBuildProgram returned CL_BUILD_PROGRAM_FAILURE (-11)
-Build Info for program 0x55b13ff88b10 (0000_962F04E2_0000_00000000) for 1 device(s):
-    Build finished in 182.81 ms.
+Build Info for program 0x56131b0feb10 (0000_B823BE28_0000_00000000) for 1 device(s):
+    Build finished in 139.45 ms.
 Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD_ERROR
 -------> Start of Build Log:
-1:14:27: error: use of undeclared identifier 'xMx'; did you mean 'xMax'?
-    float zr = (float)x / xMx * (zMax - zMin) + zMin;
+1:13:27: error: use of undeclared identifier 'xMx'; did you mean 'xMax'?
+    float zr = (float)x / xMx  * (zMax - zMin) + zMin;
                           ^~~
                           xMax
 1:4:15: note: 'xMax' declared here
@@ -73,7 +73,7 @@ Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD
 <snip>
 ```
 
-As before, there are two parts of this output to pay close attention to.
+As before, there are two parts of this output to pay attention to.
 First, ensure that the control has been properly set:
 
 ```sh
@@ -86,35 +86,35 @@ Second, observe the error in the OpenCL kernel code.
 Looks like there is a typo and `xMax` was incorrectly written as `xMx` - uh oh!
 
 For the tutorial application, we have the application source code and it is easy to modify the OpenCL kernel code and rebuild, but this isn't always the case.
-If it is not easy to modify the kernel and rebuild, we can [Dump and Inject](https://github.com/intel/opencl-intercept-layer/blob/master/docs/injecting_programs.md) modified OpenCL kernel code instead.
+If it is not easy to modify the kernel and rebuild, we can [Dump and Inject](https://github.com/intel/opencl-intercept-layer/blob/master/docs/injecting_programs.md) the modified OpenCL kernel code instead.
 
 To do this, we will first set the control `DumpProgramSource` and re-run the tutorial application.
 After setting this control we should see output like the following in our log:
 
 ```sh
-Dumping program to file (inject): /home/bashbaug/CLIntercept_Dump/sinjulia/CLI_0000_962F04E2_source.cl
+Dumping program to file (inject): /home/bashbaug/CLIntercept_Dump/sinjulia/CLI_0000_B823BE28_source.cl
 ```
 
 "Dumps" are recordings of OpenCL objects emitted to files.
-If the default "dump" directory is undesirable or unavailable, it can be specified with the `DumpDir` control.
+If the default "dump" directory is undesirable or unavailable, an alternate dump directory can be specified with the `DumpDir` control.
 
 If we open the dumped source file we should see our OpenCL kernel source, with the error shown above in the build log.
-Note that the program hash `962F04E2` matches the program hash in the build log.
+Note that the program hash in the file name `B823BE28` matches the program hash in the build log.
 Let's fix the typo in the OpenCL kernel source in this file, by changing `xMx` to `xMax`.
-After fixing the typo, save it in an `Inject` directory, set the control `InjectProgramSource` and re-run the tutorial application.
+After fixing the typo, save it in an `Inject` sub-directory in the dump directory, set the control `InjectProgramSource` and re-run the tutorial application.
 Now we should see output like the following in our log:
 
 ```sh
-Injecting source file: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_962F04E2_source.cl
->>>> clCreateProgramWithSource: context = 0x56125c70c510, count = 1
-<<<< clCreateProgramWithSource: returned 0x56125c748b10, program number = 0000 -> CL_SUCCESS
-Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_962F04E2_0000_00000000_options.txt
-Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_962F04E2_0000_00000000_options.txt
-Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_962F04E2_options.txt
+Injecting source file: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_B823BE28_source.cl
+>>>> clCreateProgramWithSource: context = 0x55d0baaa0510, count = 1
+<<<< clCreateProgramWithSource: returned 0x55d0baadcb10, program number = 0000 -> CL_SUCCESS
+Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_B823BE28_0000_00000000_options.txt
+Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_B823BE28_0000_00000000_options.txt
+Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_B823BE28_options.txt
 Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_options.txt
->>>> clBuildProgram: program = 0x56125c748b10, pfn_notify = (nil)
-Build Info for program 0x56125c748b10 (0000_962F04E2_0000_00000000) for 1 device(s):
-    Build finished in 356.64 ms.
+>>>> clBuildProgram: program = 0x55d0baadcb10, pfn_notify = (nil)
+Build Info for program 0x55d0baadcb10 (0000_B823BE28_0000_00000000) for 1 device(s):
+    Build finished in 282.97 ms.
 Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD_SUCCESS
 -------> Start of Build Log:
 <------- End of Build Log
@@ -123,7 +123,7 @@ Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD
 ```
 
 The lines about the injection options not existing are OK and expected, since we didn't include any options to inject.
-Notice that the `clBuildProgram` error is fixed - excellent!
+Notice that the `clBuildProgram` OpenCL error is fixed - excellent!
 
 Since this was the only error in our OpenCL kernel code, let's modify it in the application source code itself.
 Modifying the kernel code in the application source code will change the program hash and the modified OpenCL kernel source should no longer be injected.
@@ -131,16 +131,16 @@ Modifying the kernel code in the application source code will change the program
 ```sh
 Injection source file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_3DC4555B_source.cl
 Injection source file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_3DC4555B_source.cl
->>>> clCreateProgramWithSource: context = 0x560141dcc510, count = 1
-<<<< clCreateProgramWithSource: returned 0x560141e08b10, program number = 0000 -> CL_SUCCESS
+>>>> clCreateProgramWithSource: context = 0x55b2bd586510, count = 1
+<<<< clCreateProgramWithSource: returned 0x55b2bd5c2b10, program number = 0000 -> CL_SUCCESS
 Dumping program to file (inject): /home/bashbaug/CLIntercept_Dump/sinjulia/CLI_0000_3DC4555B_source.cl
 Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_3DC4555B_0000_00000000_options.txt
 Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_3DC4555B_0000_00000000_options.txt
 Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_3DC4555B_options.txt
 Injection options file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_options.txt
->>>> clBuildProgram: program = 0x560141e08b10, pfn_notify = (nil)
-Build Info for program 0x560141e08b10 (0000_3DC4555B_0000_00000000) for 1 device(s):
-    Build finished in 301.20 ms.
+>>>> clBuildProgram: program = 0x55b2bd5c2b10, pfn_notify = (nil)
+Build Info for program 0x55b2bd5c2b10 (0000_3DC4555B_0000_00000000) for 1 device(s):
+    Build finished in 282.76 ms.
 Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD_SUCCESS
 -------> Start of Build Log:
 <------- End of Build Log
