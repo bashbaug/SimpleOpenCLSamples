@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,17 +29,16 @@
 const char* filename = "sinjulia.bmp";
 
 size_t iterations = 16;
-// Part 5: Fix the default global work size.
-// Only some devices support non-uniform work groups, and non-uniform work
-// groups require OpenCL C 2.0 or newer.  Since we are compiling our kernels for
-// the default OpenCL C 1.2 we require uniform work groups. Unfortunately, this
-// chosen global work size is prime, so the only uniform work group size is one
-// work-item, which is not very efficient!  Choosing a different global work
-// size will likely perform much better.
+// Part 4: Fix the default global work size.
+// Since we are compiling our kernels for the default OpenCL C 1.2 we require
+// uniform work groups. Unfortunately, this chosen global work size is prime, so
+// the only uniform local work-group size is one work-item, which is not very
+// efficient! Can we choose a different global work size that will perform
+// better?
 // Note: 4K resolution is 3840 x 2160.
-size_t gwx = 3847;  // this is a weird number...
-size_t gwy = 2161;  // this is a weird number also...
-size_t lwx = 0;
+size_t gwx = 3847;
+size_t gwy = 2161;
+size_t lwx = 0; // NULL local work size.
 size_t lwy = 0;
 
 float cr = 1.0f;
@@ -50,7 +49,7 @@ cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
 // Part 2: Fix the program.
-// There are a few typos in the program below that need to be fixed.
+// Where is the typo in the program below?
 static const char kernelString[] = R"CLC(
 kernel void SinJulia(global uchar4* dst, float cr, float ci)
 {
@@ -63,8 +62,7 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
     const float zMin = -M_PI_F / 2;
     const float zMax =  M_PI_F / 2;
 
-    // One typo is here... there is no constant xMx...
-    float zr = (float)x / xMx * (zMax - zMin) + zMin;
+    float zr = (float)x / xMx  * (zMax - zMin) + zMin;
     float zi = (float)y / yMax * (zMax - zMin) + zMin;
 
     const int cIterations = 64;
@@ -133,15 +131,12 @@ static void go()
     auto start = std::chrono::system_clock::now();
     for( int i = 0; i < iterations; i++ )
     {
-        // Part 3: Fix the ND-Range.
-        // The C++ bindings are great and save a lot of typing, but sometimes
-        // they can save too much!  The arguments below are incorrect and
-        // generate a bad call to clEnqueueNDRangeKernel.  What is needed to fix
-        // it?
         commandQueue.enqueueNDRangeKernel(
             kernel,
+            cl::NullRange,
             cl::NDRange{gwx, gwy},
             lws);
+        commandQueue.flush();
     }
 
     // Enqueue all processing is complete before stopping the timer.
@@ -154,10 +149,10 @@ static void go()
 
 static void checkResults()
 {
-    // Part 4: Fix the map flags.
+    // Part 3: Fix the map flags.
     // We want to read the results of our kernel and save them to a bitmap. The
     // map flags below are more typically used to initialize a buffer. What map
-    // flag should be used instead?
+    // flag should we use instead?
     auto buf = reinterpret_cast<const uint32_t*>(
         commandQueue.enqueueMapBuffer(
             deviceMemDst,
@@ -172,6 +167,7 @@ static void checkResults()
     commandQueue.enqueueUnmapMemObject(
         deviceMemDst,
         (void*)buf );
+    commandQueue.finish();
 }
 
 int main(
@@ -277,9 +273,7 @@ int main(
 
     std::vector<cl::Device> devices;
     // Part 1: Query the devices in this platform.
-    // We will usually pass in a specific device type, e.g. CL_DEVICE_TYPE_CPU.
-    // We can also pass in CL_DEVICE_TYPE_ALL, which will get all devices.
-    // Passing CL_DEVICE_TYPE isn't a valid device type...
+    // Solution: Query for CL_DEVICE_TYPE_ALL, not CL_DEVICE_TYPE.
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
     printf("Running on device: %s\n",
@@ -290,18 +284,18 @@ int main(
 
     cl::Program program{ context, kernelString };
 
-    // Part 6: Experiment with build options.
-    // By default, OpenCL kernels use precise math functions.  For images like
-    // the ones we are generating though, fast math is usually sufficient.  If
-    // you pass build options to use fast math do you see a performance
-    // improvement?
+    // Part 5: Experiment with build options.
+    // By default, OpenCL kernels use precise math functions. For images like
+    // the ones we are generating, though, fast math is usually sufficient. If
+    // we pass build options to use fast math does the image still look OK? Does
+    // using fast math improve performance?
     program.build();
 
     kernel = cl::Kernel{ program, "SinJulia" };
 
     deviceMemDst = cl::Buffer{
         context,
-        CL_MEM_ALLOC_HOST_PTR,
+        CL_MEM_READ_WRITE,
         gwx * gwy * sizeof(cl_uchar4) };
 
     init();

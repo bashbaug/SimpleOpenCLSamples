@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -273,12 +273,8 @@ int main(
 
     std::vector<cl::Device> devices;
     // Part 1: Query the devices in this platform.
-    // When querying for OpenCL devices we pass the types of devices we want to
-    // query. This will either be one or more specific device types, e.g.
-    // CL_DEVICE_TYPE_CPU, or we can pass in CL_DEVICE_TYPE_ALL, which will get
-    // all devices. Passing CL_DEVICE_TYPE isn't a valid device type and will
-    // result in an OpenCL error. What should we pass instead?
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE, &devices);
+    // Solution: Query for CL_DEVICE_TYPE_ALL, not CL_DEVICE_TYPE.
+    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
