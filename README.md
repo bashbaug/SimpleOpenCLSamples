@@ -14,6 +14,7 @@ CMakeLists.txt          Top-level CMakefile
 external/               External Projects (headers and libs)
 include/                Include Files (OpenCL C++ bindings)
 samples/                Samples
+tutorials/              Tutorials
 ```
 
 ## How to Build the Samples
