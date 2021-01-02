@@ -279,8 +279,8 @@ int main(
 
     cl::Program program{ context, kernelString };
 
-    // Part 6: Experiment with build options.
-    // Solution: Use the "-cl-fast-relaxed-math" build options.
+    // Part 5: Experiment with build options.
+    // Solution: Use the "-cl-fast-relaxed-math" build option.
     program.build("-cl-fast-relaxed-math");
 
     kernel = cl::Kernel{ program, "SinJulia" };

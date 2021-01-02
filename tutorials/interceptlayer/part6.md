@@ -5,6 +5,19 @@
 If you have made it this far, great work!
 We started with an OpenCL application that crashed and used the Intercept Layer for OpenCL Applications identify and fix the bugs that were preventing it from running correctly, then to profile the application to significantly improve its performance.
 
+After fixing all of the bugs and making the suggested performance improvements, we should be able to execute the tutorial application without the Intercept Layer now and it will still run well:
+
+```sh
+$ ./sinjulia
+Running on platform: Intel(R) OpenCL HD Graphics
+Running on device: Intel(R) Graphics [0x5916]
+Executing the kernel 16 times
+Global Work Size = ( 3840, 2160 )
+Local work size = NULL
+Finished in 0.513813 seconds
+Wrote image file sinjulia.bmp
+```
+
 This is the "official" end of the tutorial, but if you are looking for some additional things to try, either to explore the capabilities of the Intercept Layer for OpencL Applications or to experiment with fractal images, here are a few suggestions:
 
 * Visually trace the tutorial application using [Chrome Tracing](https://github.com/intel/opencl-intercept-layer/blob/master/docs/chrome_tracing.md).
@@ -18,8 +31,8 @@ This is the "official" end of the tutorial, but if you are looking for some addi
 * Modify the tutorial application to generate different fractal images.
     * Choose a different complex constant `c` by changing the values of `cr` and `ci`.
     * Choose a different iteration function.
-      Note that the tuturoal application currently uses `f(z) = c * sin(z)` as its iteration function.
-      Other iteration functions can be found on Paul Bourke's site [here](http://paulbourke.net/fractals/juliaset/).
+      Note that the tutorial application currently uses `f(z) = c * sin(z)` as its iteration function.
+      Other common iteration functions can be found on Paul Bourke's site [here](http://paulbourke.net/fractals/juliaset/).
       Remember that the inputs to these functions are complex numbers!
     * Use a different range of inputs.
       Note that the tutorial application currently goes from `-pi/2` to `+pi/2` for both the real and imaginary axes.

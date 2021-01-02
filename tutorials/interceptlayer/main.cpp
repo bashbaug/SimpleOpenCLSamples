@@ -280,11 +280,8 @@ int main(
     cl::Program program{ context, kernelString };
 
     // Part 5: Experiment with build options.
-    // By default, OpenCL kernels use precise math functions. For images like
-    // the ones we are generating, though, fast math is usually sufficient. If
-    // we pass build options to use fast math does the image still look OK? Does
-    // using fast math improve performance?
-    program.build();
+    // Solution: Use the "-cl-fast-relaxed-math" build option.
+    program.build("-cl-fast-relaxed-math");
 
     kernel = cl::Kernel{ program, "SinJulia" };
 
