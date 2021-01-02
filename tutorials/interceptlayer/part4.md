@@ -53,8 +53,8 @@ Timer Started!
 ... loading complete.
 Running on platform: Intel(R) OpenCL HD Graphics
 Running on device: Intel(R) Graphics [0x5916]
-Build Info for program 0x56116cf85b10 (0000_3DC4555B_0000_00000000) for 1 device(s):
-    Build finished in 290.12 ms.
+Build Info for program 0x55af00e8bb10 (0000_3DC4555B_0000_00000000) for 1 device(s):
+    Build finished in 283.75 ms.
 Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD_SUCCESS
 -------> Start of Build Log:
 <------- End of Build Log
@@ -62,7 +62,7 @@ Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD
 Executing the kernel 16 times
 Global Work Size = ( 3847, 2161 )
 Local work size = NULL
-Finished in 11.516864 seconds
+Finished in 11.520581 seconds
 Wrote image file sinjulia.bmp
 ```
 
@@ -71,20 +71,20 @@ The Intercept Layer for OpenCL Applications will also print a "report" showing t
 ```sh
 Host Performance Timing Results:
 
-Total Time (ns): 11663415031
+Total Time (ns): 11520204571
 
                      Function Name,  Calls,     Time (ns), Time (%),  Average (ns),      Min (ns),      Max (ns)
-                clEnqueueMapBuffer,      1,         88023,    0.00%,         88023,         88023,         88023
-clEnqueueNDRangeKernel( SinJulia ),     15,        350098,    0.00%,         23339,         21470,         45724
-           clEnqueueUnmapMemObject,      1,         11876,    0.00%,         11876,         11876,         11876
-                          clFinish,      2,   11661543982,   99.98%,    5830771991,          2640,   11661541342
-                           clFlush,     16,          4211,    0.00%,           263,           185,          1258
-             clReleaseCommandQueue,      1,          5276,    0.00%,          5276,          5276,          5276
-                  clReleaseContext,      1,           429,    0.00%,           429,           429,           429
-                   clReleaseDevice,      1,           803,    0.00%,           803,           803,           803
-                   clReleaseKernel,      1,         21528,    0.00%,         21528,         21528,         21528
-                clReleaseMemObject,      1,       1388346,    0.01%,       1388346,       1388346,       1388346
-                  clReleaseProgram,      1,           459,    0.00%,           459,           459,           459
+                clEnqueueMapBuffer,      1,         25902,    0.00%,         25902,         25902,         25902
+clEnqueueNDRangeKernel( SinJulia ),     15,        349393,    0.00%,         23292,         20403,         45464
+           clEnqueueUnmapMemObject,      1,         13578,    0.00%,         13578,         13578,         13578
+                          clFinish,      2,   11518251007,   99.98%,    5759125503,          2258,   11518248749
+                           clFlush,     16,          4125,    0.00%,           257,           188,          1022
+             clReleaseCommandQueue,      1,          5412,    0.00%,          5412,          5412,          5412
+                  clReleaseContext,      1,           431,    0.00%,           431,           431,           431
+                   clReleaseDevice,      1,           758,    0.00%,           758,           758,           758
+                   clReleaseKernel,      1,         21333,    0.00%,         21333,         21333,         21333
+                clReleaseMemObject,      1,       1532215,    0.01%,       1532215,       1532215,       1532215
+                  clReleaseProgram,      1,           417,    0.00%,           417,           417,           417
 ```
 
 Also, the Intercept Layer for OpenCL Applications will print a "report" showing the OpenCL commands that executed code on each OpenCL device and how long they took to execute:
@@ -92,12 +92,12 @@ Also, the Intercept Layer for OpenCL Applications will print a "report" showing 
 ```sh
 Device Performance Timing Results for Intel(R) Graphics [0x5916] (24CUs, 1100MHz):
 
-Total Time (ns): 11466683589
+Total Time (ns): 11454451416
 
                                  Function Name,  Calls,     Time (ns), Time (%),  Average (ns),      Min (ns),      Max (ns)
-SinJulia SIMD16 GWS[ 3847 x 2161 ] LWS[ NULL ],     16,   11466682328,  100.00%,     716667645,     714626750,     738733333
-                            clEnqueueMapBuffer,      1,           815,    0.00%,           815,           815,           815
-                       clEnqueueUnmapMemObject,      1,           446,    0.00%,           446,           446,           446
+SinJulia SIMD16 GWS[ 3847 x 2161 ] LWS[ NULL ],     16,   11454450744,  100.00%,     715903171,     714320583,     734597750
+                            clEnqueueMapBuffer,      1,           482,    0.00%,           482,           482,           482
+                       clEnqueueUnmapMemObject,      1,           190,    0.00%,           190,           190,           190
 ```
 
 There is a lot to analyze here!
@@ -108,11 +108,11 @@ For the tutorial application this is not a surprise since it is fairly simple an
 
 The device performance timing result confirms that most of the time is spent executing the OpenCL kernel.
 Notice that the time spent executing our SinJulia kernel is almost identical to the time spent in the host API call `clFinish`.
-We can also observe the global work size for the OpenCL kernel.
-The tutorial application does not specify a local work-group size, so it shows up as `NULL` in the report, but if a local work-group size were specified it would be included in the report also.
+We can also observe the ND-range specified for the SinJulia kernel, such as the global work size and the local work-group size.
+The tutorial application does not specify a local work-group size, so it shows up as `NULL` in the report, but if a local work-group size were specified it would also be included in the report.
 
-Since we know most of the execution time of our application is spent executing the OpenCL kernel we know where to focus our optimization efforts.
-We can generally improve OpenCL execution time on the device by optimizing the ND-range when we execute our kernel or the kernel code itself.
+Since we know most of the execution time of our application is spent executing the OpenCL kernel we should focus our optimization efforts there.
+We can generally improve OpenCL execution time on the device by optimizing the ND-range for our kernel or the kernel code itself.
 In this case, the global work size looks peculiar.
 In fact, a closer examination indicates that the global work size is prime in both dimensions!
 This is not ideal, since our kernel is compiled to require uniform work groups, meaning that the kernel is executing with a local work size equal to one.
@@ -131,7 +131,7 @@ Kernel Info for: SinJulia
 ```
 
 Let's choose a different global work size instead, such as one that will output a 4K bitmap - 3840 x 2160.
-This can be done initially by passing `-gwx 3840 -gwy 2160` to the tutorial application, or by modifying the default values in the application source code:
+This can be done by passing `-gwx 3840 -gwy 2160` to the tutorial application, or by modifying the default values in the application source code:
 
 ```sh
 $ cliloader -h -dv ./sinjulia -gwx 3840 -gwy 2160
@@ -142,42 +142,42 @@ CLIntercept (64-bit) is loading...
 Executing the kernel 16 times
 Global Work Size = ( 3840, 2160 )
 Local work size = NULL
-Finished in 1.422414 seconds
+Finished in 1.417555 seconds
 Wrote image file sinjulia.bmp
 Total Enqueues: 18
 
 
 Host Performance Timing Results:
 
-Total Time (ns): 1421782871
+Total Time (ns): 1416862062
 
                      Function Name,  Calls,     Time (ns), Time (%),  Average (ns),      Min (ns),      Max (ns)
-                clEnqueueMapBuffer,      1,         24587,    0.00%,         24587,         24587,         24587
-clEnqueueNDRangeKernel( SinJulia ),     15,        315471,    0.02%,         21031,         17276,         42736
-           clEnqueueUnmapMemObject,      1,         13731,    0.00%,         13731,         13731,         13731
-                          clFinish,      2,    1419975979,   99.87%,     709987989,          3286,    1419972693
-                           clFlush,     16,          4900,    0.00%,           306,           196,          1173
-             clReleaseCommandQueue,      1,          4900,    0.00%,          4900,          4900,          4900
-                  clReleaseContext,      1,           608,    0.00%,           608,           608,           608
-                   clReleaseDevice,      1,         75593,    0.01%,         75593,         75593,         75593
-                   clReleaseKernel,      1,         20689,    0.00%,         20689,         20689,         20689
-                clReleaseMemObject,      1,       1345821,    0.09%,       1345821,       1345821,       1345821
-                  clReleaseProgram,      1,           592,    0.00%,           592,           592,           592
+                clEnqueueMapBuffer,      1,         26399,    0.00%,         26399,         26399,         26399
+clEnqueueNDRangeKernel( SinJulia ),     15,        295244,    0.02%,         19682,         17738,         41870
+           clEnqueueUnmapMemObject,      1,         11975,    0.00%,         11975,         11975,         11975
+                          clFinish,      2,    1415208192,   99.88%,     707604096,          2426,    1415205766
+                           clFlush,     16,          4807,    0.00%,           300,           222,          1078
+             clReleaseCommandQueue,      1,          5979,    0.00%,          5979,          5979,          5979
+                  clReleaseContext,      1,           430,    0.00%,           430,           430,           430
+                   clReleaseDevice,      1,           877,    0.00%,           877,           877,           877
+                   clReleaseKernel,      1,         24206,    0.00%,         24206,         24206,         24206
+                clReleaseMemObject,      1,       1283568,    0.09%,       1283568,       1283568,       1283568
+                  clReleaseProgram,      1,           385,    0.00%,           385,           385,           385
 
 Device Performance Timing Results for Intel(R) Graphics [0x5916] (24CUs, 1100MHz):
 
-Total Time (ns): 1368212401
+Total Time (ns): 1364981027
 
                                  Function Name,  Calls,     Time (ns), Time (%),  Average (ns),      Min (ns),      Max (ns)
-SinJulia SIMD16 GWS[ 3840 x 2160 ] LWS[ NULL ],     16,    1368211662,  100.00%,      85513228,      85312000,      86285416
-                            clEnqueueMapBuffer,      1,           480,    0.00%,           480,           480,           480
-                       clEnqueueUnmapMemObject,      1,           259,    0.00%,           259,           259,           259
+SinJulia SIMD16 GWS[ 3840 x 2160 ] LWS[ NULL ],     16,    1364980328,  100.00%,      85311270,      85195000,      85634333
+                            clEnqueueMapBuffer,      1,           508,    0.00%,           508,           508,           508
+                       clEnqueueUnmapMemObject,      1,           191,    0.00%,           191,           191,           191
 CLIntercept is shutting down...
 ... shutdown complete.
 
 ```
 
-The magnitude of the improvement by choosing a non-prime global work size will be device-specific, but on this OpenCL device choosing a different global work size produced an **8x** improvement in performance - not bad!
+The magnitude of the improvement by choosing a non-prime global work size will be device-specific, but on this OpenCL device choosing the different global work size produced an **8x** improvement in performance - not bad!
 Many other devices will see a similar level of improvement.
 
 Move on to part 5!

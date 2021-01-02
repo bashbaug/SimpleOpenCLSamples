@@ -29,15 +29,11 @@
 const char* filename = "sinjulia.bmp";
 
 size_t iterations = 16;
-// Part 4: Fix the default global work size.
-// Since we are compiling our kernels for the default OpenCL C 1.2 we require
-// uniform work groups. Unfortunately, this chosen global work size is prime, so
-// the only uniform local work-group size is one work-item, which is not very
-// efficient! Can we choose a different global work size that will perform
-// better?
-// Note: 4K resolution is 3840 x 2160.
-size_t gwx = 3847;
-size_t gwy = 2161;
+// Part 4: Fix the global work size.
+// Solution: Choose the 4K resolution 3840 x 2160 instead of a resolution that
+// is prime in both dimensions.
+size_t gwx = 3840;
+size_t gwy = 2160;
 size_t lwx = 0; // NULL local work size.
 size_t lwy = 0;
 

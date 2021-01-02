@@ -34,7 +34,7 @@ size_t iterations = 16;
 // is prime in both dimensions.
 size_t gwx = 3840;
 size_t gwy = 2160;
-size_t lwx = 0;
+size_t lwx = 0; // NULL local work size.
 size_t lwy = 0;
 
 float cr = 1.0f;

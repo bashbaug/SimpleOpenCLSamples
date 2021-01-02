@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,15 +30,11 @@ const char* filename = "sinjulia.bmp";
 
 size_t iterations = 16;
 // Part 4: Fix the global work size.
-// Only some devices support non-uniform work groups, and non-uniform work
-// groups require OpenCL C 2.0 or newer.  Since we are compiling our kernels for
-// the default OpenCL C 1.2 we require uniform work groups. Unfortunately, this
-// chosen global work size is prime, so the only uniform work group size is one
-// work-item, which is not very efficient!  Choosing a different global work
-// size will likely perform much better.
+// Solution: Choose the 4K resolution 3840 x 2160 instead of a resolution that
+// is prime in both dimensions.
 size_t gwx = 3840;
 size_t gwy = 2160;
-size_t lwx = 0;
+size_t lwx = 0; // NULL local work size.
 size_t lwy = 0;
 
 float cr = 1.0f;
@@ -49,7 +45,7 @@ cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
 // Part 2: Fix the OpenCL Kernel Code.
-// There are a few typos in the OpenCL kernel code below that need to be fixed.
+// Solution: Fix the typo.
 static const char kernelString[] = R"CLC(
 kernel void SinJulia(global uchar4* dst, float cr, float ci)
 {
@@ -150,9 +146,8 @@ static void go()
 static void checkResults()
 {
     // Part 3: Fix the map flags.
-    // We want to read the results of our kernel and save them to a bitmap. The
-    // map flags below are more typically used to initialize a buffer. What map
-    // flag should be used instead?
+    // Solution: Use the map flag CL_MAP_READ instead of
+    // CL_MAP_WRITE_INVALIDATE_REGION.
     auto buf = reinterpret_cast<const uint32_t*>(
         commandQueue.enqueueMapBuffer(
             deviceMemDst,
@@ -273,9 +268,7 @@ int main(
 
     std::vector<cl::Device> devices;
     // Part 1: Query the devices in this platform.
-    // We will usually pass in a specific device type, e.g. CL_DEVICE_TYPE_CPU.
-    // We can also pass in CL_DEVICE_TYPE_ALL, which will get all devices.
-    // Passing CL_DEVICE_TYPE isn't a valid device type...
+    // Solution: Query for CL_DEVICE_TYPE_ALL, not CL_DEVICE_TYPE.
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
     printf("Running on device: %s\n",
@@ -286,11 +279,11 @@ int main(
 
     cl::Program program{ context, kernelString };
 
-    // Part 6: Experiment with build options.
-    // By default, OpenCL kernels use precise math functions.  For images like
-    // the ones we are generating though, fast math is usually sufficient.  If
-    // you pass build options to use fast math do you see a performance
-    // improvement?
+    // Part 5: Experiment with build options.
+    // By default, OpenCL kernels use precise math functions. For images like
+    // the ones we are generating, though, fast math is usually sufficient. If
+    // we pass build options to use fast math does the image still look OK? Does
+    // using fast math improve performance?
     program.build();
 
     kernel = cl::Kernel{ program, "SinJulia" };
