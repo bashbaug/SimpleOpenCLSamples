@@ -67,7 +67,7 @@ If `ErrorLogging` and `CallLogging` are not "set to non-default values" then the
 Second, observe that that the call to `clGetDeviceIDs` is failing and is returning `CL_INVALID_DEVICE_TYPE`.
 Furthermore, observe that the passed-in `device_type` is unrecognized.
 Because the call to `clGetDeviceIDs` is failing, we don't have any OpenCL devices to choose from, and since the tutorial application does not gracefully handle this case it is crashing.
-Let's pass in a proper device type so we have OpenCL devices to choose from.
+Let's pass in a proper device type so we have OpenCL devices to choose from by modifying Line 281 in `main.cpp` and rebuilding.
 
 ```c++
 // Part 1: Query the devices in this platform.
