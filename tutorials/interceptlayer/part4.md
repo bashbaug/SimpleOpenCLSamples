@@ -17,7 +17,7 @@ Also note that `DevicePerformanceTiming` can be enabled by passing the `-d` opti
 
 After setting these controls, re-run the tutorial application.  In addition to the usual loading log and application output:
 
-```sh
+```
 $ cliloader -h -dv ./sinjulia
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
@@ -68,7 +68,7 @@ Wrote image file sinjulia.bmp
 
 The Intercept Layer for OpenCL Applications will also print a "report" showing the OpenCL host API calls and how long they took to execute:
 
-```sh
+```
 Host Performance Timing Results:
 
 Total Time (ns): 11520204571
@@ -89,7 +89,7 @@ clEnqueueNDRangeKernel( SinJulia ),     15,        349393,    0.00%,         232
 
 Also, the Intercept Layer for OpenCL Applications will print a "report" showing the OpenCL commands that executed code on each OpenCL device and how long they took to execute:
 
-```sh
+```
 Device Performance Timing Results for Intel(R) Graphics [0x5916] (24CUs, 1100MHz):
 
 Total Time (ns): 11454451416
@@ -119,7 +119,7 @@ This is not ideal, since our kernel is compiled to require uniform work groups, 
 For most data-parallel kernels we want a larger local work-group size.
 If we enable the control `KernelInfoLogging` we can print information about each kernel when it is created, including the query for `CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE`, which will give a hint about the desired local work-group size for the device:
 
-```sh
+```
 Kernel Info for: SinJulia
     For device: Intel(R) Graphics [0x5916]
         Num Args: 3
@@ -133,7 +133,7 @@ Kernel Info for: SinJulia
 Let's choose a different global work size instead, such as one that will output a 4K bitmap - 3840 x 2160.
 This can be done by passing `-gwx 3840 -gwy 2160` to the tutorial application, or by modifying the default values in the application source code:
 
-```sh
+```
 $ cliloader -h -dv ./sinjulia -gwx 3840 -gwy 2160
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...

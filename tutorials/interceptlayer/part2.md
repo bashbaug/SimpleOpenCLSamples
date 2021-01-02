@@ -2,13 +2,13 @@
 
 ## Part 2: Fixing an OpenCL Program Build Error
 
-In part 1 of the tutorial we fixed an OpenCL error so the program no longer crashes, but it still does not run correctly.
+In part 1 of the tutorial we fixed an OpenCL error so the program no longer crashes but it still does not run correctly.
 In this part of the tutorial we will fix the next error in the OpenCL kernel code.
-The Intercept Layer for OpenCL Applications can easily pinpoint errors in OpenCL kernel code as well, and has tools for quickly iterating to find a fix.
+The Intercept Layer for OpenCL Applications can pinpoint errors in OpenCL kernel code as well and has tools for quickly iterating to find a fix.
 
 After fixing the bug in part 1, and with `ErrorLogging` and `CallLogging` still set, the next OpenCL error is this one:
 
-```sh
+```
 $ cliloader ./sinjulia 
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
@@ -76,7 +76,7 @@ Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD
 As before, there are two parts of this output to pay attention to.
 First, ensure that the control has been properly set:
 
-```sh
+``
 Control BuildLogging is set to non-default value: true
 ```
 
@@ -91,7 +91,7 @@ If it is not easy to modify the kernel and rebuild, we can [Dump and Inject](htt
 To do this, we will first set the control `DumpProgramSource` and re-run the tutorial application.
 After setting this control we should see output like the following in our log:
 
-```sh
+```
 Dumping program to file (inject): /home/bashbaug/CLIntercept_Dump/sinjulia/CLI_0000_B823BE28_source.cl
 ```
 
@@ -104,7 +104,7 @@ Let's fix the typo in the OpenCL kernel source in this file, by changing `xMx` t
 After fixing the typo, save it in an `Inject` sub-directory in the dump directory, set the control `InjectProgramSource` and re-run the tutorial application.
 Now we should see output like the following in our log:
 
-```sh
+```
 Injecting source file: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_B823BE28_source.cl
 >>>> clCreateProgramWithSource: context = 0x55d0baaa0510, count = 1
 <<<< clCreateProgramWithSource: returned 0x55d0baadcb10, program number = 0000 -> CL_SUCCESS
@@ -128,7 +128,7 @@ Notice that the `clBuildProgram` OpenCL error is fixed - excellent!
 Since this was the only error in our OpenCL kernel code, let's modify it in the application source code itself.
 Modifying the kernel code in the application source code will change the program hash and the modified OpenCL kernel source should no longer be injected.
 
-```sh
+```
 Injection source file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_0000_3DC4555B_source.cl
 Injection source file doesn't exist: /home/bashbaug/CLIntercept_Dump/sinjulia/Inject/CLI_3DC4555B_source.cl
 >>>> clCreateProgramWithSource: context = 0x55b2bd586510, count = 1

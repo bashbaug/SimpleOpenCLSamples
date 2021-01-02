@@ -16,7 +16,7 @@ To reduce the amount of disk space required, dumping can be constrained to a spe
 For this part of the tutorial, we will enable `DumpBuffersBeforeEnqueue`, `DumpBuffersAfterEnqueue`, and we will set `DumpBuffersMaxEnqueue` to `2`.
 After setting these controls and re-running the tutorial application, we won't see any additional output in our log, but we should see files with the contents of our buffers in the dump directory:
 
-```sh
+```
 $ ls -R ~/CLIntercept_Dump/sinjulia/
 /home/bashbaug/CLIntercept_Dump/sinjulia/:
 CLI_0000_3DC4555B_source.cl  CLI_0000_B823BE28_source.cl  clintercept_report.txt  Inject  memDumpPostEnqueue  memDumpPreEnqueue
@@ -37,7 +37,7 @@ Even without a raw image decoder, though, a quick glance at these files indicate
 
 Let's re-enable `CallLogging` and check where the buffer is transferred from the device to the host before writing to the output bitmap:
 
-```sh
+```
 >>>> clEnqueueMapBuffer: [ map count = 0 ] queue = 0x560f5febe240, buffer = 0x560f5fe1e7b0, blocking, map_flags = CL_MAP_WRITE_INVALIDATE_REGION (4), offset = 0, cb = 33253468
 <<<< clEnqueueMapBuffer: [ map count = 1 ] returned 0x7f8d00a67000 -> CL_SUCCESS
 Wrote image file sinjulia.bmp

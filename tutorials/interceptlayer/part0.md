@@ -11,7 +11,7 @@ First, ensure that the tutorial application itself builds and runs.
 It will crash initially - that's fine!
 As part of the tutorial we will fix bugs that are preventing the tutorial application from running and running well.
 
-```sh
+```
 $ ./sinjulia 
 Running on platform: Intel(R) OpenCL HD Graphics
 Segmentation fault (core dumped)
@@ -27,7 +27,7 @@ After the tutorial application is building and running, next build the [Intercep
 This tutorial is written to use the [cliloader](https://github.com/intel/opencl-intercept-layer/blob/master/docs/cliloader.md) utility, but if you prefer you may follow the [installation instructions](https://github.com/intel/opencl-intercept-layer/blob/master/docs/install.md) instead.
 After building and installing the Intercept Layer and `cliloader`, you should be able to use it to execute the tutorial application.
 
-```sh
+```
 $ cliloader ./sinjulia 
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
@@ -59,7 +59,7 @@ Segmentation fault (core dumped)
 
 The tutorial application will still crash, but you should see output from the Intercept Layer as it is loading.
 The output from the Intercept Layer as it is running is referred to as the "log".
-By default, the log is emitted to `stderr`, but there are controls to emit the log to a file or to a debugger instead, which is convenient for console applications or if the application generates a lot of log data.
+By default, the log is emitted to `stderr`, but there are controls to emit the log to a file or to a debugger instead, which is convenient for GUI applications or if the application generates a lot of log data.
 
 If the Intercept Layer isn't working, please check the [Troubleshooting and Frequently Asked Questions](https://github.com/intel/opencl-intercept-layer/blob/master/docs/FAQ.md) page.
 

@@ -57,7 +57,7 @@ Segmentation fault (core dumped)
 There are two parts of this output to pay attention to.
 First, ensure that the controls have been properly set:
 
-```sh
+```
 Control CallLogging is set to non-default value: true
 Control ErrorLogging is set to non-default value: true
 ```

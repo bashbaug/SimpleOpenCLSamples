@@ -39,7 +39,7 @@ This method allows for selectively specifying program build options for some Ope
 Since the tutorial application only executes a single kernel, though, we can instead set `AppendBuildOptions` to append `-cl-fast-relaxed-math` to the build options for all OpenCL kernels.
 Let's give this a try and run the tutorial application once more:
 
-```sh
+```
 $ cliloader -h -dv ./sinjulia
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...

@@ -7,7 +7,7 @@ We started with an OpenCL application that crashed and used the Intercept Layer 
 
 After fixing all of the bugs and making the suggested performance improvements, we should be able to execute the tutorial application without the Intercept Layer now and it will still run well:
 
-```sh
+```
 $ ./sinjulia
 Running on platform: Intel(R) OpenCL HD Graphics
 Running on device: Intel(R) Graphics [0x5916]
