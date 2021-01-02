@@ -76,7 +76,7 @@ Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD
 As before, there are two parts of this output to pay attention to.
 First, ensure that the control has been properly set:
 
-``
+```
 Control BuildLogging is set to non-default value: true
 ```
 
