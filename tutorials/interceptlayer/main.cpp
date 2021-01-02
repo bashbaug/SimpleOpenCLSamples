@@ -150,14 +150,13 @@ static void go()
 static void checkResults()
 {
     // Part 3: Fix the map flags.
-    // We want to read the results of our kernel and save them to a bitmap. The
-    // map flags below are more typically used to initialize a buffer. What map
-    // flag should we use instead?
+    // Solution: Use the map flag CL_MAP_READ instead of
+    // CL_MAP_WRITE_INVALIDATE_REGION.
     auto buf = reinterpret_cast<const uint32_t*>(
         commandQueue.enqueueMapBuffer(
             deviceMemDst,
             CL_TRUE,
-            CL_MAP_WRITE_INVALIDATE_REGION,
+            CL_MAP_READ,
             0,
             gwx * gwy * sizeof(cl_uchar4) ) );
 
