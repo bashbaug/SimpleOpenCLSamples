@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2021 Ben Ashbaugh
+// Copyright (c) 2019-2020 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,11 +29,15 @@
 const char* filename = "sinjulia.bmp";
 
 size_t iterations = 16;
-// Part 4: Fix the global work size.
-// Solution: Choose the 4K resolution 3840 x 2160 instead of a resolution that
-// is prime in both dimensions.
-size_t gwx = 3840;
-size_t gwy = 2160;
+// Part 4: Fix the default global work size.
+// Since we are compiling our kernels for the default OpenCL C 1.2 we require
+// uniform work groups. Unfortunately, this chosen global work size is prime, so
+// the only uniform local work-group size is one work-item, which is not very
+// efficient! Can we choose a different global work size that will perform
+// better?
+// Note: 4K resolution is 3840 x 2160.
+size_t gwx = 3847;
+size_t gwy = 2161;
 size_t lwx = 0; // NULL local work size.
 size_t lwy = 0;
 
@@ -44,8 +48,8 @@ cl::CommandQueue commandQueue;
 cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
-// Part 2: Fix the OpenCL Kernel Code.
-// Solution: Fix the typo.
+// Part 2: Fix the program.
+// Where is the typo in the program below?
 static const char kernelString[] = R"CLC(
 kernel void SinJulia(global uchar4* dst, float cr, float ci)
 {
@@ -58,7 +62,7 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
     const float zMin = -M_PI_F / 2;
     const float zMax =  M_PI_F / 2;
 
-    float zr = (float)x / xMax * (zMax - zMin) + zMin;
+    float zr = (float)x / xMx  * (zMax - zMin) + zMin;
     float zi = (float)y / yMax * (zMax - zMin) + zMin;
 
     const int cIterations = 64;
@@ -146,13 +150,14 @@ static void go()
 static void checkResults()
 {
     // Part 3: Fix the map flags.
-    // Solution: Use the map flag CL_MAP_READ instead of
-    // CL_MAP_WRITE_INVALIDATE_REGION.
+    // We want to read the results of our kernel and save them to a bitmap. The
+    // map flags below are more typically used to initialize a buffer. What map
+    // flag should we use instead?
     auto buf = reinterpret_cast<const uint32_t*>(
         commandQueue.enqueueMapBuffer(
             deviceMemDst,
             CL_TRUE,
-            CL_MAP_READ,
+            CL_MAP_WRITE_INVALIDATE_REGION,
             0,
             gwx * gwy * sizeof(cl_uchar4) ) );
 
@@ -268,8 +273,12 @@ int main(
 
     std::vector<cl::Device> devices;
     // Part 1: Query the devices in this platform.
-    // Solution: Query for CL_DEVICE_TYPE_ALL, not CL_DEVICE_TYPE.
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+    // When querying for OpenCL devices we pass the types of devices we want to
+    // query. This will either be one or more specific device types, e.g.
+    // CL_DEVICE_TYPE_CPU, or we can pass in CL_DEVICE_TYPE_ALL, which will get
+    // all devices. Passing CL_DEVICE_TYPE isn't a valid device type and will
+    // result in an OpenCL error. What should we pass instead?
+    platforms[platformIndex].getDevices(CL_DEVICE_TYPE, &devices);
 
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
@@ -280,8 +289,11 @@ int main(
     cl::Program program{ context, kernelString };
 
     // Part 5: Experiment with build options.
-    // Solution: Use the "-cl-fast-relaxed-math" build option.
-    program.build("-cl-fast-relaxed-math");
+    // By default, OpenCL kernels use precise math functions. For images like
+    // the ones we are generating, though, fast math is usually sufficient. If
+    // we pass build options to use fast math does the image still look OK? Does
+    // using fast math improve performance?
+    program.build();
 
     kernel = cl::Kernel{ program, "SinJulia" };
 
