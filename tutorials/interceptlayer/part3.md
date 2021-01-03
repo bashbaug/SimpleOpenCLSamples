@@ -7,10 +7,10 @@ To be sure, we can un-set the `CallLogging` control, but keep `ErrorLogging` ena
 Because `ErrorLogging` is fairly lightweight and does not produce a lot of output for a well-behaved program it is a good control to leave enabled by default.
 
 If the tutorial application is running without any OpenCL errors we can check the output bitmap `sinjulia.bmp`.
-If you are running the tutorial application on a CPU or integrated GPU OpenCL device that does not have dedicated device memory then the output bitmap may look OK, but on some devices the output bitmap may either be empty or may contain garbage.
-In this part of the tutorial we will fix a subtle OpenCL error so the tutorial application runs on all OpenCL devices.
+If the tutorial application is running on some OpenCL devices such as a CPU or integrated GPU that does not have dedicated device memory then the output bitmap may look OK, but on other OpenCL devices the output bitmap may either be empty or may contain garbage.
+In this part of the tutorial we will fix a subtle OpenCL error so the tutorial application generates the correct bitmap for all OpenCL devices.
 
-When debugging errors such as these we can check the output of our OpenCL kernels by setting `DumpBuffersBeforeEnqueue` and `DumpBuffersAfterEnqueue`.
+When debugging errors such as these we can check the output of our OpenCL kernels by enabling `DumpBuffersBeforeEnqueue` and `DumpBuffersAfterEnqueue`.
 Be warned though, this can consume a lot of disk space!
 To reduce the amount of disk space required, dumping can be constrained to a specific region of the program using `DumpBuffersMinEnqueue` and `DumpBuffersMaxEnqueue`.
 For this part of the tutorial, we will enable `DumpBuffersBeforeEnqueue`, `DumpBuffersAfterEnqueue`, and we will set `DumpBuffersMaxEnqueue` to `2`.

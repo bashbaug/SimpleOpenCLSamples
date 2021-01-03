@@ -33,7 +33,7 @@ One way to trade off precision for performance is by passing the `-cl-fast-relax
 The Intercept Layer supports two different methods of specifying program build options for fast iteration and without modifying application source code.
 
 The first method uses the same [Dump and Inject](https://github.com/intel/opencl-intercept-layer/blob/master/docs/injecting_programs.md) capabilities from part 2 but to inject modified program build options instead of modified OpenCL kernel code.
-To use this method, set the `InjectProgramSource` control from before, and put a program options file in the `Inject` directory similar to the way the OpenCL kernel code was injected in part 2.
+To use this method, enable the `InjectProgramSource` control from before, and put a program options file in the `Inject` directory similar to the way the OpenCL kernel code was injected in part 2.
 This method allows for selectively specifying program build options for some OpenCL kernels without modifying program build options for all kernels.
 
 Since the tutorial application only executes a single kernel, though, we can instead set `AppendBuildOptions` to append `-cl-fast-relaxed-math` to the build options for all OpenCL kernels.

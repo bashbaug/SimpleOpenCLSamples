@@ -59,7 +59,7 @@ Segmentation fault (core dumped)
 
 The tutorial application will still crash, but you should see output from the Intercept Layer as it is loading.
 The output from the Intercept Layer as it is running is referred to as the "log".
-By default, the log is emitted to `stderr`, but there are controls to emit the log to a file or to a debugger instead, which is convenient for GUI applications or if the application generates a lot of log data.
+By default, the log is emitted to `stderr`, but the `LogToFile` control can emit the log to a file and the `LogToDebugger` control can emit the log to a debugger instead, which is convenient for GUI applications or if the application generates a lot of log data.
 
 If the Intercept Layer isn't working, please check the [Troubleshooting and Frequently Asked Questions](https://github.com/intel/opencl-intercept-layer/blob/master/docs/FAQ.md) page.
 

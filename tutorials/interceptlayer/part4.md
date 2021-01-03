@@ -12,10 +12,11 @@ Enabling both types of profiling is a good way to discover where an application 
 To profile OpenCL host API calls, enable the control `HostPerformanceTiming`, and to profile OpenCL device commands, enable the control `DevicePerformanceTiming`.
 For some programs, such as the tutorial application, it is helpful to set the control `HostPerformanceTimingMinEnqueue` to bypass host API calls made when setting up the context and compiling kernels.
 Additionally, it may be helpful to enable the controls `DevicePerformanceTimeGWSTracking`, `DevicePerformanceTimeLWSTracking`, and `DevicePerformanceTimeKernelInfoTracking`, which will include additional information for OpenCL kernel execution on the device.
-Note that `HostPerformanceTiming` can be enabled by passing the `-h` option to `cliloader` and does not necessarily need to be set manually.
+Note that `HostPerformanceTiming` can be enabled by passing the `-h` option to `cliloader` and does not necessarily need to be enabled manually.
 Also note that `DevicePerformanceTiming` can be enabled by passing the `-d` option to `cliloader`, and the additional device timing controls can be enabled by passing the `-dv` option to `cliloader`.
 
-After setting these controls, re-run the tutorial application.  In addition to the usual loading log and application output:
+After enabling these controls, re-run the tutorial application.
+In addition to the usual loading log and application output:
 
 ```
 $ cliloader -h -dv ./sinjulia
@@ -66,7 +67,7 @@ Finished in 11.520581 seconds
 Wrote image file sinjulia.bmp
 ```
 
-The Intercept Layer for OpenCL Applications will also print a "report" showing the OpenCL host API calls and how long they took to execute:
+The Intercept Layer will also display a "report" showing the OpenCL host API calls and how long they took to execute:
 
 ```
 Host Performance Timing Results:
@@ -87,7 +88,7 @@ clEnqueueNDRangeKernel( SinJulia ),     15,        349393,    0.00%,         232
                   clReleaseProgram,      1,           417,    0.00%,           417,           417,           417
 ```
 
-Also, the Intercept Layer for OpenCL Applications will print a "report" showing the OpenCL commands that executed code on each OpenCL device and how long they took to execute:
+Also, the Intercept Layer will display a "report" showing the OpenCL commands that executed code on each OpenCL device and how long they took to execute:
 
 ```
 Device Performance Timing Results for Intel(R) Graphics [0x5916] (24CUs, 1100MHz):

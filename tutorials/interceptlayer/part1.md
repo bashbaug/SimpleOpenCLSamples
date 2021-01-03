@@ -5,11 +5,11 @@
 In this part of the tutorial we will fix a bug so the program will no longer crash.
 The Intercept Layer for OpenCL Applications can easily identify OpenCL errors in a program and provide clues why the OpenCL error might be occurring.
 
-To find where this OpenCL error is occurring, set the controls `ErrorLogging` and `CallLogging`.
-Please refer to the [controls](https://github.com/intel/opencl-intercept-layer/blob/master/docs/controls.md#controls) page for instructions how to set these controls and other controls that will be used throughout the tutorial.
-Note that `CallLogging` can be enabled by passing the `-c` option to `cliloader` and does not necessarily need to be set manually.
+To find where this OpenCL error is occurring, enable the controls `ErrorLogging` and `CallLogging`.
+Please refer to the [controls](https://github.com/intel/opencl-intercept-layer/blob/master/docs/controls.md#controls) page for instructions how to enable these controls and other controls that will be used throughout the tutorial.
+Note that `CallLogging` can be enabled by passing the `-c` option to `cliloader` and does not necessarily need to be enabled manually.
 
-After setting these controls, re-run the tutorial application.
+After enabling these controls, re-run the tutorial application.
 
 ```
 $ cliloader ./sinjulia 
@@ -55,14 +55,14 @@ Segmentation fault (core dumped)
 ```
 
 There are two parts of this output to pay attention to.
-First, ensure that the controls have been properly set:
+First, ensure that the controls have been properly enabled:
 
 ```
 Control CallLogging is set to non-default value: true
 Control ErrorLogging is set to non-default value: true
 ```
 
-If `ErrorLogging` and `CallLogging` are not "set to non-default values" then the controls are not set properly.
+If `ErrorLogging` and `CallLogging` are not "set to non-default values" then the controls are not enabled properly.
 
 Second, observe that that the call to `clGetDeviceIDs` is failing and is returning `CL_INVALID_DEVICE_TYPE`.
 Furthermore, observe that the passed-in `device_type` is unrecognized.

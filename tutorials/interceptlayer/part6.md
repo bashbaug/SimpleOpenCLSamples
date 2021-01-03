@@ -18,7 +18,7 @@ Finished in 0.513813 seconds
 Wrote image file sinjulia.bmp
 ```
 
-This is the "official" end of the tutorial, but if you are looking for some additional things to try, either to explore the capabilities of the Intercept Layer for OpencL Applications or to experiment with fractal images, here are a few suggestions:
+This is the "official" end of the tutorial, but if you are looking for some additional things to try, either to explore the capabilities of the Intercept Layer for OpenCL Applications or to experiment with fractal images, here are a few suggestions:
 
 * Visually trace the tutorial application using [Chrome Tracing](https://github.com/intel/opencl-intercept-layer/blob/master/docs/chrome_tracing.md).
     * How does the trace change if you enable the `FinishAfterEnqueue` control?

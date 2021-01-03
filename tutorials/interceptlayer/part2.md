@@ -4,7 +4,7 @@
 
 In part 1 of the tutorial we fixed an OpenCL error so the program no longer crashes but it still does not run correctly.
 In this part of the tutorial we will fix the next error in the OpenCL kernel code.
-The Intercept Layer for OpenCL Applications can pinpoint errors in OpenCL kernel code as well and has tools for quickly iterating to find a fix.
+The Intercept Layer for OpenCL Applications can pinpoint errors in OpenCL kernel code as well as OpenCL API calls and has tools for quickly iterating to find a fix.
 
 After fixing the bug in part 1, and with `ErrorLogging` and `CallLogging` still set, the next OpenCL error is this one:
 
@@ -20,9 +20,9 @@ ERROR! clBuildProgram returned CL_BUILD_PROGRAM_FAILURE (-11)
 ```
 
 A `clBuildProgram` error usually means that the OpenCL kernel code is incorrect.
-To identify the error in the OpenCL kernel code, set the control `BuildLogging`.
+To identify the error in the OpenCL kernel code, enable the control `BuildLogging`.
 
-After setting this control, re-run the tutorial application.
+After enabling this control, re-run the tutorial application.
 
 ```
 $ cliloader ./sinjulia
@@ -74,13 +74,13 @@ Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD
 ```
 
 As before, there are two parts of this output to pay attention to.
-First, ensure that the control has been properly set:
+First, ensure that the control has been properly enabled:
 
 ```
 Control BuildLogging is set to non-default value: true
 ```
 
-If `BuildLogging` is not "set to a non-default value" then the control is not set properly.
+If `BuildLogging` is not "set to a non-default value" then the control is not enabled properly.
 
 Second, observe the error in the OpenCL kernel code.
 Looks like there is a typo and `xMax` was incorrectly written as `xMx` - uh oh!
@@ -88,8 +88,8 @@ Looks like there is a typo and `xMax` was incorrectly written as `xMx` - uh oh!
 For the tutorial application, we have the application source code and it is easy to modify the OpenCL kernel code and rebuild, but this isn't always the case.
 If it is not easy to modify the kernel and rebuild, we can [Dump and Inject](https://github.com/intel/opencl-intercept-layer/blob/master/docs/injecting_programs.md) the modified OpenCL kernel code instead.
 
-To do this, we will first set the control `DumpProgramSource` and re-run the tutorial application.
-After setting this control we should see output like the following in our log:
+To do this, we will first enable the control `DumpProgramSource` and re-run the tutorial application.
+After enabling this control we should see output like the following in our log:
 
 ```
 Dumping program to file (inject): /home/bashbaug/CLIntercept_Dump/sinjulia/CLI_0000_B823BE28_source.cl
@@ -101,7 +101,7 @@ If the default "dump" directory is undesirable or unavailable, an alternate dump
 If we open the dumped source file we should see our OpenCL kernel source, with the error shown above in the build log.
 Note that the program hash in the file name `B823BE28` matches the program hash in the build log.
 Let's fix the typo in the OpenCL kernel source in this file, by changing `xMx` to `xMax`.
-After fixing the typo, save it in an `Inject` sub-directory in the dump directory, set the control `InjectProgramSource` and re-run the tutorial application.
+After fixing the typo, save it in an `Inject` sub-directory in the dump directory, enable the control `InjectProgramSource` and re-run the tutorial application.
 Now we should see output like the following in our log:
 
 ```
