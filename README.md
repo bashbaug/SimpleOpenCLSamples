@@ -1,6 +1,6 @@
 # Simple OpenCL<sup>TM</sup> Samples
 
-[![build](https://github.com/bashbaug/SimpleOpenCLSamples/workflows/build/badge.svg)](https://github.com/bashbaug/SimpleOpenCLSamples/actions?query=workflow%3Abuild)
+[![build](https://github.com/bashbaug/SimpleOpenCLSamples/workflows/build/badge.svg?branch=master)](https://github.com/bashbaug/SimpleOpenCLSamples/actions?query=workflow%3Abuild+branch%3Amaster)
 
 This repo contains simple OpenCL samples that demonstrate how to build
 OpenCL applications using only the Khronos-provided headers and libs.
