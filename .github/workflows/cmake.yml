@@ -62,7 +62,7 @@ jobs:
       shell: bash
       run: cmake --build . --config $BUILD_TYPE
 
-    - name: Test
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: ctest -C $BUILD_TYPE
+    #- name: Test
+    #  working-directory: ${{runner.workspace}}/build
+    #  shell: bash
+    #  run: ctest -C $BUILD_TYPE
