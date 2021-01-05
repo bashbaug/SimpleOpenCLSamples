@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -374,6 +374,8 @@ int main(
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
+            "      -i: Kernel Iterations (default = 1)\n"
+            "      -e: Number of ND-Range Elements (default = 1)\n"
             );
 
         return -1;

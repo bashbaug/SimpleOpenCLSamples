@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020 Ben Ashbaugh
+# Copyright (c) 2019-2021 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,7 @@
 
 add_opencl_sample(
     TEST
+    NUMBER 10
     TARGET queueexperiments
     VERSION 120
     SOURCES main.cpp)

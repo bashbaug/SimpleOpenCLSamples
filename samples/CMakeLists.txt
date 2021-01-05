@@ -86,4 +86,4 @@ add_subdirectory( 04_julia )
 add_subdirectory( 05_kernelfromfile )
 add_subdirectory( 05_spirvkernelfromfile )
 
-add_subdirectory( 99_queueexperiments )
+add_subdirectory( 10_queueexperiments )
