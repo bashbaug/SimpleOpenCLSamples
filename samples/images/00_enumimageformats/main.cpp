@@ -192,7 +192,7 @@ int main(
     printf("Querying device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    const std::vector<cl_mem_flags> imageAccesses{ 
+    const std::vector<cl_mem_flags> imageAccesses{
         {
             CL_MEM_READ_ONLY,
             CL_MEM_WRITE_ONLY,

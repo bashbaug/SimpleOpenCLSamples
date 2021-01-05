@@ -17,13 +17,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    #- name: Check Tabs
-    #  run: |
-    #    if git grep -n $'\t'          *.cpp *.c *.hpp *.h; then echo 'Please replace tabs with spaces in source files.';     false; fi
+    - name: Check Tabs
+      run: |
+        if git grep -n $'\t'          samples/*.cpp samples/*.h tutorials/*.cpp tutorials/*.h; then echo 'Please replace tabs with spaces in source files.';     false; fi
 
     - name: Check Whitespace
       run: |
-        if git grep -n '[[:blank:]]$' *.cpp *.c *.hpp *.h; then echo 'Please remove trailing whitespace from source files.'; false; fi
+        if git grep -n '[[:blank:]]$' samples/*.cpp samples/*.h tutorials/*.cpp tutorials/*.h; then echo 'Please remove trailing whitespace from source files.'; false; fi
 
   build:
     needs: check
