@@ -17,9 +17,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Check Tabs
-      run: |
-        if git grep -n $'\t'          *.cpp *.c *.hpp *.h; then echo 'Please replace tabs with spaces in source files.';     false; fi
+    #- name: Check Tabs
+    #  run: |
+    #    if git grep -n $'\t'          *.cpp *.c *.hpp *.h; then echo 'Please replace tabs with spaces in source files.';     false; fi
 
     - name: Check Whitespace
       run: |
