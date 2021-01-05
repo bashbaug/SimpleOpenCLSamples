@@ -90,7 +90,7 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
         result,
         result * result,
         1.0f );
-    
+
     dst[ y * xMax + x ] = convert_uchar4(color * 255.0f);
 }
 )CLC";

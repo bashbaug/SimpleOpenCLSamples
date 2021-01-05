@@ -160,7 +160,7 @@ int main(
 
     cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
     cl_int errCode;
-    
+
     errCode = clGetDeviceInfo(
         devices[deviceIndex](),
         CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,

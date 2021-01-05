@@ -90,7 +90,7 @@ static void PrintDeviceAtomicCapabilities(
         ( caps & CL_DEVICE_ATOMIC_ORDER_SEQ_CST     ) ? "\n\t\tCL_DEVICE_ATOMIC_ORDER_SEQ_CST"      : "",
         ( caps & CL_DEVICE_ATOMIC_SCOPE_WORK_ITEM   ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_WORK_ITEM"    : "",
         ( caps & CL_DEVICE_ATOMIC_SCOPE_WORK_GROUP  ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_WORK_GROUP"   : "",
-        ( caps & CL_DEVICE_ATOMIC_SCOPE_DEVICE      ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_DEVICE"       : "", 
+        ( caps & CL_DEVICE_ATOMIC_SCOPE_DEVICE      ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_DEVICE"       : "",
         ( caps & CL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES"  : "");
 }
 

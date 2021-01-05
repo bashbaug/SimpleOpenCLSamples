@@ -153,7 +153,7 @@ int main(
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    const char* fileName = 
+    const char* fileName =
         ( sizeof(void*) == 8 ) ?
         "sample_kernel64.spv" :
         "sample_kernel32.spv";
