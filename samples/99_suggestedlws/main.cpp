@@ -25,7 +25,7 @@
 #include <fstream>
 #include <string>
 
-size_t gwx = 512;
+size_t gwx = 32771;
 
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
