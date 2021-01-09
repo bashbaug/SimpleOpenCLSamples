@@ -195,13 +195,6 @@ int main(
                     platformIndex = strtol(argv[i], NULL, 10);
                 }
             }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                if( ++i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
             else if( !strcmp( argv[i], "-i" ) )
             {
                 if( ++i < argc )

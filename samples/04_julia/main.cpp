@@ -79,7 +79,7 @@ kernel void Julia( global uchar4* dst, float cr, float ci )
     result = min( result, 1.0f );
 
     // BGRA
-    float4 color = (float4)( 1.0f, sqrt(result) , result, 1.0f );
+    float4 color = (float4)( 1.0f, sqrt(result), result, 1.0f );
 
     dst[ y * cWidth + x ] = convert_uchar4(color * 255.0f);
 }
@@ -171,13 +171,6 @@ int main(
                 if( ++i < argc )
                 {
                     deviceIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                if( ++i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
                 }
             }
             else if( !strcmp( argv[i], "-p" ) )

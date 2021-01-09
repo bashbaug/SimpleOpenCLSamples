@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2021 Ben Ashbaugh
+// Copyright (c) 2019-2020 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,148 +21,176 @@
 */
 
 #include <CL/opencl.hpp>
-#include "bmp.hpp"
+
+#include "nanoglut.h"
 
 #include <chrono>
 #include <ctime>
 
-const char* filename = "sinjulia.bmp";
+#if !defined(GL_CLAMP_TO_EDGE)
+#define GL_CLAMP_TO_EDGE                  0x812F
+#endif
 
-size_t iterations = 16;
-// Part 4: Fix the global work size.
-// Solution: Choose the 4K resolution 3840 x 2160 instead of a resolution that
-// is prime in both dimensions.
-size_t gwx = 3840;
-size_t gwy = 2160;
-size_t lwx = 0; // NULL local work size.
+size_t gwx = 512;
+size_t gwy = 512;
+size_t lwx = 0;
 size_t lwy = 0;
 
-float cr = 1.0f;
-float ci = 0.3f;
+float cr = -0.123f;
+float ci =  0.745f;
 
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
-cl::Buffer deviceMemDst;
+cl::Image2D mem;
 
-// Part 2: Fix the OpenCL Kernel Code.
-// Solution: Fix the typo.
 static const char kernelString[] = R"CLC(
-kernel void SinJulia(global uchar4* dst, float cr, float ci)
+kernel void Julia( write_only image2d_t dst, float cr, float ci )
 {
-    const int xMax = get_global_size(0);
-    const int yMax = get_global_size(1);
+    const float cMinX = -1.5f;
+    const float cMaxX =  1.5f;
+    const float cMinY = -1.5f;
+    const float cMaxY =  1.5f;
 
-    const int x = get_global_id(0);
-    const int y = get_global_id(1);
+    const int cWidth = get_global_size(0);
+    const int cIterations = 16;
 
-    const float zMin = -M_PI_F / 2;
-    const float zMax =  M_PI_F / 2;
+    int x = (int)get_global_id(0);
+    int y = (int)get_global_id(1);
 
-    float zr = (float)x / xMax * (zMax - zMin) + zMin;
-    float zi = (float)y / yMax * (zMax - zMin) + zMin;
-
-    const int cIterations = 64;
-    const float cThreshold = 50.0f;
+    float a = x * ( cMaxX - cMinX ) / cWidth + cMinX;
+    float b = y * ( cMaxY - cMinY ) / cWidth + cMinY;
 
     float result = 0.0f;
+    const float thresholdSquared = cIterations * cIterations / 64.0f;
+
     for( int i = 0; i < cIterations; i++ ) {
-        if(fabs(zi) > cThreshold) {
+        float aa = a * a;
+        float bb = b * b;
+
+        float magnitudeSquared = aa + bb;
+        if( magnitudeSquared >= thresholdSquared ) {
             break;
         }
 
-        // zn = sin(z)
-        float zrn = sin(zr) * cosh(zi);
-        float zin = cos(zr) * sinh(zi);
-
-        // z = c * zn = c * sin(z)
-        zr = cr * zrn - ci * zin;
-        zi = cr * zin + ci * zrn;
-
         result += 1.0f / cIterations;
+        b = 2 * a * b + ci;
+        a = aa - bb + cr;
     }
 
-    result = max(result, 0.0f);
-    result = min(result, 1.0f);
+    result = max( result, 0.0f );
+    result = min( result, 1.0f );
 
-    // BGRA
-    float4 color = (float4)(
-        1.0f,
-        result,
-        result * result,
-        1.0f );
+    // RGBA
+    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
 
-    dst[ y * xMax + x ] = convert_uchar4(color * 255.0f);
+    write_imagef(dst, (int2)(x, y), color);
 }
 )CLC";
 
-static void init( void )
+static void resize(int width, int height)
 {
-    // No initialization is needed for this sample.
+    glViewport(0, 0, width, height);
 }
 
-static void go()
+static void display(void)
 {
-    kernel.setArg(0, deviceMemDst);
+    kernel.setArg(0, mem);
     kernel.setArg(1, cr);
     kernel.setArg(2, ci);
 
     cl::NDRange lws;    // NullRange by default.
 
-    printf("Executing the kernel %d times\n", (int)iterations);
-    printf("Global Work Size = ( %d, %d )\n", (int)gwx, (int)gwy);
     if( lwx > 0 && lwy > 0 )
     {
-        printf("Local Work Size = ( %d, %d )\n", (int)lwx, (int)lwy);
         lws = cl::NDRange{lwx, lwy};
     }
-    else
-    {
-        printf("Local work size = NULL\n");
+
+    commandQueue.enqueueNDRangeKernel(
+        kernel,
+        cl::NullRange,
+        cl::NDRange{gwx, gwy},
+        lws);
+
+    size_t rowPitch = 0;
+    void* pixels = commandQueue.enqueueMapImage(
+        mem,
+        CL_TRUE,
+        CL_MAP_READ,
+        {0, 0, 0},
+        {gwx, gwy, 1},
+        &rowPitch,
+        nullptr);
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA,
+        (GLsizei)gwx, (GLsizei)gwy,
+        0,
+        GL_RGBA,
+        GL_FLOAT,
+        pixels);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glEnable( GL_TEXTURE_2D );
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glBegin(GL_TRIANGLE_STRIP);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex2f(-1.0f, -1.0);
+
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex2f(-1.0f,  1.0f);
+
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex2f( 1.0f, -1.0f);
+
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex2f( 1.0f,  1.0f);
+    glEnd();
+
+    GLenum  gl_error = glGetError();
+    if (glGetError() != GL_NO_ERROR) {
+        fprintf(stderr, "Error: OpenGL generated %x!\n", gl_error);
     }
 
-    // Ensure the queue is empty and no processing is happening
-    // on the device before starting the timer.
-    commandQueue.finish();
-
-    auto start = std::chrono::system_clock::now();
-    for( int i = 0; i < iterations; i++ )
-    {
-        commandQueue.enqueueNDRangeKernel(
-            kernel,
-            cl::NullRange,
-            cl::NDRange{gwx, gwy},
-            lws);
-        commandQueue.flush();
-    }
-
-    // Enqueue all processing is complete before stopping the timer.
-    commandQueue.finish();
-
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<float> elapsed_seconds = end - start;
-    printf("Finished in %f seconds\n", elapsed_seconds.count());
-}
-
-static void checkResults()
-{
-    // Part 3: Fix the map flags.
-    // Solution: Use the map flag CL_MAP_READ instead of
-    // CL_MAP_WRITE_INVALIDATE_REGION.
-    auto buf = reinterpret_cast<const uint32_t*>(
-        commandQueue.enqueueMapBuffer(
-            deviceMemDst,
-            CL_TRUE,
-            CL_MAP_READ,
-            0,
-            gwx * gwy * sizeof(cl_uchar4) ) );
-
-    BMP::save_image(buf, gwx, gwy, filename);
-    printf("Wrote image file %s\n", filename);
+    nglutSwapBuffers();
 
     commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)buf );
-    commandQueue.finish();
+        mem,
+        pixels);
+}
+
+static void keyboard(unsigned char key, int x, int y)
+{
+    switch( key )
+    {
+    case 27:
+        nglutLeaveMainLoop();
+        break;
+
+    case 'A':
+        cr += 0.005f;
+        break;
+    case 'Z':
+        cr -= 0.005f;
+        break;
+
+    case 'S':
+        ci += 0.005f;
+        break;
+    case 'X':
+        ci -= 0.005f;
+        break;
+    }
+
+    nglutPostRedisplay();
 }
 
 int main(
@@ -193,13 +221,6 @@ int main(
                 if( ++i < argc )
                 {
                     platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-i" ) )
-            {
-                if( ++i < argc )
-                {
-                    iterations = strtol(argv[i], NULL, 10);
                 }
             }
             else if( !strcmp( argv[i], "-gwx" ) )
@@ -239,19 +260,23 @@ int main(
     if( printUsage )
     {
         fprintf(stderr,
-            "Usage: sinjulia [options]\n"
+            "Usage: juliagl   [options]\n"
             "Options:\n"
             "      -d: Device Index (default = 0)\n"
             "      -p: Platform Index (default = 0)\n"
-            "      -i: Number of Iterations (default = 16)\n"
-            "      -gwx: Global Work Size X AKA Image Width\n"
-            "      -gwy: Global Work Size Y AKA Image Height\n"
+            "      -gwx: Global Work Size X AKA Image Width (default = 512)\n"
+            "      -gwy: Global Work Size Y AKA Image Height (default = 512)\n"
             "      -lwx: Local Work Size X (default = 0 = NULL Local Work Size)\n"
             "      -lwy: Local Work Size Y (default = 0 = Null Local Work size)\n"
             );
 
         return -1;
     }
+
+    //glutInit(&argc, argv);
+    nglutInitWindowSize((int)gwx, (int)gwy);
+    //glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+    nglutCreateWindow("Julia Set with OpenGL");
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
@@ -260,8 +285,6 @@ int main(
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 
     std::vector<cl::Device> devices;
-    // Part 1: Query the devices in this platform.
-    // Solution: Query for CL_DEVICE_TYPE_ALL, not CL_DEVICE_TYPE.
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
     printf("Running on device: %s\n",
@@ -271,21 +294,22 @@ int main(
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
+    program.build();
+    kernel = cl::Kernel{ program, "Julia" };
 
-    // Part 5: Experiment with build options.
-    // Solution: Use the "-cl-fast-relaxed-math" build option.
-    program.build("-cl-fast-relaxed-math");
-
-    kernel = cl::Kernel{ program, "SinJulia" };
-
-    deviceMemDst = cl::Buffer{
+    mem = cl::Image2D{
         context,
-        CL_MEM_READ_WRITE,
-        gwx * gwy * sizeof(cl_uchar4) };
+        CL_MEM_WRITE_ONLY,
+        cl::ImageFormat{CL_RGBA, CL_FLOAT},
+        gwx, gwy };
 
-    init();
-    go();
-    checkResults();
+    nglutReshapeFunc(resize);
+    nglutDisplayFunc(display);
+    nglutKeyboardFunc(keyboard);
+
+    nglutMainLoop();
+
+    nglutShutdown();
 
     return 0;
 }
