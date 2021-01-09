@@ -65,6 +65,7 @@ function(add_opencl_sample)
 endfunction()
 
 add_subdirectory( images )
+add_subdirectory( opengl )
 add_subdirectory( usm )
 
 add_subdirectory( 00_enumopencl )
