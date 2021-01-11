@@ -22,6 +22,7 @@
 
 #include "nanoglut.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -301,8 +302,7 @@ bool nglutCreateWindow(const char* title)
 
     // set up colormap and border pixel
     NGLUT_DEBUG("XCreateColormap()\n");
-    Colormap cmap;
-    cmap = XCreateColormap 
+    Colormap cmap = XCreateColormap(
         nglut_hDisplay,
         RootWindow(nglut_hDisplay, vi->screen),
         vi->visual,
@@ -334,7 +334,7 @@ bool nglutCreateWindow(const char* title)
 
     // a few additional properties
     NGLUT_DEBUG("XSetStandardProperties()\n");
-    XSetStandardProperties(nglut_hDisplay, nglut_hWin, title.c_str(), title.c_str(), None, NULL, 0, NULL);
+    XSetStandardProperties(nglut_hDisplay, nglut_hWin, title, title, None, NULL, 0, NULL);
 
     // map window
     NGLUT_DEBUG("XMapRaised()\n");
@@ -426,7 +426,7 @@ void nglutMainLoop()
     NGLUT_DEBUG("Exit: nglutMainLoop()\n");
 }
 
-void nglutExitMainLoop()
+void nglutLeaveMainLoop()
 {
     XEvent event = { 0 };
     event.xclient.type = ClientMessage;
@@ -457,7 +457,7 @@ void nglutShutdown()
     }
 
     if (nglut_hDisplay) {
-        NGLUT_DEBUG("XCloseDisplay(%p)\n", nglut_hDisplay);
+        NGLUT_DEBUG("XCloseDisplay()\n");
         XCloseDisplay( nglut_hDisplay );
         nglut_hDisplay = NULL;
     }

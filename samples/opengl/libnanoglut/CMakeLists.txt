@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+find_package(X11)
+
 set(LIBNANOGLUT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include )
 set(LIBNANOGLUT_INCLUDE_DIR ${LIBNANOGLUT_INCLUDE_DIR} PARENT_SCOPE)
 
@@ -30,5 +32,6 @@ source_group( Source FILES ${LIBNANOGLUT_SOURCE_FILES} )
 
 add_library( nanoglut STATIC ${LIBNANOGLUT_SOURCE_FILES} )
 target_include_directories( nanoglut PRIVATE ${OPENGL_INCLUDE_DIRS} ${LIBNANOGLUT_INCLUDE_DIR} )
+target_link_libraries( nanoglut PRIVATE ${X11_LIBRARIES} )
 
 set_target_properties( nanoglut PROPERTIES FOLDER "Samples/opengl/libnanoglut" )

@@ -27,6 +27,7 @@
 #include "util.hpp"
 
 #include <chrono>
+#include <math.h>
 
 #if !defined(GL_CLAMP_TO_EDGE)
 #define GL_CLAMP_TO_EDGE                  0x812F
