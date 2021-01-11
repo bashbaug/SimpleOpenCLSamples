@@ -125,7 +125,7 @@ cl::Context createContext(const cl::Platform& platform, const cl::Device& device
     }
 
     if (use_cl_khr_gl_sharing) {
-        auto clGetGLContextInfoKHR = 
+        auto clGetGLContextInfoKHR =
             (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(
                 platform(),
                 "clGetGLContextInfoKHR");
@@ -350,7 +350,7 @@ static void keyboard(unsigned char key, int x, int y)
     case 'X':
         ci -= 0.005f;
         break;
-    } 
+    }
 
     nglutPostRedisplay();
 }
@@ -359,7 +359,7 @@ static void idle(void)
 {
     if (animate) {
         static size_t frame = 0;
-        static std::chrono::system_clock::time_point start = 
+        static std::chrono::system_clock::time_point start =
             std::chrono::system_clock::now();
 
         float fcr = (frame % 599) / 599.f * 2.0f * CL_M_PI_F;
