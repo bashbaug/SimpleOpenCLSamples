@@ -1491,9 +1491,9 @@ CL_HPP_PARAM_NAME_DEVICE_FISSION_(CL_HPP_DECLARE_PARAM_TRAITS_);
 
 #if defined(cl_khr_extended_versioning)
 #if CL_HPP_TARGET_OPENCL_VERSION < 300
-CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_CL3_SHARED_(CL_HPP_DECLARE_PARAM_TRAITS_);
+CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_CL3_SHARED_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // CL_HPP_TARGET_OPENCL_VERSION < 300
-CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_KHRONLY_(CL_HPP_DECLARE_PARAM_TRAITS_);
+CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_KHRONLY_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // cl_khr_extended_versioning
 
 #ifdef CL_PLATFORM_ICD_SUFFIX_KHR
@@ -2851,7 +2851,7 @@ public:
      */
     Context(
         const vector<Device>& devices,
-        cl_context_properties* properties = NULL,
+        const cl_context_properties* properties = NULL,
         void (CL_CALLBACK * notifyFptr)(
             const char *,
             const void *,
@@ -2886,7 +2886,7 @@ public:
      */
     Context(
         const Device& device,
-        cl_context_properties* properties = NULL,
+        const cl_context_properties* properties = NULL,
         void (CL_CALLBACK * notifyFptr)(
             const char *,
             const void *,
@@ -2916,7 +2916,7 @@ public:
      */
     Context(
         cl_device_type type,
-        cl_context_properties* properties = NULL,
+        const cl_context_properties* properties = NULL,
         void (CL_CALLBACK * notifyFptr)(
             const char *,
             const void *,

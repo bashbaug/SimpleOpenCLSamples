@@ -19,50 +19,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 */
-
 #pragma once
 
-#if defined(_WIN32)
+#include "CL/opencl.hpp"
+#include <string.h>
 
-#include <windows.h>
-extern HWND nglut_hWnd;
-extern HDC nglut_hDC;
-extern HGLRC nglut_hRC;
+static bool checkDeviceForExtension(
+    const cl::Device& device,
+    const char* extensionName)
+{
+    bool    supported = false;
 
-#elif defined(__linux__)
+    if (extensionName && !strchr(extensionName, ' ')) {
+        std::string deviceExtensions = device.getInfo<CL_DEVICE_EXTENSIONS>();
 
-#include <GL/glx.h>
-#include <X11/Xlib.h>
-extern Display *nglut_hDisplay;
-extern Window nglut_hWin;
-extern GLXContext nglut_hRC;
+        const char* start = deviceExtensions.c_str();
+        while (true) {
+            const char* where = strstr(start, extensionName);
+            if (!where) {
+                break;
+            }
+            const char* terminator = where + strlen(extensionName);
+            if (where == start || *(where - 1) == ' ') {
+                if (*terminator == ' ' || *terminator == '\0') {
+                    supported = true;
+                    break;
+                }
+            }
+            start = terminator;
+        }
+    }
 
-#else
-#error Unknown OS!
-#endif
-
-#include "GL/gl.h"
-
-void nglutInitWindowSize(int width, int height);
-
-// Note: there is no glutInitDisplayMode (yet)!
-
-void nglutReshapeFunc(
-    void (*func)(int width, int height));
-void nglutDisplayFunc(
-    void (*func)(void));
-void nglutKeyboardFunc(
-    void (*func)(unsigned char key, int x, int y));
-void nglutIdleFunc(
-    void (*func)(void));
-
-bool nglutCreateWindow(const char* title);
-
-void nglutPostRedisplay();
-void nglutSwapBuffers();
-
-void nglutMainLoop();
-void nglutLeaveMainLoop();
-
-// Note: this function does not exist in freeglut or openglut.
-void nglutShutdown();
+    return supported;
+}

@@ -24,7 +24,6 @@
 #include "bmp.hpp"
 
 #include <chrono>
-#include <ctime>
 
 const char* filename = "julia.bmp";
 
