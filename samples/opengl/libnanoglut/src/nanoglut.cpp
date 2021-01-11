@@ -27,15 +27,15 @@
 
 #if defined(_WIN32)
 
-HWND hWndRenderer = NULL;
-HDC hDC = NULL;
-HGLRC hRC = NULL;
+HWND nglut_hWnd = NULL;
+HDC nglut_hDC = NULL;
+HGLRC nglut_hRC = NULL;
 
 #elif defined(__linux__)
 
-Display *hDisplay = NULL;
-Window hWin = 0;
-GLXContext hRC = NULL;
+Display *nglut_hDisplay = NULL;
+Window nglut_hWin = 0;
+GLXContext nglut_hRC = NULL;
 
 #else
 #error Unknown OS!
@@ -83,7 +83,7 @@ void nglutReshapeFunc(
 }
 
 void nglutDisplayFunc(
-    void (*func)(void) )
+    void (*func)(void))
 {
     MyDisplayFunc = func;
 }
@@ -92,6 +92,12 @@ void nglutKeyboardFunc(
     void (*func)(unsigned char key, int x, int y))
 {
     MyKeyboardFunc = func;
+}
+
+void nglutIdleFunc(
+    void (*func)(void))
+{
+    MyIdleFunc = func;
 }
 
 #if defined(_WIN32)
@@ -139,7 +145,7 @@ bool nglutCreateWindow(const char* title)
     
     dwStyle = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPED | WS_VISIBLE;
 
-    if((hWndRenderer = CreateWindow("nanoglut", title, 
+    if((nglut_hWnd = CreateWindow("nanoglut", title, 
         dwStyle,
         0, 0, 
         (int)(nglut_width  + (GetSystemMetrics(SM_CXSIZEFRAME)-1)*2), 
@@ -156,8 +162,8 @@ bool nglutCreateWindow(const char* title)
     PIXELFORMATDESCRIPTOR pfd;
     int pixelformat;
 
-    hDC = GetDC(hWndRenderer);
-    bpp = GetDeviceCaps(hDC, BITSPIXEL);
+    nglut_hDC = GetDC(nglut_hWnd);
+    bpp = GetDeviceCaps(nglut_hDC, BITSPIXEL);
 
     ZeroMemory(&pfd, sizeof(pfd));
     pfd.nSize = sizeof( pfd );
@@ -170,27 +176,27 @@ bool nglutCreateWindow(const char* title)
     pfd.cStencilBits = 8;
     pfd.iLayerType = PFD_MAIN_PLANE;
 
-    if ((pixelformat = ChoosePixelFormat(hDC, &pfd)) == 0) {
+    if ((pixelformat = ChoosePixelFormat(nglut_hDC, &pfd)) == 0) {
         MessageBox(NULL, "ChoosePixelFormat failed (returned 0).\n", "ERROR!", MB_OK);
         return false;
     }
 
-    if (DescribePixelFormat(hDC, pixelformat, sizeof(pfd), &pfd) == 0) {
+    if (DescribePixelFormat(nglut_hDC, pixelformat, sizeof(pfd), &pfd) == 0) {
         MessageBox(NULL, "DescribePixelFormat failed (returned 0).\n", "ERROR!", MB_OK);
         return false;
     }
 
-    if (SetPixelFormat(hDC, pixelformat, &pfd) == FALSE) {
+    if (SetPixelFormat(nglut_hDC, pixelformat, &pfd) == FALSE) {
         MessageBox(NULL, "SetPixelFormat failed (returned FALSE).\n", "ERROR!", MB_OK);
         return false;
     }
 
-    if ((hRC = wglCreateContext(hDC)) == NULL) {
+    if ((nglut_hRC = wglCreateContext(nglut_hDC)) == NULL) {
         MessageBox(NULL, "wglCreateContext failed (returned NULL).\n", "ERROR!", MB_OK);
         return false;
     }
 
-    if (wglMakeCurrent(hDC, hRC) == FALSE) {
+    if (wglMakeCurrent(nglut_hDC, nglut_hRC) == FALSE) {
         MessageBox(NULL, "wglMakeCurrent failed (returned FALSE).\n", "ERROR!", MB_OK);
         return false;
     }
@@ -201,12 +207,12 @@ bool nglutCreateWindow(const char* title)
 void nglutPostRedisplay()
 {
     MyDisplayFunc();
-    InvalidateRect(hWndRenderer, NULL, FALSE);
+    InvalidateRect(nglut_hWnd, NULL, FALSE);
 }
 
 void nglutSwapBuffers()
 {
-    SwapBuffers(hDC);
+    SwapBuffers(nglut_hDC);
 }
 
 void nglutMainLoop()
@@ -237,14 +243,14 @@ void nglutShutdown()
 {
     wglMakeCurrent(NULL, NULL);
 
-    wglDeleteContext(hRC);
-    hRC = NULL;
+    wglDeleteContext(nglut_hRC);
+    nglut_hRC = NULL;
 
-    ReleaseDC(hWndRenderer, hDC);
-    hDC = NULL;
+    ReleaseDC(nglut_hWnd, nglut_hDC);
+    nglut_hDC = NULL;
     
-    DestroyWindow(hWndRenderer);
-    hWndRenderer = NULL;
+    DestroyWindow(nglut_hWnd);
+    nglut_hWnd = NULL;
 }
 
 #elif defined(__linux__)
@@ -260,9 +266,8 @@ bool nglutCreateWindow(const char* title)
 
     // open display
     NGLUT_DEBUG("XOpenDisplay()\n");
-    hDisplay = XOpenDisplay(0);
-    if( hDisplay == NULL )
-    {
+    nglut_hDisplay = XOpenDisplay(0);
+    if (nglut_hDisplay == NULL) {
         NGLUT_DEBUG("XOpenDisplay() returned NULL.\n");
         return false;
     }
@@ -280,18 +285,16 @@ bool nglutCreateWindow(const char* title)
         GLX_ALPHA_SIZE,   8,
         None
     };
-    XVisualInfo *vi = glXChooseVisual( hDisplay, DefaultScreen(hDisplay), glAttr );
-    if( vi == NULL )
-    {
+    XVisualInfo *vi = glXChooseVisual( nglut_hDisplay, DefaultScreen(nglut_hDisplay), glAttr );
+    if (vi == NULL) {
         NGLUT_DEBUG("glXChooseVisual() returned NULL.\n");
         return false;
     }
   
     // create context
     NGLUT_DEBUG("glXCreateContext()\n");
-    hRC = glXCreateContext( hDisplay, vi, 0, GL_TRUE );
-    if( hRC == NULL )
-    {
+    nglut_hRC = glXCreateContext( nglut_hDisplay, vi, 0, GL_TRUE );
+    if (nglut_hRC == NULL) {
         NGLUT_DEBUG("glXCreateContext() returned NULL.\n");
         return false;
     }
@@ -299,10 +302,10 @@ bool nglutCreateWindow(const char* title)
     // set up colormap and border pixel
     NGLUT_DEBUG("XCreateColormap()\n");
     Colormap cmap;
-    cmap = XCreateColormap( 
-        hDisplay, 
-        RootWindow(hDisplay, vi->screen), 
-        vi->visual, 
+    cmap = XCreateColormap 
+        nglut_hDisplay,
+        RootWindow(nglut_hDisplay, vi->screen),
+        vi->visual,
         AllocNone);
     xAttr.colormap=cmap;
     xAttr.border_pixel=0;
@@ -312,34 +315,34 @@ bool nglutCreateWindow(const char* title)
 
     // create window
     NGLUT_DEBUG("XCreateWindow()\n");
-    hWin = XCreateWindow(
-        hDisplay, 
-        RootWindow(hDisplay, vi->screen), 
+    nglut_hWin = XCreateWindow(
+        nglut_hDisplay,
+        RootWindow(nglut_hDisplay, vi->screen),
         0, 0,   // x, y
         nglut_width, nglut_height,
         0,
-        vi->depth, 
-        InputOutput, 
+        vi->depth,
+        InputOutput,
         vi->visual,
-        CWBorderPixel | CWColormap | CWEventMask, 
+        CWBorderPixel | CWColormap | CWEventMask,
         &xAttr);
 
     // set up deletion message
     NGLUT_DEBUG("XInternAtom()\n");
-    Atom wmDelete = XInternAtom(hDisplay, "WM_DELETE_WINDOW", true);
-    XSetWMProtocols(hDisplay, hWin, &wmDelete, 1);
+    Atom wmDelete = XInternAtom(nglut_hDisplay, "WM_DELETE_WINDOW", true);
+    XSetWMProtocols(nglut_hDisplay, nglut_hWin, &wmDelete, 1);
 
     // a few additional properties
     NGLUT_DEBUG("XSetStandardProperties()\n");
-    XSetStandardProperties( hDisplay, hWin, title.c_str(), title.c_str(), None, NULL, 0, NULL );
+    XSetStandardProperties(nglut_hDisplay, nglut_hWin, title.c_str(), title.c_str(), None, NULL, 0, NULL);
 
     // map window
     NGLUT_DEBUG("XMapRaised()\n");
-    XMapRaised( hDisplay, hWin );
+    XMapRaised(nglut_hDisplay, nglut_hWin);
   
     // make the rendering context current
     NGLUT_DEBUG("glXMakeCurrent()\n");
-    if (!glXMakeCurrent( hDisplay, hWin, hRC)) {
+    if (!glXMakeCurrent( nglut_hDisplay, nglut_hWin, nglut_hRC)) {
         NGLUT_DEBUG("glXMakeCurrent() returned false.\n");
         return false;
     }
@@ -352,12 +355,12 @@ void nglutPostRedisplay()
 {
     MyDisplayFunc();
     // TODO?
-    //InvalidateRect(hWndRenderer, NULL, FALSE);
+    //InvalidateRect(nglut_hWnd, NULL, FALSE);
 }
 
 void nglutSwapBuffers()
 {
-    glXSwapBuffers(hDisplay, hWin);
+    glXSwapBuffers(nglut_hDisplay, nglut_hWin);
 }
 
 void nglutMainLoop()
@@ -367,9 +370,9 @@ void nglutMainLoop()
     bool done = false;
 
     while (!done) {
-        while( XPending(hDisplay) > 0 ) {
+        while( XPending(nglut_hDisplay) > 0 ) {
             XEvent event;
-            XNextEvent(hDisplay, &event);
+            XNextEvent(nglut_hDisplay, &event);
             switch(event.type) {
             case Expose:
                 // Guess this is called when the window gets focus?
@@ -408,7 +411,7 @@ void nglutMainLoop()
                 break;
             case ClientMessage:
                 // Windows closed.
-                if (*XGetAtomName(hDisplay, event.xclient.message_type) == *"WM_PROTOCOLS") {
+                if (*XGetAtomName(nglut_hDisplay, event.xclient.message_type) == *"WM_PROTOCOLS") {
                     done = true;
                 }
                 break;
@@ -427,36 +430,36 @@ void nglutExitMainLoop()
 {
     XEvent event = { 0 };
     event.xclient.type = ClientMessage;
-    event.xclient.window = hWin;
-    event.xclient.message_type = XInternAtom(hDisplay, "WM_PROTOCOLS", true);
+    event.xclient.window = nglut_hWin;
+    event.xclient.message_type = XInternAtom(nglut_hDisplay, "WM_PROTOCOLS", true);
     event.xclient.format = 32;
-    event.xclient.data.l[0] = XInternAtom(hDisplay, "WM_DELETE_WINDOW", false);
+    event.xclient.data.l[0] = XInternAtom(nglut_hDisplay, "WM_DELETE_WINDOW", false);
     event.xclient.data.l[1] = CurrentTime;
-    XSendEvent(hDisplay, hWin, False, NoEventMask, &event);
+    XSendEvent(nglut_hDisplay, nglut_hWin, False, NoEventMask, &event);
 }
 
 void nglutShutdown()
 {
     NGLUT_DEBUG("Enter: nglutShutdown()\n");
 
-    if (hRC) {
+    if (nglut_hRC) {
         NGLUT_DEBUG("glxMakeCurrent( NULL )\n");
-        glXMakeCurrent( hDisplay, None, NULL );
+        glXMakeCurrent( nglut_hDisplay, None, NULL );
         NGLUT_DEBUG("glXDestroyContext()\n");
-        glXDestroyContext( hDisplay, hRC );
-        hRC = NULL;
+        glXDestroyContext( nglut_hDisplay, nglut_hRC );
+        nglut_hRC = NULL;
     }
 
-    if (hWin) {
+    if (nglut_hWin) {
         NGLUT_DEBUG("glXDestroyWindow()\n");
-        XDestroyWindow( hDisplay, hWin );
-        hWin = 0;
+        XDestroyWindow( nglut_hDisplay, nglut_hWin );
+        nglut_hWin = 0;
     }
 
-    if (hDisplay) {
-        NGLUT_DEBUG("XCloseDisplay(%p)\n", hDisplay);
-        XCloseDisplay( hDisplay );
-        hDisplay = NULL;
+    if (nglut_hDisplay) {
+        NGLUT_DEBUG("XCloseDisplay(%p)\n", nglut_hDisplay);
+        XCloseDisplay( nglut_hDisplay );
+        nglut_hDisplay = NULL;
     }
 
     NGLUT_DEBUG("Exit: nglutShutdown()\n");
