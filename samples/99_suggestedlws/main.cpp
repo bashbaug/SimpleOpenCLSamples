@@ -81,15 +81,34 @@ static void go()
             &gwx,
             &slws);
         if (errorCode != CL_SUCCESS) {
-            printf("clGetKernelSuggestedLocalWorkSizeINTEL returned %d\n",
+            printf("Initial call: clGetKernelSuggestedLocalWorkSizeINTEL returned %d\n",
                 errorCode);
         } else {
-            printf("Suggested local work size is %d.\n",
+            printf("Initial call: Suggested local work size is %d.\n",
                 (int)slws);
         }
     }
 
     kernel.setArg(0, deviceMemDst);
+
+    if (clGetKernelSuggestedLocalWorkSizeINTEL) {
+        size_t gwo = 0;
+        size_t slws = 0;
+        cl_int errorCode = clGetKernelSuggestedLocalWorkSizeINTEL(
+            commandQueue(),
+            kernel(),
+            1,
+            &gwo,
+            &gwx,
+            &slws);
+        if (errorCode != CL_SUCCESS) {
+            printf("After setting kernel args: clGetKernelSuggestedLocalWorkSizeINTEL returned %d\n",
+                errorCode);
+        } else {
+            printf("After setting kernel args: Suggested local work size is %d.\n",
+                (int)slws);
+        }
+    }
 
     commandQueue.enqueueNDRangeKernel(
         kernel,
@@ -107,10 +126,10 @@ static void go()
             &gwx,
             &slws);
         if (errorCode != CL_SUCCESS) {
-            printf("clGetKernelSuggestedLocalWorkSizeINTEL returned %d\n",
+            printf("After enqueue: clGetKernelSuggestedLocalWorkSizeINTEL returned %d\n",
                 errorCode);
         } else {
-            printf("Suggested local work size is %d.\n",
+            printf("After enqueue: Suggested local work size is %d.\n",
                 (int)slws);
         }
     }
