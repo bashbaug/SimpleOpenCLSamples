@@ -143,16 +143,16 @@ bool nglutCreateWindow(const char* title)
     wc.lpszClassName = "nanoglut";
 
     RegisterClass(&wc);
-    
+
     dwStyle = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPED | WS_VISIBLE;
 
-    if((nglut_hWnd = CreateWindow("nanoglut", title, 
+    if((nglut_hWnd = CreateWindow("nanoglut", title,
         dwStyle,
-        0, 0, 
-        (int)(nglut_width  + (GetSystemMetrics(SM_CXSIZEFRAME)-1)*2), 
+        0, 0,
+        (int)(nglut_width  + (GetSystemMetrics(SM_CXSIZEFRAME)-1)*2),
         (int)(nglut_height + (GetSystemMetrics(SM_CYSIZEFRAME)-1)*2 + GetSystemMetrics(SM_CYMENU)),
-        NULL, 
-        NULL, 
+        NULL,
+        NULL,
         hInstance,
         NULL)) == NULL)
     {
@@ -249,7 +249,7 @@ void nglutShutdown()
 
     ReleaseDC(nglut_hWnd, nglut_hDC);
     nglut_hDC = NULL;
-    
+
     DestroyWindow(nglut_hWnd);
     nglut_hWnd = NULL;
 }
@@ -272,7 +272,7 @@ bool nglutCreateWindow(const char* title)
         NGLUT_DEBUG("XOpenDisplay() returned NULL.\n");
         return false;
     }
-    
+
     // choose visual
     NGLUT_DEBUG("glXChooseVisual()\n");
     int glAttr[] = {
@@ -291,7 +291,7 @@ bool nglutCreateWindow(const char* title)
         NGLUT_DEBUG("glXChooseVisual() returned NULL.\n");
         return false;
     }
-  
+
     // create context
     NGLUT_DEBUG("glXCreateContext()\n");
     nglut_hRC = glXCreateContext( nglut_hDisplay, vi, 0, GL_TRUE );
@@ -339,7 +339,7 @@ bool nglutCreateWindow(const char* title)
     // map window
     NGLUT_DEBUG("XMapRaised()\n");
     XMapRaised(nglut_hDisplay, nglut_hWin);
-  
+
     // make the rendering context current
     NGLUT_DEBUG("glXMakeCurrent()\n");
     if (!glXMakeCurrent( nglut_hDisplay, nglut_hWin, nglut_hRC)) {
