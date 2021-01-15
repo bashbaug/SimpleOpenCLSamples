@@ -133,6 +133,25 @@ static void go()
                 (int)slws);
         }
     }
+
+    if (clGetKernelSuggestedLocalWorkSizeINTEL) {
+        size_t gwo = 0;
+        size_t slws = 0;
+        cl_int errorCode = clGetKernelSuggestedLocalWorkSizeINTEL(
+            commandQueue(),
+            kernel(),
+            1,
+            NULL,
+            NULL,
+            &slws);
+        if (errorCode != CL_SUCCESS) {
+            printf("NULL Global Work Size: clGetKernelSuggestedLocalWorkSizeINTEL returned %d\n",
+                errorCode);
+        } else {
+            printf("NULL Global Work Size: Suggested local work size is %d.\n",
+                (int)slws);
+        }
+    }
 }
 
 static void checkResults()
