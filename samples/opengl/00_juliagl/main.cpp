@@ -93,6 +93,15 @@ kernel void Julia( write_only image2d_t dst, float cr, float ci )
 }
 )CLC";
 
+// This function determines if the platform and device support CL-GL sharing
+// extensions, and if so, create a context supporting sharing.  This requires
+// three steps:
+//      1. Querying the device to ensure the extensions are supported.
+//      2. Querying devices that can interoperate with the OpenGL context.
+//      3. If both queries are successful, creating an OpenCL context with the
+//         OpenGL context.
+// If any of these steps fail or if sharing is disabled then an OpenCL context
+// is created that does not support sharing.
 cl::Context createContext(const cl::Platform& platform, const cl::Device& device)
 {
     const cl_context_properties props[] = {
@@ -125,7 +134,9 @@ cl::Context createContext(const cl::Platform& platform, const cl::Device& device
     }
 
     if (use_cl_khr_gl_sharing) {
-        auto clGetGLContextInfoKHR =
+        bool found = false;
+
+        auto clGetGLContextInfoKHR = 
             (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(
                 platform(),
                 "clGetGLContextInfoKHR");
@@ -148,6 +159,7 @@ cl::Context createContext(const cl::Platform& platform, const cl::Device& device
                     NULL);
                 printf("\nOpenCL Devices currently associated with the OpenGL Context:\n");
                 for (auto& check : devices) {
+                    found |= check == device();
                     printf("  %s\n", cl::Device(check).getInfo<CL_DEVICE_NAME>().c_str());
                 }
             }
@@ -168,17 +180,32 @@ cl::Context createContext(const cl::Platform& platform, const cl::Device& device
                     NULL);
                 printf("\nOpenCL Devices which may be associated with the OpenGL Context:\n");
                 for (auto& check : devices) {
+                    found |= check == device();
                     printf("  %s\n", cl::Device(check).getInfo<CL_DEVICE_NAME>().c_str());
                 }
             }
         }
 
+        if (found) {
+            printf("Requested OpenCL device can share with the OpenGL context.\n");
+        } else {
+            printf("Requested OpenCL device cannot share with the OpenGL context.\n");
+            use_cl_khr_gl_sharing = false;
+        }
+    }
+
+    if (use_cl_khr_gl_sharing) {
+        printf("Creating a context with GL sharing.\n");
         return cl::Context(device, props);
     }
 
     return cl::Context(device);
 }
 
+// This function sets up an OpenGL texture with the requested dimensions.  If
+// CL-GL sharing is supported and enabled, an OpenCL image is created from the
+// OpenGL texture.  Otherwise, a standard OpenCL image is created, and the
+// contents of the image will need to be copied to the OpenGL texture.
 cl::Image2D createImage(const cl::Context& context)
 {
     GLuint texname = 0;
@@ -209,8 +236,8 @@ cl::Image2D createImage(const cl::Context& context)
     }
 
     if (use_cl_khr_gl_sharing) {
-        // Note: this is an extension API, but it is exported directly from
-        // the ICD loader.
+        // Note: clCreateFromGLTexture2D is an extension API, but it is
+        // exported directly from the ICD loader.
         return cl::Image2D{
             clCreateFromGLTexture2D(
                 context(),
