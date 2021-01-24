@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,18 @@
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include <CL/opencl.hpp>
 
-#include "nanoglut.h"
+#include <GLFW/glfw3.h>
+#if defined(WIN32)
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#elif defined(__linux__)
+#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_GLX
+#else
+#error Unknown OS!
+#endif
+#include <GLFW/glfw3native.h>
+
 #include "util.hpp"
 
 #include <chrono>
@@ -33,9 +44,13 @@
 #define GL_CLAMP_TO_EDGE                  0x812F
 #endif
 
+GLFWwindow* pWindow = NULL;
+
 bool use_cl_khr_gl_sharing = true;
 bool use_cl_khr_gl_event = true;
 bool animate = false;
+bool redraw = false;
+bool vsync = true;
 
 size_t gwx = 512;
 size_t gwy = 512;
@@ -107,11 +122,11 @@ cl::Context createContext(const cl::Platform& platform, const cl::Device& device
     const cl_context_properties props[] = {
         CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 #if defined(WIN32)
-        CL_GL_CONTEXT_KHR, (cl_context_properties)nglut_hRC,
-        CL_WGL_HDC_KHR, (cl_context_properties)nglut_hDC,
+        CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetWGLContext(pWindow),
+        CL_WGL_HDC_KHR, (cl_context_properties)GetDC(glfwGetWin32Window(pWindow)),
 #elif defined(__linux__)
-        CL_GL_CONTEXT_KHR, (cl_context_properties)nglut_hRC,
-        CL_GLX_DISPLAY_KHR, (cl_context_properties)nglut_hDisplay,
+        CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetGLXContext(pWindow),
+        CL_GLX_DISPLAY_KHR, (cl_context_properties)glfwGetX11Display(),
 #else
 #error Unknown OS!
 #endif
@@ -199,6 +214,7 @@ cl::Context createContext(const cl::Platform& platform, const cl::Device& device
         return cl::Context(device, props);
     }
 
+    printf("Creating a context without GL sharing.\n");
     return cl::Context(device);
 }
 
@@ -255,13 +271,40 @@ cl::Image2D createImage(const cl::Context& context)
         gwx, gwy };
 }
 
-static void resize(int width, int height)
+static void resize(GLFWwindow* pWindow, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
 static void display(void)
 {
+    if (animate) {
+        static size_t startFrame = 0;
+        static size_t frame = 0;
+        static std::chrono::system_clock::time_point start =
+            std::chrono::system_clock::now();
+
+        float fcr = (frame % 599) / 599.f * 2.0f * CL_M_PI_F;
+        float fci = (frame % 773) / 773.f * 2.0f * CL_M_PI_F;
+        cr = sinf(fcr);
+        ci = sinf(fci);
+
+        ++frame;
+
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float> delta = end - start;
+        float elapsed_seconds = delta.count();
+        if (elapsed_seconds > 2.0f) {
+            printf("frames = %d, time = %.1f\n", (int)(frame - startFrame), elapsed_seconds);
+            printf("FPS: %.1f\n", (frame - startFrame) / elapsed_seconds);
+            startFrame = frame;
+            start = end;
+        }
+    }
+    if (redraw) {
+        redraw = false;
+    }
+
     if (use_cl_khr_gl_sharing) {
         if (use_cl_khr_gl_event == false) {
             glFinish();
@@ -350,58 +393,44 @@ static void display(void)
         fprintf(stderr, "Error: OpenGL generated %x!\n", gl_error);
     }
 
-    nglutSwapBuffers();
+    glfwSwapBuffers(pWindow);
 }
 
-static void keyboard(unsigned char key, int x, int y)
+static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int mods)
 {
-    switch( key )
-    {
-    case 27:
-        nglutLeaveMainLoop();
-        break;
-    case ' ':
-        animate = !animate;
-        break;
+    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+        redraw = true;
 
-    case 'A':
-        cr += 0.005f;
-        break;
-    case 'Z':
-        cr -= 0.005f;
-        break;
+        switch (key) {
+        case GLFW_KEY_ESCAPE:
+            glfwSetWindowShouldClose(pWindow, GLFW_TRUE);
+            break;
+        case GLFW_KEY_SPACE:
+            animate = !animate;
+            break;
 
-    case 'S':
-        ci += 0.005f;
-        break;
-    case 'X':
-        ci -= 0.005f;
-        break;
-    }
+        case GLFW_KEY_A:
+            cr += 0.005f;
+            break;
+        case GLFW_KEY_Z:
+            cr -= 0.005f;
+            break;
 
-    nglutPostRedisplay();
-}
+        case GLFW_KEY_S:
+            ci += 0.005f;
+            break;
+        case GLFW_KEY_X:
+            ci -= 0.005f;
+            break;
 
-static void idle(void)
-{
-    if (animate) {
-        static size_t frame = 0;
-        static std::chrono::system_clock::time_point start =
-            std::chrono::system_clock::now();
-
-        float fcr = (frame % 599) / 599.f * 2.0f * CL_M_PI_F;
-        float fci = (frame % 773) / 773.f * 2.0f * CL_M_PI_F;
-        cr = sinf(fcr);
-        ci = sinf(fci);
-
-        if (++frame % 100 == 0) {
-            auto end = std::chrono::system_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            printf("FPS: %.1f\n", 100 / elapsed_seconds.count());
-            start = end;
+        case GLFW_KEY_V:
+            vsync = !vsync;
+            if (vsync) {
+                glfwSwapInterval(1);
+            } else {
+                glfwSwapInterval(0);
+            }
         }
-
-        nglutPostRedisplay();
     }
 }
 
@@ -495,10 +524,16 @@ int main(
         return -1;
     }
 
-    //glutInit(&argc, argv);
-    nglutInitWindowSize((int)gwx, (int)gwy);
-    //glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
-    nglutCreateWindow("Julia Set with OpenGL");
+    if (!glfwInit()) {
+        fprintf(stderr, "Could not initialize glfw!\n");
+        return -1;
+    }
+
+    // Create an OpenGL window.  This needs to be done before creating the
+    // OpenCL context because we need to know information about the OpenGL
+    // context to create an OpenCL context that supports sharing.
+    pWindow = glfwCreateWindow((int)gwx, (int)gwy, "Julia Set with OpenGL", NULL, NULL);
+    glfwMakeContextCurrent(pWindow);
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
@@ -521,14 +556,19 @@ int main(
 
     mem = createImage(context);
 
-    nglutReshapeFunc(resize);
-    nglutDisplayFunc(display);
-    nglutKeyboardFunc(keyboard);
-    nglutIdleFunc(idle);
+    glfwSetKeyCallback(pWindow, keyboard);
+    glfwSetFramebufferSizeCallback(pWindow, resize);
 
-    nglutMainLoop();
+    while (!glfwWindowShouldClose(pWindow)) {
+        if (animate || redraw) {
+            display();
+        }
 
-    nglutShutdown();
+        glfwPollEvents();
+    }
+
+    glfwDestroyWindow(pWindow);
+    glfwTerminate();
 
     return 0;
 }
