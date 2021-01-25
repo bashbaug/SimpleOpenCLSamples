@@ -152,7 +152,7 @@ cl::Context createContext(const cl::Platform& platform, const cl::Device& device
     if (use_cl_khr_gl_sharing) {
         bool found = false;
 
-        auto clGetGLContextInfoKHR = 
+        auto clGetGLContextInfoKHR =
             (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(
                 platform(),
                 "clGetGLContextInfoKHR");
