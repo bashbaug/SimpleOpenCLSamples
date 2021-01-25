@@ -37,9 +37,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Get OpenGL
+    - name: Get Ubuntu OpenGL Dependencies
       if: matrix.os == 'ubuntu-latest'
-      uses: openrndr/setup-opengl@v1.1
+      run: |
+        sudo apt-get install libglfw3-dev
 
     - name: Get OpenCL Headers
       uses: actions/checkout@master
