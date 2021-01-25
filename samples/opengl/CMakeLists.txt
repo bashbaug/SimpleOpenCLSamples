@@ -19,7 +19,7 @@
 # SOFTWARE.
 
 find_package(OpenGL)
-find_package(glfw3 3.3 HINTS "../../external")
+find_package(glfw3 HINTS "../../external")
 
 set(BUILD_OPENGL_SAMPLES TRUE)
 if(NOT OPENGL_FOUND)
