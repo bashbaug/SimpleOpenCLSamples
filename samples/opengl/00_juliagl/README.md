@@ -11,7 +11,7 @@ In order to share the OpenGL texture with OpenCL, the OpenCL device must support
 If sharing is not supported then the application will still run, but the Julia set image will be copied from OpenCL to OpenGL on the host.
 
 Additionally, this sample use implicit synchronization between OpenGL and OpenCL when supported.
-Implicit synchronization requires support for the [cl_khr_gl_event](https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_gl_event)_ extension.
+Implicit synchronization requires support for the [cl_khr_gl_event](https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_gl_event) extension.
 If implicit synchronization is not supported then the application will still run, but synchronization will be done manually.
 
 ## Key APIs and Concepts
