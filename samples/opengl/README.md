@@ -31,6 +31,33 @@ The GLFW source code may be cloned into a completely separate directory or into 
 4. Install GLFW either into the `external` directory for the samples (recommended), or into a system directory.
 If GLFW is installed into the `external` directory it _should_ be detected automatically by these samples.
 
+Sample build instructions:
+
+1. Clone the GLFW source code.
+In these instructions we will clone into the `external` directory.
+
+    ```sh
+    $ git clone https://github.com/glfw/glfw.git external/glfw-src
+    ```
+
+2. Create build files.
+
+    ```sh
+    $ cd external/glfw-src && mkdir build && cd build
+    $ cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/path/to/your/SimpleOpenCLSamples/external/glfw \
+        -DGLFW_BUILD_DOCS=0 -DGLFW_BUILD_EXAMPLES=0 -DGLFW_BUILD_TESTS=0
+    ```
+
+3. Build and install GLFW.
+
+    ```sh
+    $ make -j install
+    ```
+
+After installing, GLFW should be found by the OpenCL samples.
+
 ## Summary of OpenGL Samples
 
 * [juliagl](./00_juliagl): Demonstrates sharing an OpenGL texture with OpenCL.
