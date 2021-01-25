@@ -1,47 +1,53 @@
-# Julia Set
+# Julia Set with OpenGL
 
 ## Sample Purpose
 
-This is another sample that generates a fractal image.
-It uses an OpenCL kernel to compute a [Julia set](https://en.wikipedia.org/wiki/Julia_set) image, which is then written to a BMP file.
-Each OpenCL work item computes one element of the set.
+This is a modified version of the earlier Julia set sample.
+Similar to the earlier Julia Set sample, an OpenCL kernel is used to generate a Julia set image.
+The main difference between this sample and the earlier sample is that in this sample the Julia set image is used as an OpenGL texture and rendered to the screen instead of writing it to a BMP file.
 
-By default, similar to prior samples, this sample does not specify a local work size when it enqueues an ND range for the kernel into an OpenCL command queue.
-This enables the OpenCL implementation to determine how to group work items, and is a reasonable best practice when work items may execute in any grouping.
-Unlike prior samples, however, this sample can optionally specify a local work size grouping.
-The local work size grouping is one way to tune an application for an architecture.
-Can you find a local work size grouping that performs better than the implementation-determined grouping?
-Is there a local work size grouping that performs very poorly on your implementation?
+This sample can share the OpenGL texture with OpenCL when supported.
+In order to share the OpenGL texture with OpenCL, the OpenCL device must support the [cl_khr_gl_sharing](https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_gl_sharing) extension, and the OpenCL device must support sharing with the OpenGL context.
+If sharing is not supported then the application will still run, but the Julia set image will be copied from OpenCL to OpenGL on the host.
 
-Note that because this kernel is compiled as an OpenCL 1.x kernel, the local work size grouping must evenly divide the global work size.
-Since the default global work size is a power of two, this means that the local work size grouping must also be a power of two.
-
-This sample also demonstrates how to measure the wall clock time for an OpenCL kernel.
-Note especially how `clFinish` is used to ensure that the OpenCL command queue is empty before starting the timer, and that all processing is complete before stopping the timer.
-
-![Julia Set Image](julia.png)
-
-As with prior samples, the source code for the OpenCL kernel is embedded into the host code as a raw string, and by default, this sample will run in the first enumerated OpenCL device on the first enumerated OpenCL platform.
-To run on a different OpenCL device or platform, please use the provided command line options.
+Additionally, this sample use implicit synchronization between OpenGL and OpenCL when supported.
+Implicit synchronization requires support for the [cl_khr_gl_event](https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_gl_event)_ extension.
+If implicit synchronization is not supported then the application will still run, but synchronization will be done manually.
 
 ## Key APIs and Concepts
 
-This example shows how to specify a local work size grouping when a kernel is enqueued into an OpenCL command queue.
-It also demonstrates how to measure the performance of an OpenCL kernel.
+This example shows how to share an OpenGL texture with OpenCL.
 
 ```c
-clEnqueueNDRangeKernel with a local work size
-clFinish
+clGetGLContextInfoKHR
+clCreateFromGLTexture2D
+clEnqueueAcquireGLObjects
+clEnqueueReleaseGLObjects
 ```
 
 ## Command Line Options
+
+Note: Many of these command line arguments are identical to the earlier Julia set sample.
 
 | Option | Default Value | Description |
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
-| `-i <number>` | 16 | Specify the number of iterations to execute.
+| `-hostcopy` | n/a | Do not use the `cl_khr_gl_sharing` extension and unconditionally copy on the host.
+| `-hostsync` | n/a | Do not use the `cl_khr_gl_event` extension and exclusively synchronize on the host.
 | `-gwx <number>` | 512 | Specify the global work size to execute, in the X direction.  This also determines the width of the generated image.
 | `-gwy <number>` | 512 | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
 | `-lwx <number>` | 0 | Specify the local work size in the X direction.  If either local works size dimension is zero a `NULL` local work size is used.
 | `-lwy <number>` | 0 | Specify the local work size in the Y direction.  If either local works size dimension is zero a `NULL` local work size is used.
+
+## Controls While Running
+
+| Control | Description |
+|:--|:--|
+| `Escape` | Exits from the sample.
+| `Space` | Toggle animation (default: `false`).
+| `V` | Toggle vsync (default: `true`). Disabling vsync may increase framerate but cause [screen tearing](https://en.wikipedia.org/wiki/Screen_tearing).
+| `A` | Increase the real part of the complex constant `C`.
+| `Z` | Decrease the real part of the complex constant `C`.
+| `S` | Increase the imaginary part of the complex constant `C`.
+| `X` | Decrease the imaginary part of the complex constant `C`.
