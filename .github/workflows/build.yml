@@ -37,6 +37,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Get OpenGL
+      if: matrix.os == 'ubuntu-latest'
+      uses: openrndr/setup-opengl@v1.1
+
     - name: Get OpenCL Headers
       uses: actions/checkout@master
       with:
