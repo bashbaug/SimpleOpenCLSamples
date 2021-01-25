@@ -73,13 +73,14 @@ kernel void Julia( write_only image2d_t dst, float cr, float ci )
     const float cMaxY =  1.5f;
 
     const int cWidth = get_global_size(0);
+    const int cHeight = get_global_size(1);
     const int cIterations = 16;
 
     int x = (int)get_global_id(0);
     int y = (int)get_global_id(1);
 
     float a = x * ( cMaxX - cMinX ) / cWidth + cMinX;
-    float b = y * ( cMaxY - cMinY ) / cWidth + cMinY;
+    float b = y * ( cMaxY - cMinY ) / cHeight + cMinY;
 
     float result = 0.0f;
     const float thresholdSquared = cIterations * cIterations / 64.0f;
@@ -295,7 +296,6 @@ static void display(void)
         std::chrono::duration<float> delta = end - start;
         float elapsed_seconds = delta.count();
         if (elapsed_seconds > 2.0f) {
-            printf("frames = %d, time = %.1f\n", (int)(frame - startFrame), elapsed_seconds);
             printf("FPS: %.1f\n", (frame - startFrame) / elapsed_seconds);
             startFrame = frame;
             start = end;
@@ -305,7 +305,14 @@ static void display(void)
         redraw = false;
     }
 
+    // If we support interop we need to acquire the OpenCL image object we
+    // created from the OpenGL texture.  If we do not support interop then we
+    // will compute into the OpenCL image object then manually transfer its
+    // contents to OpenGL.
     if (use_cl_khr_gl_sharing) {
+        // If we do not support cl_khr_gl_event then we need to synchronize
+        // OpenGL and OpenCL.  If we do support cl_khr_gl_event, then acquiring
+        // the object performs an implicit synchronization.
         if (use_cl_khr_gl_event == false) {
             glFinish();
         }
@@ -318,12 +325,12 @@ static void display(void)
             NULL);
     }
 
+    // Execute the OpenCL kernel as usual.
     kernel.setArg(0, mem);
     kernel.setArg(1, cr);
     kernel.setArg(2, ci);
 
     cl::NDRange lws;    // NullRange by default.
-
     if( lwx > 0 && lwy > 0 )
     {
         lws = cl::NDRange{lwx, lwy};
@@ -335,7 +342,10 @@ static void display(void)
         cl::NDRange{gwx, gwy},
         lws);
 
+    // After executing the OpenCL kernel, we need to release the OpenCL image
+    // object back to OpenGL, or manually copy from OpenCL to OpenGL.
     if (use_cl_khr_gl_sharing) {
+        // As before, synchronize if we do not support cl_khr_gl_event.
         if (use_cl_khr_gl_event == false) {
             commandQueue.finish();
         }
@@ -347,6 +357,8 @@ static void display(void)
             NULL,
             NULL);
     } else {
+        // For the manual copy, we will map the OpenCL image object, transfer
+        // its contents to OpenGL, then unmap the OpenCL image object.
         size_t rowPitch = 0;
         void* pixels = commandQueue.enqueueMapImage(
             mem,
@@ -372,6 +384,7 @@ static void display(void)
             pixels);
     }
 
+    // Draw a triangle strip to cover the entire viewport.
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glBegin(GL_TRIANGLE_STRIP);
@@ -407,6 +420,7 @@ static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int
             break;
         case GLFW_KEY_SPACE:
             animate = !animate;
+            printf("animation is %s\n", vsync ? "ON" : "OFF");
             break;
 
         case GLFW_KEY_A:
@@ -425,6 +439,7 @@ static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int
 
         case GLFW_KEY_V:
             vsync = !vsync;
+            printf("vsync is %s\n", vsync ? "ON" : "OFF");
             if (vsync) {
                 glfwSwapInterval(1);
             } else {

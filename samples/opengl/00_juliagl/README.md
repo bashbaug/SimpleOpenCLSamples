@@ -46,7 +46,7 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 |:--|:--|
 | `Escape` | Exits from the sample.
 | `Space` | Toggle animation (default: `false`).
-| `V` | Toggle vsync (default: `true`). Disabling vsync may increase framerate but cause [screen tearing](https://en.wikipedia.org/wiki/Screen_tearing).
+| `V` | Toggle vsync (default: `true`). Disabling vsync may increase framerate but may cause [screen tearing](https://en.wikipedia.org/wiki/Screen_tearing).
 | `A` | Increase the real part of the complex constant `C`.
 | `Z` | Decrease the real part of the complex constant `C`.
 | `S` | Increase the imaginary part of the complex constant `C`.
