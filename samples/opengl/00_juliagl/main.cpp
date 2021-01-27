@@ -420,7 +420,7 @@ static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int
             break;
         case GLFW_KEY_SPACE:
             animate = !animate;
-            printf("animation is %s\n", vsync ? "ON" : "OFF");
+            printf("animation is %s\n", animate ? "ON" : "OFF");
             break;
 
         case GLFW_KEY_A:
