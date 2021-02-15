@@ -70,6 +70,7 @@ add_subdirectory( usm )
 
 add_subdirectory( 00_enumopencl )
 add_subdirectory( 00_enumopenclpp )
+add_subdirectory( 00_enumqueuefamilies )
 add_subdirectory( 00_newqueries )
 add_subdirectory( 00_newqueriespp )
 add_subdirectory( 01_copybuffer )

@@ -1422,6 +1422,13 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_pipe_info, CL_PIPE_PROPERTIES, cl::vector<cl_pipe_properties>) \
     F(cl_sampler_info, CL_SAMPLER_PROPERTIES, cl::vector<cl_sampler_properties>)
 
+#define CL_HPP_PARAM_NAME_CL_INTEL_COMMAND_QUEUE_FAMILIES_(F) \
+    F(cl_device_info, CL_DEVICE_QUEUE_FAMILY_PROPERTIES_INTEL, cl::vector<cl_queue_family_properties_intel>) \
+    \
+    F(cl_command_queue_info, CL_QUEUE_FAMILY_INTEL, cl_uint) \
+    F(cl_command_queue_info, CL_QUEUE_INDEX_INTEL, cl_uint)
+
+
 template <typename enum_type, cl_int Name>
 struct param_traits {};
 
@@ -1572,6 +1579,10 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_KERNEL_EXEC_TIMEOUT_NV, c
 #ifdef CL_DEVICE_INTEGRATED_MEMORY_NV
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_INTEGRATED_MEMORY_NV, cl_bool)
 #endif
+
+#if defined(cl_intel_command_queue_families)
+CL_HPP_PARAM_NAME_CL_INTEL_COMMAND_QUEUE_FAMILIES_(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif // cl_intel_command_queue_families
 
 // Convenience functions
 
