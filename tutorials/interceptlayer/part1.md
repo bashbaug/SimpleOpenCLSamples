@@ -43,6 +43,9 @@ Timer Started!
 <<<< clGetPlatformIDs -> CL_SUCCESS
 >>>> clGetPlatformIDs
 <<<< clGetPlatformIDs -> CL_SUCCESS
+*** Important Note! ***
+This is the Intercept Layer Tutorial application.
+It will crash initially!  Please see the tutorial README for details.
 >>>> clGetPlatformInfo: platform = Intel(R) OpenCL HD Graphics (0x55637a388e20), param_name = CL_PLATFORM_NAME (00000902)
 <<<< clGetPlatformInfo -> CL_SUCCESS
 >>>> clGetPlatformInfo: platform = Intel(R) OpenCL HD Graphics (0x55637a388e20), param_name = CL_PLATFORM_NAME (00000902)
@@ -67,7 +70,7 @@ If `ErrorLogging` and `CallLogging` are not "set to non-default values" then the
 Second, observe that that the call to `clGetDeviceIDs` is failing and is returning `CL_INVALID_DEVICE_TYPE`.
 Furthermore, observe that the passed-in `device_type` is unrecognized.
 Because the call to `clGetDeviceIDs` is failing, we don't have any OpenCL devices to choose from, and since the tutorial application does not gracefully handle this case it is crashing.
-Let's pass in a proper device type so we have OpenCL devices to choose from by modifying Line 281 in `main.cpp` and rebuilding.
+Let's pass in a proper device type so we have OpenCL devices to choose from.
 
 ```c++
 // Part 1: Query the devices in this platform.

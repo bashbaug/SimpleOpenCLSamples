@@ -13,6 +13,9 @@ As part of the tutorial we will fix bugs that are preventing the tutorial applic
 
 ```
 $ ./sinjulia 
+*** Important Note! ***
+This is the Intercept Layer Tutorial application.
+It will crash initially!  Please see the tutorial README for details.
 Running on platform: Intel(R) OpenCL HD Graphics
 Segmentation fault (core dumped)
 ```
@@ -53,6 +56,9 @@ Couldn't get exported function pointer to: clGetGLContextInfoKHR
 Control ReportToStderr is set to non-default value: true
 Timer Started!
 ... loading complete.
+*** Important Note! ***
+This is the Intercept Layer Tutorial application.
+It will crash initially!  Please see the tutorial README for details.
 Running on platform: Intel(R) OpenCL HD Graphics
 Segmentation fault (core dumped)
 ```

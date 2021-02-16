@@ -260,6 +260,10 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
+    printf("*** Important Note! ***\n");
+    printf("This is the Intercept Layer Tutorial application.\n");
+    printf("It will crash initially!  Please see the tutorial README for details.\n");
+
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 
