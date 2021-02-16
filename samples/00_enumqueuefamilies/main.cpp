@@ -74,6 +74,8 @@ typedef struct _cl_queue_family_properties_intel {
 
 #include <CL/opencl.hpp>
 
+#include "util.hpp"
+
 static void PrintDeviceType(
     const char* label,
     cl_device_type type )
@@ -104,22 +106,22 @@ static void PrintQueueCapabilities(
     if (caps == CL_QUEUE_DEFAULT_CAPABILITIES_INTEL) {
         printf("\t\t\tDEFAULT\n");
     } else {
-        if (caps & CL_QUEUE_CAPABILITY_CREATE_SINGLE_QUEUE_EVENTS_INTEL    ) printf("\t\t\tCL_QUEUE_CAPABILITY_CREATE_SINGLE_QUEUE_EVENTS_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_CREATE_CROSS_QUEUE_EVENTS_INTEL     ) printf("\t\t\tCL_QUEUE_CAPABILITY_CREATE_CROSS_QUEUE_EVENTS_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_SINGLE_QUEUE_EVENT_WAIT_LIST_INTEL  ) printf("\t\t\tCL_QUEUE_CAPABILITY_SINGLE_QUEUE_EVENT_WAIT_LIST_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_CROSS_QUEUE_EVENT_WAIT_LIST_INTEL   ) printf("\t\t\tCL_QUEUE_CAPABILITY_CROSS_QUEUE_EVENT_WAIT_LIST_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_BUFFER_INTEL               ) printf("\t\t\tCL_QUEUE_CAPABILITY_TRANSFER_BUFFER_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_BUFFER_RECT_INTEL          ) printf("\t\t\tCL_QUEUE_CAPABILITY_TRANSFER_BUFFER_RECT_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_MAP_BUFFER_INTEL                    ) printf("\t\t\tCL_QUEUE_CAPABILITY_MAP_BUFFER_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_FILL_BUFFER_INTEL                   ) printf("\t\t\tCL_QUEUE_CAPABILITY_FILL_BUFFER_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_IMAGE_INTEL                ) printf("\t\t\tCL_QUEUE_CAPABILITY_TRANSFER_IMAGE_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_MAP_IMAGE_INTEL                     ) printf("\t\t\tCL_QUEUE_CAPABILITY_MAP_IMAGE_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_FILL_IMAGE_INTEL                    ) printf("\t\t\tCL_QUEUE_CAPABILITY_FILL_IMAGE_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_BUFFER_IMAGE_INTEL         ) printf("\t\t\tCL_QUEUE_CAPABILITY_TRANSFER_BUFFER_IMAGE_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_IMAGE_BUFFER_INTEL         ) printf("\t\t\tCL_QUEUE_CAPABILITY_TRANSFER_IMAGE_BUFFER_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_MARKER_INTEL                        ) printf("\t\t\tCL_QUEUE_CAPABILITY_MARKER_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_BARRIER_INTEL                       ) printf("\t\t\tCL_QUEUE_CAPABILITY_BARRIER_INTEL\n");
-        if (caps & CL_QUEUE_CAPABILITY_KERNEL_INTEL                        ) printf("\t\t\tCL_QUEUE_CAPABILITY_KERNEL_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_CREATE_SINGLE_QUEUE_EVENTS_INTEL    ) printf("\t\t\tCREATE_SINGLE_QUEUE_EVENTS_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_CREATE_CROSS_QUEUE_EVENTS_INTEL     ) printf("\t\t\tCREATE_CROSS_QUEUE_EVENTS_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_SINGLE_QUEUE_EVENT_WAIT_LIST_INTEL  ) printf("\t\t\tSINGLE_QUEUE_EVENT_WAIT_LIST_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_CROSS_QUEUE_EVENT_WAIT_LIST_INTEL   ) printf("\t\t\tCROSS_QUEUE_EVENT_WAIT_LIST_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_BUFFER_INTEL               ) printf("\t\t\tTRANSFER_BUFFER_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_BUFFER_RECT_INTEL          ) printf("\t\t\tTRANSFER_BUFFER_RECT_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_MAP_BUFFER_INTEL                    ) printf("\t\t\tMAP_BUFFER_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_FILL_BUFFER_INTEL                   ) printf("\t\t\tFILL_BUFFER_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_IMAGE_INTEL                ) printf("\t\t\tTRANSFER_IMAGE_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_MAP_IMAGE_INTEL                     ) printf("\t\t\tMAP_IMAGE_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_FILL_IMAGE_INTEL                    ) printf("\t\t\tFILL_IMAGE_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_BUFFER_IMAGE_INTEL         ) printf("\t\t\tTRANSFER_BUFFER_IMAGE_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_TRANSFER_IMAGE_BUFFER_INTEL         ) printf("\t\t\tTRANSFER_IMAGE_BUFFER_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_MARKER_INTEL                        ) printf("\t\t\tMARKER_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_BARRIER_INTEL                       ) printf("\t\t\tBARRIER_INTEL\n");
+        if (caps & CL_QUEUE_CAPABILITY_KERNEL_INTEL                        ) printf("\t\t\tKERNEL_INTEL\n");
     }
 }
 
@@ -147,14 +149,14 @@ static void PrintDeviceInfoSummary(
         printf("\tDevice Version: %s\n", devices[i].getInfo<CL_DEVICE_VERSION>().c_str() );
         printf("\tDriver Version: %s\n", devices[i].getInfo<CL_DRIVER_VERSION>().c_str() );
 
-        cl_int test = CL_SUCCESS;
-        std::vector<cl_queue_family_properties_intel>   qfprops =
-            devices[i].getInfo<CL_DEVICE_QUEUE_FAMILY_PROPERTIES_INTEL>(&test);
-        if (test == CL_SUCCESS) {
+        if (checkDeviceForExtension(devices[i], "cl_intel_command_queue_families")) {
+            cl_int test;
+            std::vector<cl_queue_family_properties_intel>   qfprops =
+                devices[i].getInfo<CL_DEVICE_QUEUE_FAMILY_PROPERTIES_INTEL>(&test);
             for ( size_t q = 0; q < qfprops.size(); q++ ) {
                 printf("\tQueue Family %i:\n", (int)q);
-                printf("\t\tName:       %s\n", qfprops[q].name);
-                printf("\t\tCount:      %u\n", qfprops[q].count);
+                printf("\t\tName:   %s\n", qfprops[q].name);
+                printf("\t\tCount:  %u\n", qfprops[q].count);
                 printf("\t\tProperties:\n");
                 PrintQueueProperties(qfprops[q].properties);
                 printf("\t\tCapabilities:\n");
