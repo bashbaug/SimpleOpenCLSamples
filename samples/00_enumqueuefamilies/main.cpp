@@ -163,7 +163,7 @@ static void PrintDeviceInfoSummary(
                 PrintQueueCapabilities(qfprops[q].capabilities);
             }
         } else {
-            printf("\tThis device does not support queue families.\n");
+            printf("\tThis device does not support cl_intel_command_queue_families.\n");
         }
     }
 }
