@@ -65,6 +65,8 @@ Notes:
 [Khronos OpenCL-CLHPP Repo](https://github.com/KhronosGroup/OpenCL-CLHPP),
 and is licensed under the
 [Khronos(tm) License](https://github.com/KhronosGroup/OpenCL-CLHPP/blob/master/LICENSE.txt).
+* The samples use [popl](https://github.com/badaix/popl) for its options
+parsing, which is licensed under the MIT License.
 
 ---
 OpenCL and the OpenCL logo are trademarks of Apple Inc. used by permission by Khronos.
