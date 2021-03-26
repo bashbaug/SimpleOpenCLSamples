@@ -30,7 +30,7 @@ cl::Image1D imageSrc;
 cl::Buffer memDst;
 
 static const char kernelString[] = R"CLC(
-sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE  | CLK_ADDRESS_NONE | CLK_FILTER_LINEAR;
+constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE  | CLK_ADDRESS_NONE | CLK_FILTER_LINEAR;
 
 kernel void Test( global float4* dst, read_only image1d_t src )
 {
@@ -92,7 +92,7 @@ int main(
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: copybufferkernel [options]\n"
+                "Usage: linearsampler [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }

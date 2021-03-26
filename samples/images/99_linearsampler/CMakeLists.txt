@@ -20,6 +20,7 @@
 
 add_opencl_sample(
     TEST
+    NUMBER 99
     TARGET linearsampler
     VERSION 120
     CATEGORY images
