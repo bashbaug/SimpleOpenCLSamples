@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Ben Ashbaugh
+# Copyright (c) 2021 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,9 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Require OpenCL 2.0, for read-write images:
-set(SAMPLES_CL_VERSION 200)
+add_opencl_sample(
+    TEST
+    TARGET linearsampler
+    VERSION 120
+    CATEGORY images
+    SOURCES main.cpp)
 
-add_subdirectory( 00_enumimageformats )
-
-add_subdirectory( 99_linearsampler )
