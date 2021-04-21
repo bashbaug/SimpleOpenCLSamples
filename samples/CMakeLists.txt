@@ -80,3 +80,5 @@ add_subdirectory( 05_kernelfromfile )
 add_subdirectory( 05_spirvkernelfromfile )
 
 add_subdirectory( 10_queueexperiments )
+
+add_subdirectory( 99_localmemquery )
