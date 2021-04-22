@@ -20,8 +20,7 @@
 // SOFTWARE.
 */
 
-#include <stdio.h>
-#include <vector>
+#include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
 
@@ -134,50 +133,28 @@ int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( size_t i = 1; i < argc; i++ )
-        {
-            if( !strcmp( argv[i], "-d" ) )
-            {
-                ++i;
-                if( i < argc )
-                {
-                    deviceIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                ++i;
-                if( i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else
-            {
-                printUsage = true;
-            }
-        }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: enumimageformats    [options]\n"
-            "Options:\n"
-            "      -d: Device Index (default = 0)\n"
-            "      -p: Platform Index (default = 0)\n"
-            );
+        popl::OptionParser op("Supported Options");
+        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
+        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
 
-        return -1;
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
+        }
+
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: enumimageformats [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;

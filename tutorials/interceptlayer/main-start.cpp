@@ -20,6 +20,8 @@
 // SOFTWARE.
 */
 
+#include <popl/popl.hpp>
+
 #include <CL/opencl.hpp>
 #include "bmp.hpp"
 
@@ -173,88 +175,33 @@ int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( size_t i = 1; i < argc; i++ )
-        {
-            if( !strcmp( argv[i], "-d" ) )
-            {
-                if( ++i < argc )
-                {
-                    deviceIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                if( ++i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-i" ) )
-            {
-                if( ++i < argc )
-                {
-                    iterations = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-gwx" ) )
-            {
-                if( ++i < argc )
-                {
-                    gwx = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-gwy" ) )
-            {
-                if( ++i < argc )
-                {
-                    gwy = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-lwx" ) )
-            {
-                if( ++i < argc )
-                {
-                    lwx = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-lwy" ) )
-            {
-                if( ++i < argc )
-                {
-                    lwy = strtol(argv[i], NULL, 10);
-                }
-            }
-            else
-            {
-                printUsage = true;
-            }
-        }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: sinjulia [options]\n"
-            "Options:\n"
-            "      -d: Device Index (default = 0)\n"
-            "      -p: Platform Index (default = 0)\n"
-            "      -i: Number of Iterations (default = 16)\n"
-            "      -gwx: Global Work Size X AKA Image Width\n"
-            "      -gwy: Global Work Size Y AKA Image Height\n"
-            "      -lwx: Local Work Size X (default = 0 = NULL Local Work Size)\n"
-            "      -lwy: Local Work Size Y (default = 0 = Null Local Work size)\n"
-            );
+        popl::OptionParser op("Supported Options");
+        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
+        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
+        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X", gwx, &gwx);
+        op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y", gwy, &gwy);
+        op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
+        op.add<popl::Value<size_t>>("", "lwy", "Local Work Size Y", lwy, &lwy);
 
-        return -1;
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
+        }
+
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: sinjulia [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;

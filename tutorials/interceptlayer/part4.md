@@ -132,10 +132,10 @@ Kernel Info for: SinJulia
 ```
 
 Let's choose a different global work size instead, such as one that will output a 4K bitmap - 3840 x 2160.
-This can be done by passing `-gwx 3840 -gwy 2160` to the tutorial application, or by modifying the default values in the application source code:
+This can be done by passing `--gwx 3840 --gwy 2160` to the tutorial application, or by modifying the default values in the application source code:
 
 ```
-$ cliloader -h -dv ./sinjulia -gwx 3840 -gwy 2160
+$ cliloader -h -dv ./sinjulia --gwx 3840 --gwy 2160
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
 <snip>

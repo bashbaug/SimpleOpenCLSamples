@@ -27,7 +27,7 @@ Try to solve each part on your own, but if you get stuck solutions are provided 
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
 | `-i <number>` | 16 | Specify the number of iterations to execute.
-| `-gwx <number>` | TBD! | Specify the global work size to execute, in the X direction.  This also determines the width of the generated image.
-| `-gwy <number>` | TBD! | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
-| `-lwx <number>` | 0 | Specify the local work-group size in the X direction.  If either local work-group size is zero a `NULL` local work-group size is used.
-| `-lwy <number>` | 0 | Specify the local work-group size in the Y direction.  If either local work-group size is zero a `NULL` local work-group size is used.
+| `--gwx <number>` | TBD! | Specify the global work size to execute, in the X direction.  This also determines the width of the generated image.
+| `--gwy <number>` | TBD! | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
+| `--lwx <number>` | 0 | Specify the local work-group size in the X direction.  If either local work-group size is zero a `NULL` local work-group size is used.
+| `--lwy <number>` | 0 | Specify the local work-group size in the Y direction.  If either local work-group size is zero a `NULL` local work-group size is used.

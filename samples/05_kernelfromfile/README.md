@@ -49,7 +49,7 @@ Can you initialize the contents of the buffer from a file?
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
-| `-file <string>` | `sample_kernel.cl` | Specify the name of the file with the OpenCL kernel source.
-| `-name <string>` | `Test` | Specify the name of the OpenCL kernel in the source file.
-| `-options <string>` | None | Specify optional program build options.
-| `-gwx <number>` | 512 | Specify the global work size to execute.
+| `--file <string>` | `sample_kernel.cl` | Specify the name of the file with the OpenCL kernel source.
+| `--name <string>` | `Test` | Specify the name of the OpenCL kernel in the source file.
+| `--options <string>` | None | Specify optional program build options.
+| `--gwx <number>` | 512 | Specify the global work size to execute.

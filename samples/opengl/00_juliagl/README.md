@@ -33,12 +33,12 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
-| `-hostcopy` | n/a | Do not use the `cl_khr_gl_sharing` extension and unconditionally copy on the host.
-| `-hostsync` | n/a | Do not use the `cl_khr_gl_event` extension and exclusively synchronize on the host.
-| `-gwx <number>` | 512 | Specify the global work size to execute, in the X direction.  This also determines the width of the generated image.
-| `-gwy <number>` | 512 | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
-| `-lwx <number>` | 0 | Specify the local work size in the X direction.  If either local works size dimension is zero a `NULL` local work size is used.
-| `-lwy <number>` | 0 | Specify the local work size in the Y direction.  If either local works size dimension is zero a `NULL` local work size is used.
+| `--hostcopy` | n/a | Do not use the `cl_khr_gl_sharing` extension and unconditionally copy on the host.
+| `--hostsync` | n/a | Do not use the `cl_khr_gl_event` extension and exclusively synchronize on the host.
+| `--gwx <number>` | 512 | Specify the global work size to execute, in the X direction.  This also determines the width of the generated image.
+| `--gwy <number>` | 512 | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
+| `--lwx <number>` | 0 | Specify the local work size in the X direction.  If either local works size dimension is zero a `NULL` local work size is used.
+| `--lwy <number>` | 0 | Specify the local work size in the Y direction.  If either local works size dimension is zero a `NULL` local work size is used.
 
 ## Controls While Running
 
