@@ -28,9 +28,10 @@
 
 using test_clock = std::chrono::high_resolution_clock;
 
-constexpr int maxKernels = 16;
+constexpr int maxKernels = 64;
 constexpr int testIterations = 32;
 
+int numKernels = 8;
 int numIterations = 1;
 size_t numElements = 1;
 
@@ -59,12 +60,11 @@ static void init(cl::Context& context, cl::Device& device)
     queue.finish();
 }
 
-static void go_kernelx1( cl::Context& context, cl::Device& device )
+static void go_kernelxN( cl::Context& context, cl::Device& device, const int numKernels )
 {
-    constexpr int numKernels = 1;
     init(context, device);
 
-    printf("%s: ", __FUNCTION__); fflush(stdout);
+    printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
 
     cl::CommandQueue queue(context, device);
 
@@ -86,66 +86,11 @@ static void go_kernelx1( cl::Context& context, cl::Device& device )
     printf("Finished in %f seconds\n", best);
 }
 
-static void go_kernelx2( cl::Context& context, cl::Device& device )
+static void go_kernelxN_ooq( cl::Context& context, cl::Device& device, const int numKernels )
 {
-    constexpr int numKernels = 2;
     init(context, device);
 
-    printf("%s: ", __FUNCTION__); fflush(stdout);
-
-    cl::CommandQueue queue(context, device);
-
-    float best = 999.0f;
-    for (int test = 0; test < testIterations; test++) {
-        auto start = test_clock::now();
-        for (int i = 0; i < numKernels; i++) {
-            queue.enqueueNDRangeKernel(
-                kernels[i],
-                cl::NullRange,
-                cl::NDRange{numElements});
-        }
-        queue.finish();
-
-        auto end = test_clock::now();
-        std::chrono::duration<float> elapsed_seconds = end - start;
-        best = std::min(best, elapsed_seconds.count());
-    }
-    printf("Finished in %f seconds\n", best);
-}
-
-static void go_kernelx4( cl::Context& context, cl::Device& device )
-{
-    constexpr int numKernels = 4;
-    init(context, device);
-
-    printf("%s: ", __FUNCTION__); fflush(stdout);
-
-    cl::CommandQueue queue(context, device);
-
-    float best = 999.0f;
-    for (int test = 0; test < testIterations; test++) {
-        auto start = test_clock::now();
-        for (int i = 0; i < numKernels; i++) {
-            queue.enqueueNDRangeKernel(
-                kernels[i],
-                cl::NullRange,
-                cl::NDRange{numElements});
-        }
-        queue.finish();
-
-        auto end = test_clock::now();
-        std::chrono::duration<float> elapsed_seconds = end - start;
-        best = std::min(best, elapsed_seconds.count());
-    }
-    printf("Finished in %f seconds\n", best);
-}
-
-static void go_kernelx1_ooq( cl::Context& context, cl::Device& device )
-{
-    constexpr int numKernels = 1;
-    init(context, device);
-
-    printf("%s: ", __FUNCTION__); fflush(stdout);
+    printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
     if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
@@ -173,12 +118,11 @@ static void go_kernelx1_ooq( cl::Context& context, cl::Device& device )
     printf("Finished in %f seconds\n", best);
 }
 
-static void go_kernelx2_ooq( cl::Context& context, cl::Device& device )
+static void go_kernelxN_ooq_events( cl::Context& context, cl::Device& device, const int numKernels )
 {
-    constexpr int numKernels = 2;
     init(context, device);
 
-    printf("%s: ", __FUNCTION__); fflush(stdout);
+    printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
     if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
@@ -190,73 +134,7 @@ static void go_kernelx2_ooq( cl::Context& context, cl::Device& device )
 
     float best = 999.0f;
     for (int test = 0; test < testIterations; test++) {
-        auto start = test_clock::now();
-        for (int i = 0; i < numKernels; i++) {
-            queue.enqueueNDRangeKernel(
-                kernels[i],
-                cl::NullRange,
-                cl::NDRange{numElements});
-        }
-        queue.finish();
-
-        auto end = test_clock::now();
-        std::chrono::duration<float> elapsed_seconds = end - start;
-        best = std::min(best, elapsed_seconds.count());
-    }
-    printf("Finished in %f seconds\n", best);
-}
-
-static void go_kernelx4_ooq( cl::Context& context, cl::Device& device )
-{
-    constexpr int numKernels = 4;
-    init(context, device);
-
-    printf("%s: ", __FUNCTION__); fflush(stdout);
-
-    cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
-    if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
-        printf("Skipping (device does not support out-of-order queues).\n");
-        return;
-    }
-
-    cl::CommandQueue queue(context, device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
-
-    float best = 999.0f;
-    for (int test = 0; test < testIterations; test++) {
-        auto start = test_clock::now();
-        for (int i = 0; i < numKernels; i++) {
-            queue.enqueueNDRangeKernel(
-                kernels[i],
-                cl::NullRange,
-                cl::NDRange{numElements});
-        }
-        queue.finish();
-
-        auto end = test_clock::now();
-        std::chrono::duration<float> elapsed_seconds = end - start;
-        best = std::min(best, elapsed_seconds.count());
-    }
-    printf("Finished in %f seconds\n", best);
-}
-
-static void go_kernelx4_ooq_events( cl::Context& context, cl::Device& device )
-{
-    constexpr int numKernels = 4;
-    init(context, device);
-
-    printf("%s: ", __FUNCTION__); fflush(stdout);
-
-    cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
-    if ((props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0) {
-        printf("Skipping (device does not support out-of-order queues).\n");
-        return;
-    }
-
-    cl::CommandQueue queue(context, device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
-
-    float best = 999.0f;
-    for (int test = 0; test < testIterations; test++) {
-        std::vector<cl::Event> events(4);
+        std::vector<cl::Event> events(numKernels);
         auto start = test_clock::now();
         for (int i = 0; i < numKernels; i++) {
             queue.enqueueNDRangeKernel(
@@ -276,12 +154,11 @@ static void go_kernelx4_ooq_events( cl::Context& context, cl::Device& device )
     printf("Finished in %f seconds\n", best);
 }
 
-static void go_kernel_ioqx4( cl::Context& context, cl::Device& device )
+static void go_kernel_ioqxN( cl::Context& context, cl::Device& device, const int numKernels )
 {
-    constexpr int numKernels = 4;
     init(context, device);
 
-    printf("%s: ", __FUNCTION__); fflush(stdout);
+    printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
     if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) {
@@ -328,6 +205,7 @@ int main(
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Value<int>>("k", "kernels", "Kernel to Execute", numKernels, &numKernels);
         op.add<popl::Value<int>>("i", "iterations", "Kernel Iterations", numIterations, &numIterations);
         op.add<popl::Value<size_t>>("e", "elements", "Number of ND-Range Elements", numElements, &numElements);
         bool printUsage = false;
@@ -344,6 +222,12 @@ int main(
                 "%s", op.help().c_str());
             return -1;
         }
+    }
+
+    if (numKernels > maxKernels) {
+        printf("Number of kernels is %d, which exceeds the maximum of %d.\n", numKernels, maxKernels);
+        printf("The number of kernels will be set to %d instead.\n", maxKernels);
+        numKernels = maxKernels;
     }
 
     std::vector<cl::Platform> platforms;
@@ -372,17 +256,25 @@ int main(
         kernels[i].setArg(1, numIterations);
     }
 
-    go_kernelx1(context, device);
-    go_kernelx2(context, device);
-    go_kernelx4(context, device);
+    go_kernelxN(context, device, 1);
+    go_kernelxN(context, device, 2);
+    go_kernelxN(context, device, 4);
+    go_kernelxN(context, device, numKernels);
 
-    go_kernelx1_ooq(context, device);
-    go_kernelx2_ooq(context, device);
-    go_kernelx4_ooq(context, device);
+    go_kernelxN_ooq(context, device, 1);
+    go_kernelxN_ooq(context, device, 2);
+    go_kernelxN_ooq(context, device, 4);
+    go_kernelxN_ooq(context, device, numKernels);
 
-    go_kernelx4_ooq_events(context, device);
+    go_kernelxN_ooq_events(context, device, 1);
+    go_kernelxN_ooq_events(context, device, 2);
+    go_kernelxN_ooq_events(context, device, 4);
+    go_kernelxN_ooq_events(context, device, numKernels);
 
-    go_kernel_ioqx4(context, device);
+    go_kernel_ioqxN(context, device, 1);
+    go_kernel_ioqxN(context, device, 2);
+    go_kernel_ioqxN(context, device, 4);
+    go_kernel_ioqxN(context, device, numKernels);
 
     return 0;
 }
