@@ -47,5 +47,6 @@ For GPU OpenCL devices this may require running the application in a console or 
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
+| `-k <number>` | 8 | Specify the number of kernels to execute for the variable execution.
 | `-i <number>` | 1 | Specify the number of kernel iterations to execute.
 | `-e <number>` | 1 | Specify the number of ND-range elements to execute (the global work size).
