@@ -4,8 +4,7 @@ import numpy as np
 import pyopencl as cl
 import argparse
 
-#gwx = 1024 * 1024
-gwx = 16
+gwx = 1024 * 1024
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
