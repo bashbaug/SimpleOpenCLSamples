@@ -47,3 +47,4 @@ endfunction()
 
 add_subdirectory( 00_enumopencl )
 add_subdirectory( 01_copybuffer )
+add_subdirectory( 02_copybufferkernel )

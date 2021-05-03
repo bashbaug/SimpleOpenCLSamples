@@ -6,6 +6,14 @@ import argparse
 
 gwx = 1024 * 1024
 
+kernelString = """
+kernel void CopyBuffer( global uint* dst, global uint* src )
+{
+    uint id = get_global_id(0);
+    dst[id] = src[id];
+}
+"""
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--platform', type=int, action='store', default=0, help='Platform Index')
@@ -24,6 +32,10 @@ if __name__ == "__main__":
     context = cl.Context([devices[deviceIndex]])
     commandQueue = cl.CommandQueue(context, devices[deviceIndex])
 
+    program = cl.Program(context, kernelString)
+    program.build()
+    kernel = program.CopyBuffer
+
     deviceMemSrc = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR, gwx * np.uint32().itemsize)
     deviceMemDst = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR, gwx * np.uint32().itemsize)
 
@@ -34,7 +46,7 @@ if __name__ == "__main__":
             mapped_src[i] = i
 
     # go
-    cl.enqueue_copy(commandQueue, deviceMemDst, deviceMemSrc)
+    kernel(commandQueue, [gwx], None, deviceMemDst, deviceMemSrc)
 
     # checkResults
     mapped_dst, event = cl.enqueue_map_buffer(commandQueue, deviceMemDst, cl.map_flags.READ, 0, gwx, np.uint32)
