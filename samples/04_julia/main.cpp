@@ -125,7 +125,7 @@ static void go()
             lws);
     }
 
-    // Enqueue all processing is complete before stopping the timer.
+    // Ensure all processing is complete before stopping the timer.
     commandQueue.finish();
 
     auto end = std::chrono::system_clock::now();

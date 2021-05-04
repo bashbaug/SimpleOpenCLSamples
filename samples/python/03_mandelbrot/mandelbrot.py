@@ -75,7 +75,7 @@ if __name__ == "__main__":
                              width * height * np.uint32().itemsize)
 
     kernel(commandQueue, [width, height], None, 
-           np.float32(-2.0), np.float32(-1.0), np.float32(1.0), np.float32(1.0), 
+           np.float32(-2.0), np.float32(-1.0), np.float32(1.0), np.float32(1.0),
            np.int32(width), np.int32(height), np.int32(maxIterations), deviceMemDst)
 
     mapped_dst, event = cl.enqueue_map_buffer(commandQueue, deviceMemDst,
