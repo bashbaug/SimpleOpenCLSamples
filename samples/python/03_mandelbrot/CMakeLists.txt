@@ -19,5 +19,5 @@
 # SOFTWARE.
 
 add_opencl_python_sample(
-    NUMBER 02
-    SOURCES copybufferkernel.py)
+    NUMBER 03
+    SOURCES mandelbrot.py)

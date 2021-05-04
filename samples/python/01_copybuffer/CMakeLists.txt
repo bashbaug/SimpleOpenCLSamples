@@ -19,5 +19,5 @@
 # SOFTWARE.
 
 add_opencl_python_sample(
-    NUMBER 00
+    NUMBER 01
     SOURCES copybuffer.py)

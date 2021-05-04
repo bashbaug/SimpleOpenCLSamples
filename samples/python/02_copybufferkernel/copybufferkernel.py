@@ -39,17 +39,18 @@ if __name__ == "__main__":
     deviceMemSrc = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR, gwx * np.uint32().itemsize)
     deviceMemDst = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR, gwx * np.uint32().itemsize)
 
-    # init
-    mapped_src, event = cl.enqueue_map_buffer(commandQueue, deviceMemSrc, cl.map_flags.WRITE_INVALIDATE_REGION, 0, gwx, np.uint32)
+    mapped_src, event = cl.enqueue_map_buffer(commandQueue, deviceMemSrc,
+                                              cl.map_flags.WRITE_INVALIDATE_REGION,
+                                              0, gwx, np.uint32)
     with mapped_src.base:
         for i in range(gwx):
             mapped_src[i] = i
 
-    # go
     kernel(commandQueue, [gwx], None, deviceMemDst, deviceMemSrc)
 
-    # checkResults
-    mapped_dst, event = cl.enqueue_map_buffer(commandQueue, deviceMemDst, cl.map_flags.READ, 0, gwx, np.uint32)
+    mapped_dst, event = cl.enqueue_map_buffer(commandQueue, deviceMemDst,
+                                              cl.map_flags.READ,
+                                              0, gwx, np.uint32)
     with mapped_dst.base:
         mismatches = 0
         for i, val in enumerate(mapped_dst):
