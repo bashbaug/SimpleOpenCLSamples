@@ -6,6 +6,9 @@ This repo contains simple OpenCL samples that demonstrate how to build
 OpenCL applications using only the Khronos-provided headers and libs.
 All samples have been tested on Windows and Linux.
 
+Most of the samples are written in C and C++ using the OpenCL C++ bindings.
+A few of the samples have been ported to Python using [PyOpenCL](https://pypi.org/project/pyopencl/).
+
 
 ## Code Structure
 
