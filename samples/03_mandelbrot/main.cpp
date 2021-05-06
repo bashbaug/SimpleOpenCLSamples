@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,10 +31,6 @@ const cl_uint width = 768;
 const cl_uint height = 512;
 
 const int maxIterations = 256;
-
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl::Buffer deviceMemDst;
 
 static const char kernelString[] = R"CLC(
 static inline int mandel(float c_re, float c_im, int count) {
@@ -70,52 +66,6 @@ kernel void Mandelbrot(
     output[index] = mandel(x, y, maxIterations);
 }
 )CLC";
-
-static void init( void )
-{
-    // No initialization is needed for this sample.
-}
-
-static void go()
-{
-    kernel.setArg(0, -2.0f);    // x0
-    kernel.setArg(1, -1.0f);    // y0
-    kernel.setArg(2, 1.0f);     // x1
-    kernel.setArg(3, 1.0f);     // y1
-    kernel.setArg(4, width);
-    kernel.setArg(5, height);
-    kernel.setArg(6, maxIterations);
-    kernel.setArg(7, deviceMemDst);
-
-    commandQueue.enqueueNDRangeKernel(
-        kernel,
-        cl::NullRange,
-        cl::NDRange{width, height} );
-}
-
-static void checkResults()
-{
-    const cl_int*  buf = (const cl_int*)commandQueue.enqueueMapBuffer(
-        deviceMemDst,
-        CL_TRUE,
-        CL_MAP_READ,
-        0,
-        width * height * sizeof(cl_int) );
-
-    std::vector<uint8_t> colors;
-    colors.resize(width * height);
-    for (int i = 0; i < width * height; ++i) {
-        // Map the iteration count to colors by just alternating between
-        // two greys.
-        colors[i] = (buf[i] & 0x1) ? 240 : 20;
-    }
-    BMP::save_image(colors.data(), width, height, filename);
-    printf("Wrote image file %s\n", filename);
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)buf ); // TODO: Why isn't this a const void* in the API?
-}
 
 int main(
     int argc,
@@ -157,29 +107,54 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
-#if 0
-    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
-    {
-        printf("Program build log for device %s:\n",
-            device.getInfo<CL_DEVICE_NAME>().c_str() );
-        printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
-    }
-#endif
-    kernel = cl::Kernel{ program, "Mandelbrot" };
+    cl::Kernel kernel = cl::Kernel{ program, "Mandelbrot" };
 
-    deviceMemDst = cl::Buffer{
+    cl::Buffer deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,
         width * height * sizeof( cl_int ) };
 
-    init();
-    go();
-    checkResults();
+    // execution
+    kernel.setArg(0, -2.0f);    // x0
+    kernel.setArg(1, -1.0f);    // y0
+    kernel.setArg(2, 1.0f);     // x1
+    kernel.setArg(3, 1.0f);     // y1
+    kernel.setArg(4, width);
+    kernel.setArg(5, height);
+    kernel.setArg(6, maxIterations);
+    kernel.setArg(7, deviceMemDst);
+    commandQueue.enqueueNDRangeKernel(
+        kernel,
+        cl::NullRange,
+        cl::NDRange{width, height} );
+
+    // save bitmap
+    {
+        const cl_int*  buf = (const cl_int*)commandQueue.enqueueMapBuffer(
+            deviceMemDst,
+            CL_TRUE,
+            CL_MAP_READ,
+            0,
+            width * height * sizeof(cl_int) );
+
+        std::vector<uint8_t> colors;
+        colors.resize(width * height);
+        for (int i = 0; i < width * height; ++i) {
+            // Map the iteration count to colors by just alternating between
+            // two greys.
+            colors[i] = (buf[i] & 0x1) ? 240 : 20;
+        }
+        BMP::save_image(colors.data(), width, height, filename);
+        printf("Wrote image file %s\n", filename);
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemDst,
+            (void*)buf );
+    }
 
     return 0;
 }

@@ -25,12 +25,7 @@
 #include <CL/opencl.hpp>
 #include "libusm.h"
 
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl_uint* src;
-cl_uint* dst;
-
-size_t  gwx = 1024*1024;
+const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
 kernel void CopyBuffer( global uint* dst, global uint* src )
@@ -39,81 +34,6 @@ kernel void CopyBuffer( global uint* dst, global uint* src )
     dst[id] = src[id];
 }
 )CLC";
-
-static void init( void )
-{
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        src[i] = (cl_uint)(i);
-    }
-}
-
-static void go()
-{
-    clSetKernelArgMemPointerINTEL(
-        kernel(),
-        0,
-        dst );
-    clSetKernelArgMemPointerINTEL(
-        kernel(),
-        1,
-        src );
-
-    clEnqueueMigrateMemINTEL(
-        commandQueue(),
-        src,
-        gwx * sizeof(cl_uint),
-        0,
-        0,
-        nullptr,
-        nullptr );
-    clEnqueueMigrateMemINTEL(
-        commandQueue(),
-        dst,
-        gwx * sizeof(cl_uint),
-        CL_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED,
-        0,
-        nullptr,
-        nullptr );
-
-    commandQueue.enqueueNDRangeKernel(
-        kernel,
-        cl::NullRange,
-        cl::NDRange{gwx} );
-}
-
-static void checkResults()
-{
-    commandQueue.finish();
-
-    unsigned int    mismatches = 0;
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        if( dst[i] != i )
-        {
-            if( mismatches < 16 )
-            {
-                fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
-                    (unsigned int)i,
-                    dst[i],
-                    (unsigned int)i );
-            }
-            mismatches++;
-        }
-    }
-
-    if( mismatches )
-    {
-        fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
-            mismatches,
-            (unsigned int)gwx );
-    }
-    else
-    {
-        printf("Success.\n");
-    }
-}
 
 int main(
     int argc,
@@ -156,51 +76,116 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
-#if 0
-    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
+    cl::Kernel kernel = cl::Kernel{ program, "CopyBuffer" };
+
+    cl_uint* s_src = (cl_uint*)clSharedMemAllocINTEL(
+        context(),
+        devices[deviceIndex](),
+        nullptr,
+        gwx * sizeof(cl_uint),
+        0,
+        nullptr );
+    cl_uint* s_dst = (cl_uint*)clSharedMemAllocINTEL(
+        context(),
+        devices[deviceIndex](),
+        nullptr,
+        gwx * sizeof(cl_uint),
+        0,
+        nullptr );
+
+    if( s_src && s_dst )
     {
-        printf("Program build log for device %s:\n",
-            device.getInfo<CL_DEVICE_NAME>().c_str() );
-        printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
+        // initialization
+        {
+            for( size_t i = 0; i < gwx; i++ )
+            {
+                s_src[i] = (cl_uint)(i);
+            }
+
+            memset( s_dst, 0, gwx * sizeof(cl_uint) );
+        }
+
+        // execution
+        clEnqueueMigrateMemINTEL(
+            commandQueue(),
+            s_src,
+            gwx * sizeof(cl_uint),
+            0,
+            0,
+            nullptr,
+            nullptr );
+        clEnqueueMigrateMemINTEL(
+            commandQueue(),
+            s_dst,
+            gwx * sizeof(cl_uint),
+            CL_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED,
+            0,
+            nullptr,
+            nullptr );
+
+        clSetKernelArgMemPointerINTEL(
+            kernel(),
+            0,
+            s_dst );
+        clSetKernelArgMemPointerINTEL(
+            kernel(),
+            1,
+            s_src );
+        commandQueue.enqueueNDRangeKernel(
+            kernel,
+            cl::NullRange,
+            cl::NDRange{gwx} );
+
+        // verification
+        {
+            commandQueue.finish();
+
+            unsigned int    mismatches = 0;
+
+            for( size_t i = 0; i < gwx; i++ )
+            {
+                if( s_dst[i] != i )
+                {
+                    if( mismatches < 16 )
+                    {
+                        fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
+                            (unsigned int)i,
+                            s_dst[i],
+                            (unsigned int)i );
+                    }
+                    mismatches++;
+                }
+            }
+
+            if( mismatches )
+            {
+                fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
+                    mismatches,
+                    (unsigned int)gwx );
+            }
+            else
+            {
+                printf("Success.\n");
+            }
+        }
     }
-#endif
-    kernel = cl::Kernel{ program, "CopyBuffer" };
-
-    src = (cl_uint*)clSharedMemAllocINTEL(
-        context(),
-        devices[deviceIndex](),
-        nullptr,
-        gwx * sizeof(cl_uint),
-        0,
-        nullptr );
-    dst = (cl_uint*)clSharedMemAllocINTEL(
-        context(),
-        devices[deviceIndex](),
-        nullptr,
-        gwx * sizeof(cl_uint),
-        0,
-        nullptr );
-
-    if( src && dst )
+    else
     {
-        init();
-        go();
-        checkResults();
+        printf("Allocation failed - does this device support Unified Shared Memory?\n");
     }
 
     printf("Cleaning up...\n");
 
     clMemFreeINTEL(
         context(),
-        src );
+        s_src );
     clMemFreeINTEL(
         context(),
-        dst );
+        s_dst );
 
     return 0;
 }

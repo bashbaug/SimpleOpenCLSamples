@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,12 +24,7 @@
 
 #include <CL/opencl.hpp>
 
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl::Buffer deviceMemSrc;
-cl::Buffer deviceMemDst;
-
-size_t  gwx = 1024*1024;
+const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
 kernel void CopyBuffer( global uint* dst, global uint* src )
@@ -38,78 +33,6 @@ kernel void CopyBuffer( global uint* dst, global uint* src )
     dst[id] = src[id];
 }
 )CLC";
-
-static void init( void )
-{
-    cl_uint*    pSrc = (cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemSrc,
-        CL_TRUE,
-        CL_MAP_WRITE_INVALIDATE_REGION,
-        0,
-        gwx * sizeof(cl_uint) );
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        pSrc[i] = (cl_uint)(i);
-    }
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemSrc,
-        pSrc );
-}
-
-static void go()
-{
-    kernel.setArg(0, deviceMemDst);
-    kernel.setArg(1, deviceMemSrc);
-
-    commandQueue.enqueueNDRangeKernel(
-        kernel,
-        cl::NullRange,
-        cl::NDRange{gwx} );
-}
-
-static void checkResults()
-{
-    const cl_uint*  pDst = (const cl_uint*)commandQueue.enqueueMapBuffer(
-        deviceMemDst,
-        CL_TRUE,
-        CL_MAP_READ,
-        0,
-        gwx * sizeof(cl_uint) );
-
-    unsigned int    mismatches = 0;
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        if( pDst[i] != i )
-        {
-            if( mismatches < 16 )
-            {
-                fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
-                    (unsigned int)i,
-                    pDst[i],
-                    (unsigned int)i );
-            }
-            mismatches++;
-        }
-    }
-
-    if( mismatches )
-    {
-        fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
-            mismatches,
-            (unsigned int)gwx );
-    }
-    else
-    {
-        printf("Success.\n");
-    }
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)pDst ); // TODO: Why isn't this a const void* in the API?
-}
 
 int main(
     int argc,
@@ -152,34 +75,90 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
-#if 0
-    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
+    cl::Kernel kernel = cl::Kernel{ program, "CopyBuffer" };
+
+    cl::Buffer deviceMemSrc = cl::Buffer{
+        context,
+        CL_MEM_ALLOC_HOST_PTR,
+        gwx * sizeof( cl_uint ) };
+
+    cl::Buffer deviceMemDst = cl::Buffer{
+        context,
+        CL_MEM_ALLOC_HOST_PTR,
+        gwx * sizeof( cl_uint ) };
+
+    // initialization
     {
-        printf("Program build log for device %s:\n",
-            device.getInfo<CL_DEVICE_NAME>().c_str() );
-        printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
+        cl_uint*    pSrc = (cl_uint*)commandQueue.enqueueMapBuffer(
+            deviceMemSrc,
+            CL_TRUE,
+            CL_MAP_WRITE_INVALIDATE_REGION,
+            0,
+            gwx * sizeof(cl_uint) );
+
+        for( size_t i = 0; i < gwx; i++ )
+        {
+            pSrc[i] = (cl_uint)(i);
+        }
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemSrc,
+            pSrc );
     }
-#endif
-    kernel = cl::Kernel{ program, "CopyBuffer" };
 
-    deviceMemSrc = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    // execution
+    kernel.setArg(0, deviceMemDst);
+    kernel.setArg(1, deviceMemSrc);
+    commandQueue.enqueueNDRangeKernel(
+        kernel,
+        cl::NullRange,
+        cl::NDRange{gwx} );
 
-    deviceMemDst = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    // verification
+    {
+        const cl_uint*  pDst = (const cl_uint*)commandQueue.enqueueMapBuffer(
+            deviceMemDst,
+            CL_TRUE,
+            CL_MAP_READ,
+            0,
+            gwx * sizeof(cl_uint) );
 
-    init();
-    go();
-    checkResults();
+        unsigned int    mismatches = 0;
+
+        for( size_t i = 0; i < gwx; i++ )
+        {
+            if( pDst[i] != i )
+            {
+                if( mismatches < 16 )
+                {
+                    fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
+                        (unsigned int)i,
+                        pDst[i],
+                        (unsigned int)i );
+                }
+                mismatches++;
+            }
+        }
+
+        if( mismatches )
+        {
+            fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
+                mismatches,
+                (unsigned int)gwx );
+        }
+        else
+        {
+            printf("Success.\n");
+        }
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemDst,
+            (void*)pDst );
+    }
 
     return 0;
 }
