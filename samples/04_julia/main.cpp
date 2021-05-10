@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,18 +29,8 @@
 
 const char* filename = "julia.bmp";
 
-size_t iterations = 16;
-size_t gwx = 512;
-size_t gwy = 512;
-size_t lwx = 0;
-size_t lwy = 0;
-
-float cr = -0.123f;
-float ci =  0.745f;
-
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl::Buffer deviceMemDst;
+const float cr = -0.123f;
+const float ci =  0.745f;
 
 static const char kernelString[] = R"CLC(
 kernel void Julia( global uchar4* dst, float cr, float ci )
@@ -86,77 +76,18 @@ kernel void Julia( global uchar4* dst, float cr, float ci )
 }
 )CLC";
 
-static void init( void )
-{
-    // No initialization is needed for this sample.
-}
-
-static void go()
-{
-    kernel.setArg(0, deviceMemDst);
-    kernel.setArg(1, cr);
-    kernel.setArg(2, ci);
-
-    cl::NDRange lws;    // NullRange by default.
-
-    printf("Executing the kernel %d times\n", (int)iterations);
-    printf("Global Work Size = ( %d, %d )\n", (int)gwx, (int)gwy);
-    if( lwx > 0 && lwy > 0 )
-    {
-        printf("Local Work Size = ( %d, %d )\n", (int)lwx, (int)lwy);
-        lws = cl::NDRange{lwx, lwy};
-    }
-    else
-    {
-        printf("Local work size = NULL\n");
-    }
-
-    // Ensure the queue is empty and no processing is happening
-    // on the device before starting the timer.
-    commandQueue.finish();
-
-    auto start = std::chrono::system_clock::now();
-    for( int i = 0; i < iterations; i++ )
-    {
-        commandQueue.enqueueNDRangeKernel(
-            kernel,
-            cl::NullRange,
-            cl::NDRange{gwx, gwy},
-            lws);
-    }
-
-    // Enqueue all processing is complete before stopping the timer.
-    commandQueue.finish();
-
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<float> elapsed_seconds = end - start;
-    printf("Finished in %f seconds\n", elapsed_seconds.count());
-}
-
-static void checkResults()
-{
-    auto buf = reinterpret_cast<const uint32_t*>(
-        commandQueue.enqueueMapBuffer(
-            deviceMemDst,
-            CL_TRUE,
-            CL_MAP_READ,
-            0,
-            gwx * gwy * sizeof(cl_uchar4) ) );
-
-    BMP::save_image(buf, gwx, gwy, filename);
-    printf("Wrote image file %s\n", filename);
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)buf ); // TODO: Why isn't this a const void* in the API?
-}
-
 int main(
     int argc,
     char** argv )
 {
     int platformIndex = 0;
     int deviceIndex = 0;
+
+    size_t iterations = 16;
+    size_t gwx = 512;
+    size_t gwy = 512;
+    size_t lwx = 0;
+    size_t lwy = 0;
 
     {
         popl::OptionParser op("Supported Options");
@@ -197,29 +128,76 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
-#if 0
-    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
-    {
-        printf("Program build log for device %s:\n",
-            device.getInfo<CL_DEVICE_NAME>().c_str() );
-        printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
-    }
-#endif
-    kernel = cl::Kernel{ program, "Julia" };
+    cl::Kernel kernel = cl::Kernel{ program, "Julia" };
 
-    deviceMemDst = cl::Buffer{
+    cl::Buffer deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,
         gwx * gwy * sizeof( cl_uchar4 ) };
 
-    init();
-    go();
-    checkResults();
+    // execution
+    {
+        kernel.setArg(0, deviceMemDst);
+        kernel.setArg(1, cr);
+        kernel.setArg(2, ci);
+
+        cl::NDRange lws;    // NullRange by default.
+
+        printf("Executing the kernel %d times\n", (int)iterations);
+        printf("Global Work Size = ( %d, %d )\n", (int)gwx, (int)gwy);
+        if( lwx > 0 && lwy > 0 )
+        {
+            printf("Local Work Size = ( %d, %d )\n", (int)lwx, (int)lwy);
+            lws = cl::NDRange{lwx, lwy};
+        }
+        else
+        {
+            printf("Local work size = NULL\n");
+        }
+
+        // Ensure the queue is empty and no processing is happening
+        // on the device before starting the timer.
+        commandQueue.finish();
+
+        auto start = std::chrono::system_clock::now();
+        for( int i = 0; i < iterations; i++ )
+        {
+            commandQueue.enqueueNDRangeKernel(
+                kernel,
+                cl::NullRange,
+                cl::NDRange{gwx, gwy},
+                lws);
+        }
+
+        // Ensure all processing is complete before stopping the timer.
+        commandQueue.finish();
+
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        printf("Finished in %f seconds\n", elapsed_seconds.count());
+    }
+
+    // save bitmap
+    {
+        auto buf = reinterpret_cast<const uint32_t*>(
+            commandQueue.enqueueMapBuffer(
+                deviceMemDst,
+                CL_TRUE,
+                CL_MAP_READ,
+                0,
+                gwx * gwy * sizeof(cl_uchar4) ) );
+
+        BMP::save_image(buf, gwx, gwy, filename);
+        printf("Wrote image file %s\n", filename);
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemDst,
+            (void*)buf ); // TODO: Why isn't this a const void* in the API?
+    }
 
     return 0;
 }

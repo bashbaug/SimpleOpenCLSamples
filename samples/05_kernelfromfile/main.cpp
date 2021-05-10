@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,6 @@
 #include <fstream>
 #include <string>
 
-size_t gwx = 512;
-
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl::Buffer deviceMemDst;
-
 static std::string readStringFromFile(
     const std::string& filename )
 {
@@ -54,28 +48,6 @@ static std::string readStringFromFile(
     return source;
 }
 
-static void init( void )
-{
-    // No initialization is needed for this sample.
-}
-
-static void go()
-{
-    kernel.setArg(0, deviceMemDst);
-
-    commandQueue.enqueueNDRangeKernel(
-        kernel,
-        cl::NullRange,
-        cl::NDRange{gwx});
-}
-
-static void checkResults()
-{
-    // No results to check for this sample, but do verify that execution
-    // has completed.
-    commandQueue.finish();
-}
-
 int main(
     int argc,
     char** argv )
@@ -86,6 +58,7 @@ int main(
     std::string fileName("sample_kernel.cl");
     std::string kernelName("Test");
     std::string buildOptions;
+    size_t gwx = 512;
 
     {
         popl::OptionParser op("Supported Options");
@@ -124,7 +97,7 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     printf("Reading program source from file: %s\n", fileName.c_str() );
     std::string kernelString = readStringFromFile(fileName.c_str());
@@ -141,16 +114,23 @@ int main(
             program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
     }
     printf("Creating kernel: %s\n", kernelName.c_str() );
-    kernel = cl::Kernel{ program, kernelName.c_str() };
+    cl::Kernel kernel = cl::Kernel{ program, kernelName.c_str() };
 
-    deviceMemDst = cl::Buffer{
+    cl::Buffer deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,
         gwx * sizeof( cl_uint ) };
 
-    init();
-    go();
-    checkResults();
+    // execution
+    kernel.setArg(0, deviceMemDst);
+    commandQueue.enqueueNDRangeKernel(
+        kernel,
+        cl::NullRange,
+        cl::NDRange{gwx});
+
+    // No results to check for this sample, but do verify that execution
+    // has completed.
+    commandQueue.finish();
 
     printf("Done.\n");
 

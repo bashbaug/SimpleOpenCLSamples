@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2020 Ben Ashbaugh
+// Copyright (c) 2020-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,12 +25,7 @@
 #include <CL/opencl.hpp>
 #include "libusm.h"
 
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl_uint* s_src;
-cl_uint* s_dst;
-
-size_t  gwx = 1024*1024;
+const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
 kernel void CopyBuffer( global uint* dst, global uint* src )
@@ -39,66 +34,6 @@ kernel void CopyBuffer( global uint* dst, global uint* src )
     dst[id] = src[id];
 }
 )CLC";
-
-static void init( void )
-{
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        s_src[i] = (cl_uint)(i);
-    }
-
-    memset( s_dst, 0, gwx * sizeof(cl_uint) );
-}
-
-static void go()
-{
-    clSetKernelArgMemPointerINTEL(
-        kernel(),
-        0,
-        s_dst );
-    clSetKernelArgMemPointerINTEL(
-        kernel(),
-        1,
-        s_src );
-
-    commandQueue.enqueueNDRangeKernel(
-        kernel,
-        cl::NullRange,
-        cl::NDRange{gwx} );
-}
-
-static void checkResults()
-{
-    commandQueue.finish();
-
-    unsigned int    mismatches = 0;
-
-    for( size_t i = 0; i < gwx; i++ )
-    {
-        if( s_dst[i] != i )
-        {
-            if( mismatches < 16 )
-            {
-                fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
-                    (unsigned int)i,
-                    s_dst[i],
-                    (unsigned int)i );
-            }
-            mismatches++;
-        }
-    }
-
-    if( mismatches )
-    {
-        fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
-            mismatches,
-            (unsigned int)gwx );
-    }
-    else
-    {
-        printf("Success.\n");
-    }
-}
 
 int main(
     int argc,
@@ -141,29 +76,20 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
-#if 0
-    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
-    {
-        printf("Program build log for device %s:\n",
-            device.getInfo<CL_DEVICE_NAME>().c_str() );
-        printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
-    }
-#endif
-    kernel = cl::Kernel{ program, "CopyBuffer" };
+    cl::Kernel kernel = cl::Kernel{ program, "CopyBuffer" };
 
-    s_src = (cl_uint*)clSharedMemAllocINTEL(
+    cl_uint* s_src = (cl_uint*)clSharedMemAllocINTEL(
         context(),
         devices[deviceIndex](),
         nullptr,
         gwx * sizeof(cl_uint),
         0,
         nullptr );
-    s_dst = (cl_uint*)clSharedMemAllocINTEL(
+    cl_uint* s_dst = (cl_uint*)clSharedMemAllocINTEL(
         context(),
         devices[deviceIndex](),
         nullptr,
@@ -173,9 +99,62 @@ int main(
 
     if( s_src && s_dst )
     {
-        init();
-        go();
-        checkResults();
+        // initialization
+        {
+            for( size_t i = 0; i < gwx; i++ )
+            {
+                s_src[i] = (cl_uint)(i);
+            }
+
+            memset( s_dst, 0, gwx * sizeof(cl_uint) );
+        }
+
+        // execution
+        clSetKernelArgMemPointerINTEL(
+            kernel(),
+            0,
+            s_dst );
+        clSetKernelArgMemPointerINTEL(
+            kernel(),
+            1,
+            s_src );
+        commandQueue.enqueueNDRangeKernel(
+            kernel,
+            cl::NullRange,
+            cl::NDRange{gwx} );
+
+        // verification
+        {
+            commandQueue.finish();
+
+            unsigned int    mismatches = 0;
+
+            for( size_t i = 0; i < gwx; i++ )
+            {
+                if( s_dst[i] != i )
+                {
+                    if( mismatches < 16 )
+                    {
+                        fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
+                            (unsigned int)i,
+                            s_dst[i],
+                            (unsigned int)i );
+                    }
+                    mismatches++;
+                }
+            }
+
+            if( mismatches )
+            {
+                fprintf(stderr, "Error: Found %d mismatches / %d values!!!\n",
+                    mismatches,
+                    (unsigned int)gwx );
+            }
+            else
+            {
+                printf("Success.\n");
+            }
+        }
     }
     else
     {
