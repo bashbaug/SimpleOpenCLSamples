@@ -75,9 +75,9 @@ static void go_ioq(cl::Context& context, cl::Device& device, cl::Buffer& buffer,
     float best = 999.0f;
     for (int test = 0; test < testIterations; test++) {
         auto start = test_clock::now();
-        for (int start = 0; start < gwx; start += tile) {
+        for (size_t start = 0; start < gwx; start += tile) {
             for (auto& kernel : kernels) {
-                kernel.setArg(1, start);
+                kernel.setArg(1, (int)start);
                 queue.enqueueNDRangeKernel(
                     kernel,
                     cl::NullRange,
@@ -133,7 +133,7 @@ static void go_ioq_gwo(cl::Context& context, cl::Device& device, cl::Buffer& buf
     float best = 999.0f;
     for (int test = 0; test < testIterations; test++) {
         auto start = test_clock::now();
-        for (int start = 0; start < gwx; start += tile) {
+        for (size_t start = 0; start < gwx; start += tile) {
             for (auto& kernel : kernels) {
                 queue.enqueueNDRangeKernel(
                     kernel,
@@ -232,6 +232,7 @@ int main(
     pipeline.push_back(Add2);
     pipeline.push_back(Add3);
 
+    //go_ioq(context, device, buf, pipeline);
     go_ioq_gwo(context, device, buf, pipeline);
 
     return 0;
