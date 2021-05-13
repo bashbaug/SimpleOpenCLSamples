@@ -81,22 +81,6 @@ int main(
     const size_t elements = 1024 * 1024;
     std::vector<int> v(elements);
 
-    printf("Creating a buffer for the entire host memory allocation...\n");
-    cl::Buffer everything = cl::Buffer{
-        context,
-        CL_MEM_USE_HOST_PTR,
-        elements * sizeof(v[0]),
-        v.data()};
-    printf("... buffer is %p\n\n", everything());
-
-    printf("Creating a buffer for the first half of the allocation...\n");
-    cl::Buffer first = cl::Buffer{
-        context,
-        CL_MEM_USE_HOST_PTR,
-        elements / 2 * sizeof(v[0]),
-        v.data()};
-    printf("... buffer is %p\n\n", first());
-
     printf("Creating a buffer for the second half of the allocation...\n");
     cl::Buffer second = cl::Buffer{
         context,
@@ -105,6 +89,23 @@ int main(
         v.data() + elements / 2};
     printf("... buffer is %p\n\n", second());
 
+    printf("Creating a buffer for the entire host memory allocation...\n");
+    cl::Buffer everything = cl::Buffer{
+        context,
+        CL_MEM_USE_HOST_PTR,
+        elements * sizeof(v[0]),
+        v.data()};
+    printf("... buffer is %p\n\n", everything());
+
+#if 0
+    printf("Creating a buffer for the first half of the allocation...\n");
+    cl::Buffer first = cl::Buffer{
+        context,
+        CL_MEM_USE_HOST_PTR,
+        elements / 2 * sizeof(v[0]),
+        v.data()};
+    printf("... buffer is %p\n\n", first());
+
     printf("Creating a buffer for the middle of the allocation...\n");
     cl::Buffer middle = cl::Buffer{
         context,
@@ -112,6 +113,15 @@ int main(
         elements / 2 * sizeof(v[0]),
         v.data() + elements / 4};
     printf("... buffer is %p\n\n", middle());
+#endif
+
+    printf("Using the second half buffer...\n");
+    kernel.setArg(0, second);
+    commandQueue.enqueueNDRangeKernel(
+        kernel,
+        cl::NullRange,
+        cl::NDRange{256});
+    commandQueue.finish();
 
     printf("Using the entire buffer...\n");
     kernel.setArg(0, everything);
@@ -121,16 +131,9 @@ int main(
         cl::NDRange{256});
     commandQueue.finish();
 
+#if 0
     printf("Using the first half buffer...\n");
     kernel.setArg(0, first);
-    commandQueue.enqueueNDRangeKernel(
-        kernel,
-        cl::NullRange,
-        cl::NDRange{256});
-    commandQueue.finish();
-
-    printf("Using the second half buffer...\n");
-    kernel.setArg(0, second);
     commandQueue.enqueueNDRangeKernel(
         kernel,
         cl::NullRange,
@@ -144,6 +147,7 @@ int main(
         cl::NullRange,
         cl::NDRange{256});
     commandQueue.finish();
+#endif
 
     printf("Done!\n");
 
