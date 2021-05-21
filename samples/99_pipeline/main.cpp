@@ -26,6 +26,10 @@
 
 #include <chrono>
 
+#define CL_MEM_FLAGS_INTEL 0x10001
+#define CL_MEM_LOCALLY_UNCACHED_RESOURCE (1 << 18)
+#define CL_MEM_LOCALLY_UNCACHED_SURFACE_STATE_RESOURCE (1 << 25)
+
 using test_clock = std::chrono::high_resolution_clock;
 
 constexpr int testIterations = 32;
@@ -35,17 +39,17 @@ size_t  gwx = 16*1024*1024;
 size_t  tile = gwx;
 
 static const char kernelString[] = R"CLC(
-kernel void Add1( global uint* ptr, uint start )
+kernel void Add1( global uint4* ptr, uint start )
 {
     uint id = get_global_id(0) + start;
     ptr[id] = ptr[id] + 1;
 }
-kernel void Add2( global uint* ptr, uint start )
+kernel void Add2( global uint4* ptr, uint start )
 {
     uint id = get_global_id(0) + start;
     ptr[id] = ptr[id] + 2;
 }
-kernel void Add3( global uint* ptr, uint start )
+kernel void Add3( global uint4* ptr, uint start )
 {
     uint id = get_global_id(0) + start;
     ptr[id] = ptr[id] + 3;
@@ -99,9 +103,9 @@ static void go_ioq(cl::Context& context, cl::Device& device, cl::Buffer& buffer,
             CL_TRUE,
             CL_MAP_READ,
             0,
-            gwx * sizeof(cl_uint) );
+            gwx * sizeof(cl_uint4) );
         printf("Check: [0] = %u, [1] = %u, ... [n-2] = %u, [n-1] = %u\n",
-            p[0], p[1], p[gwx-2], p[gwx-1]);
+            p[0], p[1], p[gwx * 4 - 2], p[gwx * 4 - 1]);
         queue.enqueueUnmapMemObject(
             buffer,
             p );
@@ -156,9 +160,9 @@ static void go_ioq_gwo(cl::Context& context, cl::Device& device, cl::Buffer& buf
             CL_TRUE,
             CL_MAP_READ,
             0,
-            gwx * sizeof(cl_uint) );
+            gwx * sizeof(cl_uint4) );
         printf("Check: [0] = %u, [1] = %u, ... [n-2] = %u, [n-1] = %u\n",
-            p[0], p[1], p[gwx-2], p[gwx-1]);
+            p[0], p[1], p[gwx * 4 - 2], p[gwx * 4 - 1]);
         queue.enqueueUnmapMemObject(
             buffer,
             p );
@@ -172,6 +176,7 @@ int main(
 {
     int platformIndex = 0;
     int deviceIndex = 0;
+    bool uncached = false;
 
     {
         popl::OptionParser op("Supported Options");
@@ -180,6 +185,7 @@ int main(
         op.add<popl::Value<int>>("i", "iterations", "Kernel Iterations", numIterations, &numIterations);
         op.add<popl::Value<size_t>>("s", "size", "Total Buffer Size", gwx, &gwx);
         op.add<popl::Value<size_t>>("t", "tile", "Tile Size", tile, &tile);
+        op.add<popl::Switch>("", "uncached", "Allocate an Uncached Buffer", &uncached);
 
         bool printUsage = false;
         try {
@@ -222,10 +228,26 @@ int main(
     cl::Kernel Add2 = cl::Kernel{ program, "Add2" };
     cl::Kernel Add3 = cl::Kernel{ program, "Add3" };
 
-    cl::Buffer buf = cl::Buffer{
-        context,
-        CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+    cl::Buffer buf;
+    if (uncached) {
+        cl_mem_properties props[] = {
+            CL_MEM_FLAGS_INTEL, CL_MEM_LOCALLY_UNCACHED_SURFACE_STATE_RESOURCE,
+            0
+        };
+        buf = cl::Buffer{
+            clCreateBufferWithProperties(
+                context(),
+                props,
+                CL_MEM_ALLOC_HOST_PTR,
+                gwx * sizeof(cl_uint4),
+                NULL,
+                NULL) };
+    } else {
+        buf = cl::Buffer{
+            context,
+            CL_MEM_ALLOC_HOST_PTR,
+            gwx * sizeof(cl_uint4) };
+    }
 
     std::vector<cl::Kernel> pipeline;
     pipeline.push_back(Add1);

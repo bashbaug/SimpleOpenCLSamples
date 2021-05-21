@@ -22,5 +22,5 @@ add_opencl_sample(
     TEST
     NUMBER 99
     TARGET pipeline
-    VERSION 120
+    VERSION 300
     SOURCES main.cpp)
