@@ -229,7 +229,7 @@ static void go_kernel_qf_ioqxN( cl::Context& context, cl::Device& device, const 
         printf("Skipping (no queues found?).\n");
         return;
     } else {
-        printf("Using queue family %u with %u queues.\n", family, numQueues);
+        printf("Using queue family %u with %u queue(s): ", family, numQueues); fflush(stdout);
     }
 
     cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
