@@ -242,7 +242,7 @@ static void go_kernel_qf_ioqxN( cl::Context& context, cl::Device& device, const 
     for (int i = 0; i < numKernels; i++) {
         cl_queue_properties props[] = {
             CL_QUEUE_FAMILY_INTEL, family,
-            CL_QUEUE_INDEX_INTEL, numKernels % numQueues,
+            CL_QUEUE_INDEX_INTEL, i % numQueues,
             0
         };
         queues.push_back(cl::CommandQueue{
