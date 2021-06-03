@@ -24,6 +24,8 @@
 
 #include <CL/opencl.hpp>
 
+#include "util.hpp"
+
 #include <chrono>
 
 using test_clock = std::chrono::high_resolution_clock;
@@ -194,6 +196,139 @@ static void go_kernel_ioqxN( cl::Context& context, cl::Device& device, const int
     printf("Finished in %f seconds\n", best);
 }
 
+static void findQueueFamily( cl::Device& device, cl_uint& family, cl_uint& numQueues )
+{
+    numQueues = 0;
+
+    std::vector<cl_queue_family_properties_intel>   qfprops =
+        device.getInfo<CL_DEVICE_QUEUE_FAMILY_PROPERTIES_INTEL>();
+    for (cl_uint q = 0; q < qfprops.size(); q++) {
+        if (qfprops[q].capabilities == CL_QUEUE_DEFAULT_CAPABILITIES_INTEL &&
+            qfprops[q].count > numQueues) {
+            family = q;
+            numQueues = qfprops[q].count;
+        }
+    }
+}
+
+static void go_kernel_qf_ioqxN( cl::Context& context, cl::Device& device, const int numKernels )
+{
+    init(context, device);
+
+    printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
+
+    if (!checkDeviceForExtension(device, "cl_intel_command_queue_families")) {
+        printf("Skipping (device does not support cl_intel_command_queue_families).\n");
+        return;
+    }
+
+    cl_uint family = 0;
+    cl_uint numQueues = 0;
+    findQueueFamily(device, family, numQueues);
+    if (numQueues == 0) {
+        printf("Skipping (no queues found?).\n");
+        return;
+    } else {
+        printf("Using queue family %u with %u queues.\n", family, numQueues);
+    }
+
+    cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
+    if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) {
+        // Create a dummy out-of-order queue to enable command aggregation.
+        cl::CommandQueue dummy{context, device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
+    }
+
+    std::vector<cl::CommandQueue> queues;
+    for (int i = 0; i < numKernels; i++) {
+        cl_queue_properties props[] = {
+            CL_QUEUE_FAMILY_INTEL, family,
+            CL_QUEUE_INDEX_INTEL, numKernels % numQueues,
+            0
+        };
+        queues.push_back(cl::CommandQueue{
+            clCreateCommandQueueWithProperties(context(), device(), props, NULL)});
+    }
+
+    float best = 999.0f;
+    for (int test = 0; test < testIterations; test++) {
+        auto start = test_clock::now();
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].enqueueNDRangeKernel(
+                kernels[i],
+                cl::NullRange,
+                cl::NDRange{numElements});
+        }
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].flush();
+        }
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].finish();
+        }
+
+        auto end = test_clock::now();
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        best = std::min(best, elapsed_seconds.count());
+    }
+    printf("Finished in %f seconds\n", best);
+}
+
+static void go_kernel_ctx_ioqxN( cl::Device& device, const int numKernels )
+{
+    printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
+
+    std::vector<cl::Context> contexts;
+    std::vector<cl::Program> programs;
+    std::vector<cl::Kernel> kernels;
+    std::vector<cl::Buffer> buffers;
+    std::vector<cl::CommandQueue> queues;
+
+    for (int i = 0; i < numKernels; i++) {
+        contexts.push_back(cl::Context{device});
+
+        programs.push_back(cl::Program{ contexts[i], kernelString });
+        programs[i].build();
+
+        buffers.push_back(cl::Buffer{contexts[i], CL_MEM_ALLOC_HOST_PTR, numElements * sizeof(float)});
+        kernels.push_back(cl::Kernel{programs[i], "TimeSink"});
+        queues.push_back(cl::CommandQueue{contexts[i], device});
+
+        kernels[i].setArg(0, buffers[i]);
+        kernels[i].setArg(1, numIterations);
+
+        float pattern = 0.0f;
+        queues[i].enqueueFillBuffer(buffers[i], pattern, 0, numElements * sizeof(pattern));
+        queues[i].finish();
+
+        cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
+        if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) {
+            // Create a dummy out-of-order queue to enable command aggregation.
+            cl::CommandQueue dummy{contexts[i], device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
+        }
+    }
+
+    float best = 999.0f;
+    for (int test = 0; test < testIterations; test++) {
+        auto start = test_clock::now();
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].enqueueNDRangeKernel(
+                kernels[i],
+                cl::NullRange,
+                cl::NDRange{numElements});
+        }
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].flush();
+        }
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].finish();
+        }
+
+        auto end = test_clock::now();
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        best = std::min(best, elapsed_seconds.count());
+    }
+    printf("Finished in %f seconds\n", best);
+}
+
 int main(
     int argc,
     char** argv )
@@ -275,6 +410,16 @@ int main(
     go_kernel_ioqxN(context, device, 2);
     go_kernel_ioqxN(context, device, 4);
     go_kernel_ioqxN(context, device, numKernels);
+
+    go_kernel_qf_ioqxN(context, device, 1);
+    go_kernel_qf_ioqxN(context, device, 2);
+    go_kernel_qf_ioqxN(context, device, 4);
+    go_kernel_qf_ioqxN(context, device, numKernels);
+
+    go_kernel_ctx_ioqxN(device, 1);
+    go_kernel_ctx_ioqxN(device, 2);
+    go_kernel_ctx_ioqxN(device, 4);
+    go_kernel_ctx_ioqxN(device, numKernels);
 
     return 0;
 }
