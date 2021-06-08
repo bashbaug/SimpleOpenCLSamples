@@ -18,6 +18,11 @@ This pattern requires the out-of-order command-queue capability and may not exec
 4. The fourth pattern executes independent ND-range kernels using multiple in-order command-queues.
 This pattern requires no special OpenCL capabilities and should execute on all OpenCL devices.
 Some devices that do not support out-of-order command-queues can still execute commands concurrently using this pattern.
+5. The fifth pattern executes independent ND-range kernels using multiple in-order command-queues, except in this scenario the command-queues are created using different command-queue indices.
+This pattern requires support for the [cl_intel_command_queue_families](https://www.khronos.org/registry/OpenCL/extensions/intel/cl_intel_command_queue_families.html) extension.
+Command-queues with different command-queue indices may execute differently than ordinary command-queues.
+6. The sixth pattern executes independent ND-range kernels using in-order command-queues created different OpenCL contexts.
+This pattern simulates the behavior of multiple applications running in parallel, or multiple isolated threads running in parallel.
 
 ## Key APIs and Concepts
 
@@ -39,7 +44,7 @@ Many parts of OpenCL _allow_ for concurrent execution, but very few parts of Ope
 This is not OpenCL-specific and is also true for other data-parallel programming models.
 
 * If results are inconsistent, try to ensure no other processes are using the OpenCL device.
-For GPU OpenCL devices this may require running the application in a console or terminal window rather from a desktop GUI.
+For GPU OpenCL devices this may require running the application in a console or terminal window rather than a desktop GUI.
 
 ## Command Line Options
 

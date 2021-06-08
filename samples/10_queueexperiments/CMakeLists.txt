@@ -22,5 +22,5 @@ add_opencl_sample(
     TEST
     NUMBER 10
     TARGET queueexperiments
-    VERSION 120
+    VERSION 200 # for clCreateCommandQueueWithProperties
     SOURCES main.cpp)
