@@ -100,6 +100,7 @@ int main(
             "               0 = by affinity domain\n"
             "               1 = equally\n"
             "               2 = by counts\n"
+            "               3 = by names\n"
             );
 
         return -1;
@@ -139,16 +140,20 @@ int main(
         CL_DEVICE_PARTITION_BY_AFFINITY_DOMAIN, CL_DEVICE_AFFINITY_DOMAIN_NEXT_PARTITIONABLE, 0
     };
     const cl_device_partition_property partitionEqually[] = {
-        CL_DEVICE_PARTITION_EQUALLY, 2, 0
+        CL_DEVICE_PARTITION_EQUALLY, 2, 0,
     };
     const cl_device_partition_property partitionByCounts[] = {
-        CL_DEVICE_PARTITION_BY_COUNTS, 1, 1, 0,
+        CL_DEVICE_PARTITION_BY_COUNTS, 1, 1, CL_DEVICE_PARTITION_BY_COUNTS_LIST_END, 0,
+    };
+    const cl_device_partition_property partitionByNames[] = {
+        CL_DEVICE_PARTITION_BY_NAMES_EXT, 0, 2, CL_PARTITION_BY_NAMES_LIST_END_EXT, 0,
     };
     std::vector<cl::Device> subdevices;
     devices[deviceIndex].createSubDevices(
         partitionType == 0 ? partitionByAffinity : 
         partitionType == 1 ? partitionEqually :
         partitionType == 2 ? partitionByCounts :
+        partitionType == 3 ? partitionByNames :
         nullptr, &subdevices);
 
     printf("Partitioned into %d sub-devices.\n", (int)subdevices.size());
