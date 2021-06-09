@@ -37,7 +37,7 @@ int numIterations = 1;
 
 using element = cl_uint4;
 
-size_t  gwx = 1024;
+size_t  gwx = 4096;
 size_t  tile = gwx;
 
 static const char kernelString[] = R"CLC(
