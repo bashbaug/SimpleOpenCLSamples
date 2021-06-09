@@ -83,3 +83,5 @@ add_subdirectory( 05_spirvkernelfromfile )
 add_subdirectory( 10_queueexperiments )
 
 add_subdirectory( 99_pipeline )
+add_subdirectory( 99_pipeline2d )
+add_subdirectory( 99_pipeline2dimg )
