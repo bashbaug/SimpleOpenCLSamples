@@ -33,7 +33,6 @@
 using test_clock = std::chrono::high_resolution_clock;
 
 constexpr int testIterations = 32;
-int numIterations = 1;
 
 using element = cl_uint4;
 
@@ -198,7 +197,6 @@ int main(
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
-        op.add<popl::Value<int>>("i", "iterations", "Kernel Iterations", numIterations, &numIterations);
         op.add<popl::Value<size_t>>("s", "size", "Buffer Size", gwx, &gwx);
         op.add<popl::Value<size_t>>("t", "tile", "Tile Size", tile, &tile);
         op.add<popl::Switch>("", "uncached", "Allocate an Uncached Buffer", &uncached);

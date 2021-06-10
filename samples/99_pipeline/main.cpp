@@ -33,30 +33,30 @@
 using test_clock = std::chrono::high_resolution_clock;
 
 constexpr int testIterations = 32;
-int numIterations = 1;
 
+bool    unique = false;
 size_t  gwx = 16*1024*1024;
 size_t  tile = gwx;
 
 static const char kernelString[] = R"CLC(
-kernel void Add1( global uint4* ptr, uint start )
+kernel void Add1( global uint4* src, global uint4* dst, uint start )
 {
     uint id = get_global_id(0) + start;
-    ptr[id] = ptr[id] + 1;
+    dst[id] = src[id] + 1;
 }
-kernel void Add2( global uint4* ptr, uint start )
+kernel void Add2( global uint4* src, global uint4* dst, uint start )
 {
     uint id = get_global_id(0) + start;
-    ptr[id] = ptr[id] + 2;
+    dst[id] = src[id] + 2;
 }
-kernel void Add3( global uint4* ptr, uint start )
+kernel void Add3( global uint4* src, global uint4* dst, uint start )
 {
     uint id = get_global_id(0) + start;
-    ptr[id] = ptr[id] + 3;
+    dst[id] = src[id] + 3;
 }
 )CLC";
 
-static void go_ioq(cl::Context& context, cl::Device& device, cl::Buffer& buffer, std::vector<cl::Kernel>& kernels)
+static void go_ioq(cl::Context& context, cl::Device& device, std::vector<cl::Buffer>& buffers, std::vector<cl::Kernel>& kernels)
 {
     printf("%s: ", __FUNCTION__); fflush(stdout);
 
@@ -68,12 +68,21 @@ static void go_ioq(cl::Context& context, cl::Device& device, cl::Buffer& buffer,
 
     cl::CommandQueue queue(context, device);
 
+    int i = 0;
     for (auto& kernel : kernels) {
-        kernel.setArg(0, buffer);
+        if (unique) {
+            kernel.setArg(0, buffers[i]);
+            kernel.setArg(1, buffers[++i]);
+        } else {
+            kernel.setArg(0, buffers[kernels.size()]);
+            kernel.setArg(1, buffers[kernels.size()]);
+        }
     }
 
     int pattern = 0;
-    queue.enqueueFillBuffer(buffer, pattern, 0, gwx * sizeof(pattern));
+    for (auto& buf : buffers) {
+        queue.enqueueFillBuffer(buf, pattern, 0, gwx * sizeof(pattern));
+    }
     queue.finish();
 
     float best = 999.0f;
@@ -81,7 +90,7 @@ static void go_ioq(cl::Context& context, cl::Device& device, cl::Buffer& buffer,
         auto start = test_clock::now();
         for (size_t start = 0; start < gwx; start += tile) {
             for (auto& kernel : kernels) {
-                kernel.setArg(1, (int)start);
+                kernel.setArg(2, (int)start);
                 queue.enqueueNDRangeKernel(
                     kernel,
                     cl::NullRange,
@@ -99,7 +108,7 @@ static void go_ioq(cl::Context& context, cl::Device& device, cl::Buffer& buffer,
     // verification
     {
         cl_uint* p = (cl_uint*)queue.enqueueMapBuffer(
-            buffer,
+            buffers[kernels.size()],
             CL_TRUE,
             CL_MAP_READ,
             0,
@@ -107,13 +116,13 @@ static void go_ioq(cl::Context& context, cl::Device& device, cl::Buffer& buffer,
         printf("Check: [0] = %u, [1] = %u, ... [n-2] = %u, [n-1] = %u\n",
             p[0], p[1], p[gwx * 4 - 2], p[gwx * 4 - 1]);
         queue.enqueueUnmapMemObject(
-            buffer,
+            buffers[kernels.size()],
             p );
         queue.finish();
     }
 }
 
-static void go_ioq_gwo(cl::Context& context, cl::Device& device, cl::Buffer& buffer, std::vector<cl::Kernel>& kernels)
+static void go_ioq_gwo(cl::Context& context, cl::Device& device, std::vector<cl::Buffer>& buffers, std::vector<cl::Kernel>& kernels)
 {
     printf("%s: ", __FUNCTION__); fflush(stdout);
 
@@ -125,13 +134,22 @@ static void go_ioq_gwo(cl::Context& context, cl::Device& device, cl::Buffer& buf
 
     cl::CommandQueue queue(context, device);
 
+    int i = 0;
     for (auto& kernel : kernels) {
-        kernel.setArg(0, buffer);
-        kernel.setArg(1, 0);
+        if (unique) {
+            kernel.setArg(0, buffers[i]);
+            kernel.setArg(1, buffers[++i]);
+        } else {
+            kernel.setArg(0, buffers[kernels.size()]);
+            kernel.setArg(1, buffers[kernels.size()]);
+        }
+        kernel.setArg(2, 0);
     }
 
     int pattern = 0;
-    queue.enqueueFillBuffer(buffer, pattern, 0, gwx * sizeof(pattern));
+    for (auto& buf : buffers) {
+        queue.enqueueFillBuffer(buf, pattern, 0, gwx * sizeof(pattern));
+    }
     queue.finish();
 
     float best = 999.0f;
@@ -156,7 +174,7 @@ static void go_ioq_gwo(cl::Context& context, cl::Device& device, cl::Buffer& buf
     // verification
     {
         cl_uint* p = (cl_uint*)queue.enqueueMapBuffer(
-            buffer,
+            buffers[kernels.size()],
             CL_TRUE,
             CL_MAP_READ,
             0,
@@ -164,7 +182,7 @@ static void go_ioq_gwo(cl::Context& context, cl::Device& device, cl::Buffer& buf
         printf("Check: [0] = %u, [1] = %u, ... [n-2] = %u, [n-1] = %u\n",
             p[0], p[1], p[gwx * 4 - 2], p[gwx * 4 - 1]);
         queue.enqueueUnmapMemObject(
-            buffer,
+            buffers[kernels.size()],
             p );
         queue.finish();
     }
@@ -182,10 +200,10 @@ int main(
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
-        op.add<popl::Value<int>>("i", "iterations", "Kernel Iterations", numIterations, &numIterations);
         op.add<popl::Value<size_t>>("s", "size", "Total Buffer Size", gwx, &gwx);
         op.add<popl::Value<size_t>>("t", "tile", "Tile Size", tile, &tile);
         op.add<popl::Switch>("", "uncached", "Allocate an Uncached Buffer", &uncached);
+        op.add<popl::Switch>("", "unique", "Use Unique Buffers", &unique);
 
         bool printUsage = false;
         try {
@@ -228,34 +246,38 @@ int main(
     cl::Kernel Add2 = cl::Kernel{ program, "Add2" };
     cl::Kernel Add3 = cl::Kernel{ program, "Add3" };
 
-    cl::Buffer buf;
-    if (uncached) {
-        cl_mem_properties props[] = {
-            CL_MEM_FLAGS_INTEL, CL_MEM_LOCALLY_UNCACHED_SURFACE_STATE_RESOURCE,
-            0
-        };
-        buf = cl::Buffer{
-            clCreateBufferWithProperties(
-                context(),
-                props,
-                CL_MEM_ALLOC_HOST_PTR,
-                gwx * sizeof(cl_uint4),
-                NULL,
-                NULL) };
-    } else {
-        buf = cl::Buffer{
-            context,
-            CL_MEM_ALLOC_HOST_PTR,
-            gwx * sizeof(cl_uint4) };
-    }
-
     std::vector<cl::Kernel> pipeline;
     pipeline.push_back(Add1);
     pipeline.push_back(Add2);
     pipeline.push_back(Add3);
 
-    //go_ioq(context, device, buf, pipeline);
-    go_ioq_gwo(context, device, buf, pipeline);
+    std::vector<cl::Buffer> buffers;
+    for (size_t i = 0; i < pipeline.size() + 1; i++) {
+        if (uncached) {
+            cl_mem_properties props[] = {
+                CL_MEM_FLAGS_INTEL, CL_MEM_LOCALLY_UNCACHED_SURFACE_STATE_RESOURCE,
+                0
+            };
+            cl::Buffer buf = cl::Buffer{
+                clCreateBufferWithProperties(
+                    context(),
+                    props,
+                    CL_MEM_ALLOC_HOST_PTR,
+                    gwx * sizeof(cl_uint4),
+                    NULL,
+                    NULL) };
+            buffers.push_back(buf);
+        } else {
+            cl::Buffer buf = cl::Buffer{
+                context,
+                CL_MEM_ALLOC_HOST_PTR,
+                gwx * sizeof(cl_uint4) };
+            buffers.push_back(buf);
+        }
+    }
+
+    //go_ioq(context, device, buffers, pipeline);
+    go_ioq_gwo(context, device, buffers, pipeline);
 
     return 0;
 }
