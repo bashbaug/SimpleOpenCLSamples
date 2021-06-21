@@ -247,6 +247,22 @@ static void PrintDeviceInfoSummary(
 #endif
         printf("\tPipe Support:                             %s\n",
             devicePipeSupport ? "CL_TRUE" : "CL_FALSE" );
+
+#if defined(CL_DEVICE_INTEGER_DOT_PRODUCT_CAPABILITIES_KHR)
+        cl_device_integer_dot_product_capabilities_khr caps =
+            devices[i].getInfo<CL_DEVICE_INTEGER_DOT_PRODUCT_CAPABILITIES_KHR>(&test);
+        if( test == CL_SUCCESS )
+        {
+            printf("%s: %s%s\n",
+                "Integer Dot Product Capabilities",
+                ( caps & CL_DEVICE_INTEGER_DOT_PRODUCT_INPUT_4x8BIT_PACKED_KHR  ) ? "\n\t\tCL_DEVICE_INTEGER_DOT_PRODUCT_INPUT_4x8BIT_PACKED_KHR"   : "",
+                ( caps & CL_DEVICE_INTEGER_DOT_PRODUCT_INPUT_4x8BIT_KHR         ) ? "\n\t\tCL_DEVICE_INTEGER_DOT_PRODUCT_INPUT_4x8BIT_KHR"          : "");
+        }
+        else
+        {
+            printf("Query for CL_DEVICE_INTEGER_DOT_PRODUCT_CAPABILITIES_KHR failed.\n");
+        }
+#endif
     }
 }
 
