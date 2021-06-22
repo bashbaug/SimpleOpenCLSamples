@@ -548,19 +548,19 @@
 
 // Define deprecated prefixes and suffixes to ensure compilation
 // in case they are not pre-defined
-#if !defined(CL_EXT_PREFIX__VERSION_1_1_DEPRECATED)
-#define CL_EXT_PREFIX__VERSION_1_1_DEPRECATED  
-#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_1_DEPRECATED)
-#if !defined(CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED)
-#define CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
-#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_1_DEPRECATED)
+#if !defined(CL_API_PREFIX__VERSION_1_1_DEPRECATED)
+#define CL_API_PREFIX__VERSION_1_1_DEPRECATED
+#endif // #if !defined(CL_API_PREFIX__VERSION_1_1_DEPRECATED)
+#if !defined(CL_API_SUFFIX__VERSION_1_1_DEPRECATED)
+#define CL_API_SUFFIX__VERSION_1_1_DEPRECATED
+#endif // #if !defined(CL_API_PREFIX__VERSION_1_1_DEPRECATED)
 
-#if !defined(CL_EXT_PREFIX__VERSION_1_2_DEPRECATED)
-#define CL_EXT_PREFIX__VERSION_1_2_DEPRECATED  
-#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_2_DEPRECATED)
-#if !defined(CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED)
-#define CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED
-#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_2_DEPRECATED)
+#if !defined(CL_API_PREFIX__VERSION_1_2_DEPRECATED)
+#define CL_API_PREFIX__VERSION_1_2_DEPRECATED
+#endif // #if !defined(CL_API_PREFIX__VERSION_1_2_DEPRECATED)
+#if !defined(CL_API_SUFFIX__VERSION_1_2_DEPRECATED)
+#define CL_API_SUFFIX__VERSION_1_2_DEPRECATED
+#endif // #if !defined(CL_API_PREFIX__VERSION_1_2_DEPRECATED)
 
 #if !defined(CL_CALLBACK)
 #define CL_CALLBACK
@@ -1317,14 +1317,20 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_kernel_arg_info, CL_KERNEL_ARG_NAME, string) \
     F(cl_kernel_arg_info, CL_KERNEL_ARG_TYPE_QUALIFIER, cl_kernel_arg_type_qualifier) \
     \
+    F(cl_kernel_work_group_info, CL_KERNEL_GLOBAL_WORK_SIZE, cl::detail::size_t_array) \
+    \
+    F(cl_device_info, CL_DEVICE_LINKER_AVAILABLE, cl_bool) \
+    F(cl_device_info, CL_DEVICE_IMAGE_MAX_BUFFER_SIZE, size_type) \
+    F(cl_device_info, CL_DEVICE_IMAGE_MAX_ARRAY_SIZE, size_type) \
     F(cl_device_info, CL_DEVICE_PARENT_DEVICE, cl::Device) \
     F(cl_device_info, CL_DEVICE_PARTITION_MAX_SUB_DEVICES, cl_uint) \
     F(cl_device_info, CL_DEVICE_PARTITION_PROPERTIES, cl::vector<cl_device_partition_property>) \
     F(cl_device_info, CL_DEVICE_PARTITION_TYPE, cl::vector<cl_device_partition_property>)  \
     F(cl_device_info, CL_DEVICE_REFERENCE_COUNT, cl_uint) \
-    F(cl_device_info, CL_DEVICE_PREFERRED_INTEROP_USER_SYNC, size_type) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_INTEROP_USER_SYNC, cl_bool) \
     F(cl_device_info, CL_DEVICE_PARTITION_AFFINITY_DOMAIN, cl_device_affinity_domain) \
     F(cl_device_info, CL_DEVICE_BUILT_IN_KERNELS, string) \
+    F(cl_device_info, CL_DEVICE_PRINTF_BUFFER_SIZE, size_type) \
     \
     F(cl_image_info, CL_IMAGE_ARRAY_SIZE, size_type) \
     F(cl_image_info, CL_IMAGE_NUM_MIP_LEVELS, cl_uint) \
@@ -1344,6 +1350,11 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_PREFERRED_PLATFORM_ATOMIC_ALIGNMENT, cl_uint) \
     F(cl_device_info, CL_DEVICE_PREFERRED_GLOBAL_ATOMIC_ALIGNMENT, cl_uint) \
     F(cl_device_info, CL_DEVICE_PREFERRED_LOCAL_ATOMIC_ALIGNMENT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_IMAGE_PITCH_ALIGNMENT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_READ_WRITE_IMAGE_ARGS, cl_uint ) \
+    F(cl_device_info, CL_DEVICE_MAX_GLOBAL_VARIABLE_SIZE, size_type ) \
+    F(cl_device_info, CL_DEVICE_GLOBAL_VARIABLE_PREFERRED_TOTAL_SIZE, size_type ) \
     F(cl_profiling_info, CL_PROFILING_COMMAND_COMPLETE, cl_ulong) \
     F(cl_kernel_exec_info, CL_KERNEL_EXEC_INFO_SVM_FINE_GRAIN_SYSTEM, cl_bool) \
     F(cl_kernel_exec_info, CL_KERNEL_EXEC_INFO_SVM_PTRS, void**) \
@@ -1362,17 +1373,17 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_program_info, CL_PROGRAM_IL_KHR, cl::vector<unsigned char>)
 
 #define CL_HPP_PARAM_NAME_INFO_2_1_(F) \
-    F(cl_platform_info, CL_PLATFORM_HOST_TIMER_RESOLUTION, size_type) \
+    F(cl_platform_info, CL_PLATFORM_HOST_TIMER_RESOLUTION, cl_ulong) \
     F(cl_program_info, CL_PROGRAM_IL, cl::vector<unsigned char>) \
-    F(cl_kernel_info, CL_KERNEL_MAX_NUM_SUB_GROUPS, size_type) \
-    F(cl_kernel_info, CL_KERNEL_COMPILE_NUM_SUB_GROUPS, size_type) \
     F(cl_device_info, CL_DEVICE_MAX_NUM_SUB_GROUPS, cl_uint) \
     F(cl_device_info, CL_DEVICE_IL_VERSION, string) \
     F(cl_device_info, CL_DEVICE_SUB_GROUP_INDEPENDENT_FORWARD_PROGRESS, cl_bool) \
     F(cl_command_queue_info, CL_QUEUE_DEVICE_DEFAULT, cl::DeviceCommandQueue) \
     F(cl_kernel_sub_group_info, CL_KERNEL_MAX_SUB_GROUP_SIZE_FOR_NDRANGE, size_type) \
     F(cl_kernel_sub_group_info, CL_KERNEL_SUB_GROUP_COUNT_FOR_NDRANGE, size_type) \
-    F(cl_kernel_sub_group_info, CL_KERNEL_LOCAL_SIZE_FOR_SUB_GROUP_COUNT, cl::detail::size_t_array)
+    F(cl_kernel_sub_group_info, CL_KERNEL_LOCAL_SIZE_FOR_SUB_GROUP_COUNT, cl::detail::size_t_array) \
+    F(cl_kernel_sub_group_info, CL_KERNEL_MAX_NUM_SUB_GROUPS, size_type) \
+    F(cl_kernel_sub_group_info, CL_KERNEL_COMPILE_NUM_SUB_GROUPS, size_type)
 
 #define CL_HPP_PARAM_NAME_INFO_2_2_(F) \
     F(cl_program_info, CL_PROGRAM_SCOPE_GLOBAL_CTORS_PRESENT, cl_bool) \
@@ -1503,6 +1514,24 @@ CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_CL3_SHARED_(CL_HPP_DECLARE_PARAM_TR
 CL_HPP_PARAM_NAME_CL_KHR_EXTENDED_VERSIONING_KHRONLY_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // cl_khr_extended_versioning
 
+#if defined(cl_khr_device_uuid)
+using uuid_array = array<cl_uchar, CL_UUID_SIZE_KHR>;
+using luid_array = array<cl_uchar, CL_LUID_SIZE_KHR>;
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_UUID_KHR, uuid_array)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DRIVER_UUID_KHR, uuid_array)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_LUID_VALID_KHR, cl_bool)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_LUID_KHR, luid_array)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_NODE_MASK_KHR, cl_uint)
+#endif
+
+#if defined(cl_khr_pci_bus_info)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_PCI_BUS_INFO_KHR, cl_device_pci_bus_info_khr)
+#endif
+
+#if defined(cl_khr_integer_dot_product)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_INTEGER_DOT_PRODUCT_CAPABILITIES_KHR, cl_device_integer_dot_product_capabilities_khr)
+#endif
+
 #ifdef CL_PLATFORM_ICD_SUFFIX_KHR
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_ICD_SUFFIX_KHR, string)
 #endif
@@ -1510,7 +1539,6 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_ICD_SUFFIX_KHR, strin
 #ifdef CL_DEVICE_PROFILING_TIMER_OFFSET_AMD
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_PROFILING_TIMER_OFFSET_AMD, cl_ulong)
 #endif
-
 #ifdef CL_DEVICE_GLOBAL_FREE_MEMORY_AMD
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_GLOBAL_FREE_MEMORY_AMD, vector<size_type>)
 #endif
@@ -2108,6 +2136,9 @@ struct ImageFormat : public cl_image_format
         image_channel_data_type = type;
     }
 
+    //! \brief Copy constructor.
+    ImageFormat(const ImageFormat &other) { *this = other; }
+
     //! \brief Assignment operator.
     ImageFormat& operator = (const ImageFormat& rhs)
     {
@@ -2361,7 +2392,7 @@ public:
                 const cl_device_partition_property_ext * /* properties */,
                 cl_uint /*num_entries*/,
                 cl_device_id * /*out_devices*/,
-                cl_uint * /*num_devices*/ ) CL_EXT_SUFFIX__VERSION_1_1;
+                cl_uint * /*num_devices*/ ) CL_API_SUFFIX__VERSION_1_1;
 
         static PFN_clCreateSubDevicesEXT pfn_clCreateSubDevicesEXT = NULL;
         CL_HPP_INIT_CL_EXT_FCN_PTR_(clCreateSubDevicesEXT);
@@ -2771,8 +2802,8 @@ CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Platform::default_error_ = CL_SUCCESS;
  * Unload the OpenCL compiler.
  * \note Deprecated for OpenCL 1.2. Use Platform::unloadCompiler instead.
  */
-inline CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_int
-UnloadCompiler() CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+inline CL_API_PREFIX__VERSION_1_1_DEPRECATED cl_int
+UnloadCompiler() CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 inline cl_int
 UnloadCompiler()
 {
@@ -4489,12 +4520,11 @@ public:
         cl_int* err = NULL)
     {
         cl_int error;
-        cl_image_desc desc =
-        {
-            CL_MEM_OBJECT_IMAGE1D,
-            width,
-            0, 0, 0, 0, 0, 0, 0, 0
-        };
+
+        cl_image_desc desc = {0};
+        desc.image_type = CL_MEM_OBJECT_IMAGE1D;
+        desc.image_width = width;
+
         object_ = ::clCreateImage(
             context(), 
             flags, 
@@ -4577,13 +4607,12 @@ public:
         cl_int* err = NULL)
     {
         cl_int error;
-        cl_image_desc desc =
-        {
-            CL_MEM_OBJECT_IMAGE1D_BUFFER,
-            width,
-            0, 0, 0, 0, 0, 0, 0,
-            buffer()
-        };
+
+        cl_image_desc desc = {0};
+        desc.image_type = CL_MEM_OBJECT_IMAGE1D_BUFFER;
+        desc.image_width = width;
+        desc.buffer = buffer();
+
         object_ = ::clCreateImage(
             context(), 
             flags, 
@@ -4663,15 +4692,13 @@ public:
         cl_int* err = NULL)
     {
         cl_int error;
-        cl_image_desc desc =
-        {
-            CL_MEM_OBJECT_IMAGE1D_ARRAY,
-            width,
-            0, 0,  // height, depth (unused)
-            arraySize,
-            rowPitch,
-            0, 0, 0, 0
-        };
+
+        cl_image_desc desc = {0};
+        desc.image_type = CL_MEM_OBJECT_IMAGE1D_ARRAY;
+        desc.image_width = width;
+        desc.image_array_size = arraySize;
+        desc.image_row_pitch = rowPitch;
+
         object_ = ::clCreateImage(
             context(), 
             flags, 
@@ -4778,15 +4805,12 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
         if (useCreateImage)
         {
-            cl_image_desc desc =
-            {
-                CL_MEM_OBJECT_IMAGE2D,
-                width,
-                height,
-                0, 0, // depth, array size (unused)
-                row_pitch,
-                0, 0, 0, 0
-            };
+            cl_image_desc desc = {0};
+            desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+            desc.image_width = width;
+            desc.image_height = height;
+            desc.image_row_pitch = row_pitch;
+
             object_ = ::clCreateImage(
                 context(),
                 flags,
@@ -4832,17 +4856,13 @@ public:
     {
         cl_int error;
 
-        cl_image_desc desc =
-        {
-            CL_MEM_OBJECT_IMAGE2D,
-            width,
-            height,
-            0, 0, // depth, array size (unused)
-            row_pitch,
-            0, 0, 0,
-            // Use buffer as input to image
-            sourceBuffer()
-        };
+        cl_image_desc desc = {0};
+        desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+        desc.image_width = width;
+        desc.image_height = height;
+        desc.image_row_pitch = row_pitch;
+        desc.buffer = sourceBuffer();
+
         object_ = ::clCreateImage(
             context(),
             0, // flags inherited from buffer
@@ -4896,19 +4916,16 @@ public:
         // Update only the channel order. 
         // Channel format inherited from source.
         sourceFormat.image_channel_order = order;
-        cl_image_desc desc =
-        {
-            CL_MEM_OBJECT_IMAGE2D,
-            sourceWidth,
-            sourceHeight,
-            0, 0, // depth (unused), array size (unused)
-            sourceRowPitch,
-            0, // slice pitch (unused)
-            sourceNumMIPLevels,
-            sourceNumSamples,
-            // Use buffer as input to image
-            sourceImage()
-        };
+
+        cl_image_desc desc = {0};
+        desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+        desc.image_width = sourceWidth;
+        desc.image_height = sourceHeight;
+        desc.image_row_pitch = sourceRowPitch;
+        desc.num_mip_levels = sourceNumMIPLevels;
+        desc.num_samples = sourceNumSamples;
+        desc.buffer = sourceImage();
+
         object_ = ::clCreateImage(
             context(),
             0, // flags should be inherited from mem_object
@@ -4988,7 +5005,7 @@ public:
  *  \see Memory
  *  \note Deprecated for OpenCL 1.2. Please use ImageGL instead.
  */
-class CL_EXT_PREFIX__VERSION_1_1_DEPRECATED Image2DGL : public Image2D 
+class CL_API_PREFIX__VERSION_1_1_DEPRECATED Image2DGL : public Image2D 
 {
 public:
     /*! \brief Constructs an Image2DGL in a specified context, from a given
@@ -5071,7 +5088,7 @@ public:
         return *this;
     }
 
-} CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+} CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 #endif // CL_USE_DEPRECATED_OPENCL_1_1_APIS
 
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
@@ -5094,17 +5111,15 @@ public:
         cl_int* err = NULL)
     {
         cl_int error;
-        cl_image_desc desc =
-        {
-            CL_MEM_OBJECT_IMAGE2D_ARRAY,
-            width,
-            height,
-            0,       // depth (unused)
-            arraySize,
-            rowPitch,
-            slicePitch,
-            0, 0, 0
-        };
+
+        cl_image_desc desc = {0};
+        desc.image_type = CL_MEM_OBJECT_IMAGE2D_ARRAY;
+        desc.image_width = width;
+        desc.image_height = height;
+        desc.image_array_size = arraySize;
+        desc.image_row_pitch = rowPitch;
+        desc.image_slice_pitch = slicePitch;
+
         object_ = ::clCreateImage(
             context(), 
             flags, 
@@ -5209,17 +5224,14 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
         if (useCreateImage)
         {
-            cl_image_desc desc =
-            {
-                CL_MEM_OBJECT_IMAGE3D,
-                width,
-                height,
-                depth,
-                0,      // array size (unused)
-                row_pitch,
-                slice_pitch,
-                0, 0, 0
-            };
+            cl_image_desc desc = {0};
+            desc.image_type = CL_MEM_OBJECT_IMAGE3D;
+            desc.image_width = width;
+            desc.image_height = height;
+            desc.image_depth = depth;
+            desc.image_row_pitch = row_pitch;
+            desc.image_slice_pitch = slice_pitch;
+
             object_ = ::clCreateImage(
                 context(), 
                 flags, 
@@ -6877,9 +6889,9 @@ public:
      *  on a callback stack associated with program. The registered user callback
      *  functions are called in the reverse order in which they were registered.
      */
-    CL_EXT_PREFIX__VERSION_2_2_DEPRECATED cl_int setReleaseCallback(
+    CL_API_PREFIX__VERSION_2_2_DEPRECATED cl_int setReleaseCallback(
         void (CL_CALLBACK * pfn_notify)(cl_program program, void * user_data),
-        void * user_data = NULL) CL_EXT_SUFFIX__VERSION_2_2_DEPRECATED
+        void * user_data = NULL) CL_API_SUFFIX__VERSION_2_2_DEPRECATED
     {
         return detail::errHandler(
             ::clSetProgramReleaseCallback(
@@ -8584,10 +8596,10 @@ public:
     }
 
 #if defined(CL_USE_DEPRECATED_OPENCL_1_2_APIS)
-    CL_EXT_PREFIX__VERSION_1_2_DEPRECATED cl_int enqueueTask(
+    CL_API_PREFIX__VERSION_1_2_DEPRECATED cl_int enqueueTask(
         const Kernel& kernel,
         const vector<Event>* events = NULL,
-        Event* event = NULL) const CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED
+        Event* event = NULL) const CL_API_SUFFIX__VERSION_1_2_DEPRECATED
     {
         cl_event tmp;
         cl_int err = detail::errHandler(
@@ -8644,8 +8656,8 @@ public:
  * Deprecated APIs for 1.2
  */
 #if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
-    CL_EXT_PREFIX__VERSION_1_1_DEPRECATED 
-    cl_int enqueueMarker(Event* event = NULL) const CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
+    CL_API_PREFIX__VERSION_1_1_DEPRECATED
+    cl_int enqueueMarker(Event* event = NULL) const CL_API_SUFFIX__VERSION_1_1_DEPRECATED
     {
         cl_event tmp;
         cl_int err = detail::errHandler(
@@ -8660,8 +8672,8 @@ public:
         return err;
     }
 
-    CL_EXT_PREFIX__VERSION_1_1_DEPRECATED
-    cl_int enqueueWaitForEvents(const vector<Event>& events) const CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
+    CL_API_PREFIX__VERSION_1_1_DEPRECATED
+    cl_int enqueueWaitForEvents(const vector<Event>& events) const CL_API_SUFFIX__VERSION_1_1_DEPRECATED
     {
         return detail::errHandler(
             ::clEnqueueWaitForEvents(
@@ -8797,8 +8809,8 @@ typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueReleaseD3D10ObjectsKHR)(
  * Deprecated APIs for 1.2
  */
 #if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
-    CL_EXT_PREFIX__VERSION_1_1_DEPRECATED
-    cl_int enqueueBarrier() const CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
+    CL_API_PREFIX__VERSION_1_1_DEPRECATED
+    cl_int enqueueBarrier() const CL_API_SUFFIX__VERSION_1_1_DEPRECATED
     {
         return detail::errHandler(
             ::clEnqueueBarrier(object_),
