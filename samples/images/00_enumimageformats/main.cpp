@@ -97,6 +97,19 @@ const char* channel_order_to_string(cl_channel_order channel_order)
     CASE_TO_STRING(CL_sBGRA);
     CASE_TO_STRING(CL_ABGR);
 #endif
+#ifdef CL_NV21_IMG  // cl_img_yuv_image
+    CASE_TO_STRING(CL_NV21_IMG);
+    CASE_TO_STRING(CL_YV12_IMG);
+#endif
+#ifdef cl_intel_packed_yuv
+    CASE_TO_STRING(CL_YUYV_INTEL);
+    CASE_TO_STRING(CL_UYVY_INTEL);
+    CASE_TO_STRING(CL_YVYU_INTEL);
+    CASE_TO_STRING(CL_VYUY_INTEL);
+#endif
+#ifdef CL_NV12_INTEL // cl_intel_planar_yuv
+    CASE_TO_STRING(CL_NV12_INTEL);
+#endif
     default: return "Unknown cl_channel_order";
     }
 }
