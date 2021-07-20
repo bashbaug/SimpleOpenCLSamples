@@ -2,15 +2,17 @@
 
 ## Sample Purpose
 
-This is a modified version of the previous sample that loads a kernel from a file.
-The most important difference in this sample is that it specifies a "local work size".
-When enqueueing an OpenCL kernel for execution we can specify only a "global work size", describing the range of work-items that will execute the kernel, or we can specify both a "global work size" and a "local work size".
-If we specify a "local work size" this will describe how work-items are grouped into work-groups for execution.
+This is a modified version of a previous sample that loads a kernel from a file.
+The most important difference between the previous sample and this sample is that this sample specifies a "local work size" when enqueueing the kernel for execution.
+
+When enqueueing an OpenCL kernel for execution, we can specify only a "global work size", describing the range of work-items that will execute the kernel, or we can specify both a "global work size" and a "local work size".
+If we specify a "local work size" then the local work size this will describe how work-items are grouped into work-groups for execution.
+
 Work-items in a work-group are special: they're guaranteed to execute concurrently, they can exchange results via "local memory", and they can synchronize execution using barriers.
 The default kernel for this sample does not take advantage of any of these features, however future samples will!
 
-Many devices may only support "uniform" work-groups, where the local work size evenly divides the global work size.
-To check if "non-uniform" work-groups are supported, query the OpenCL version supported by the device: only "uniform" work-groups are supported for OpenCL 1.x devices, "non-uniform" work-groups are required for OpenCL 2.x devices, and optional support for non-uniform work-group support can be queried using `CL_DEVICE_NON_UNIFORM_WORK_GROUP_SUPPORT` for OpenCL 3.0 devices.
+Many devices support only "uniform" work-groups, where the local work size evenly divides the global work size.
+To check if "non-uniform" work-groups are supported, query the OpenCL version supported by the device: only "uniform" work-groups are supported for OpenCL 1.x devices, support for "non-uniform" work-groups are required for OpenCL 2.x devices, and support for non-uniform work-groups is optional for OpenCL 3.0 devices and can be queried using `CL_DEVICE_NON_UNIFORM_WORK_GROUP_SUPPORT`.
 If non-uniform work-groups are supported, they will need to be enabled by compiling with the `-cl-std=CL2.0` or `-cl-std=CL3.0` compile, link, or build options.
 
 Additional notes:
@@ -22,11 +24,11 @@ Additional notes:
 
 ## Key APIs and Concepts
 
-This sample demonstrates how to specify groupings of work-items when enqueueing an OpenCL kernel for execution, by passing a non-NULL local work size to `clEnqueueNDRangeKernel`.
+This sample demonstrates how to specify groupings of work-items when enqueueing an OpenCL kernel for execution by passing a non-`NULL` local work size to `clEnqueueNDRangeKernel`.
 
 This sample also supports compiling and linking the program object separately using `clCompileProgram` and `clLinkProgram` rather than performing both steps using `clBuildProgram`.
 
-```c
+```
 clEnqueueNDRangeKernel with a non-NULL local work size
 clCompileProgram
 clLinkProgram
@@ -44,7 +46,7 @@ Can you find a local work size that performs better than the `NULL` local work s
 If not, what happens if you pass a local work size that does not evenly divide the global work size?
 If so, can you pass the right build options to enable non-uniform work-group support?
 3. Do you see any difference compiling and linking the program separately vs. building it in one step?
-4. Can load and compile a program from a different file and link with it?
+4. Can you load and compile a program from a different file and link with it?
 
 ## Command Line Options
 
