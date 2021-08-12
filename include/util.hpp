@@ -21,8 +21,39 @@
 */
 #pragma once
 
-#include "CL/opencl.hpp"
-#include <string.h>
+#include <CL/opencl.hpp>
+#include <string>
+
+static cl_uint getDeviceOpenCLVersion(
+    const cl::Device& device)
+{
+    cl_uint major = 0;
+    cl_uint minor = 0;
+
+    std::string version = device.getInfo<CL_DEVICE_VERSION>();
+
+    // The device version string has the form:
+    //   OpenCL <Major>.<Minor> <Vendor Specific Info>
+    const std::string prefix{"OpenCL "};
+    if (!version.compare(0, prefix.length(), prefix)) {
+        const char* check = version.c_str() + prefix.length();
+        while (isdigit(check[0])) {
+            major *= 10;
+            major += check[0] - '0';
+            ++check;
+        }
+        if (check[0] == '.') {
+            ++check;
+        }
+        while (isdigit(check[0])) {
+            minor *= 10;
+            minor += check[0] - '0';
+            ++check;
+        }
+    }
+
+    return (major << 16) | minor;
+}
 
 static bool checkDeviceForExtension(
     const cl::Device& device,
