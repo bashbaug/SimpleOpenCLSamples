@@ -166,8 +166,22 @@ int main(
         cl::NDRange{gwx},
         (lwx == 0) ? cl::NullRange : cl::NDRange{lwx});
 
-    // No results to check for this sample, but do verify that execution
-    // has completed.
+    // verify results by printing the first few values
+    if (gwx > 3) {
+        auto ptr = (const cl_uint*)commandQueue.enqueueMapBuffer(
+            deviceMemDst,
+            CL_TRUE,
+            CL_MAP_READ,
+            0,
+            gwx * sizeof( cl_uint ) );
+
+        printf("First few values: [0] = %u, [1] = %u, [2] = %u\n", ptr[0], ptr[1], ptr[2]);
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemDst,
+            (void*)ptr );
+    }
+
     commandQueue.finish();
 
     printf("Done.\n");

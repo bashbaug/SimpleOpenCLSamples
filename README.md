@@ -59,6 +59,17 @@ implementations as well.
 * [OpenCL Specs](https://www.khronos.org/registry/OpenCL/specs/)
 * [OpenCL Return Codes](https://streamhpc.com/blog/2013-04-28/opencl-error-codes/)
 
+## A Note About Error Checking
+
+For brevity, most samples do not include error checking. This means that a
+sample may crash or incorrectly report success if an OpenCL error occurs. By
+defining the CMake variable `SAMPLES_ENABLE_EXCEPTIONS` many samples can instead
+throw an exception if an OpenCL error occurs.
+
+Tools like the [OpenCL Intercept Layer](https://github.com/intel/opencl-intercept-layer)
+can also be useful to detect when an OpenCL error occurs and to identify the
+cause of the error.
+
 ## License
 
 These samples are licensed under the [MIT License](LICENSE).

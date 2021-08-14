@@ -32,6 +32,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(SimpleOpenCLSamples VERSION 1.0)
 
+option(SAMPLES_ENABLE_EXCEPTIONS "Enable Exceptions for OpenCL Errors")
+
 set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
 find_package(OpenCL)
 

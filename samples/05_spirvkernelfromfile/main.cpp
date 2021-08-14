@@ -27,6 +27,8 @@
 #include <fstream>
 #include <string>
 
+#include "util.hpp"
+
 static std::vector<cl_uchar> readSPIRVFromFile(
     const std::string& filename )
 {
@@ -51,71 +53,58 @@ static std::vector<cl_uchar> readSPIRVFromFile(
     return ret;
 }
 
-static cl_uint getPlatformVersion(const cl::Platform& platform)
-{
-    cl_uint major = 0;
-    cl_uint minor = 0;
-
-    std::string version = platform.getInfo<CL_PLATFORM_VERSION>();
-
-    // The platform version string has the form:
-    //   OpenCL <Major>.<Minor> <Vendor Specific Info>
-    const std::string prefix{"OpenCL "};
-    if (!version.compare(0, prefix.length(), prefix)) {
-        const char* check = version.c_str() + prefix.length();
-        while (isdigit(check[0])) {
-            major *= 10;
-            major += check[0] - '0';
-            ++check;
-        }
-        if (check[0] == '.') {
-            ++check;
-        }
-        while (isdigit(check[0])) {
-            minor *= 10;
-            minor += check[0] - '0';
-            ++check;
-        }
-    }
-
-    return (major << 16) | minor;
-}
-
 static cl::Program createProgramWithIL(
     const cl::Context& context,
     const std::vector<cl_uchar>& il )
 {
     cl_program program = nullptr;
 
-    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-    if (!devices.empty()) {
-        cl::Platform platform{ devices[0].getInfo<CL_DEVICE_PLATFORM>() };
-#ifdef CL_VERSION_2_1
-        if (getPlatformVersion(platform) >= 0x00020001) {
-            std::string ilVersions = devices[0].getInfo<CL_DEVICE_IL_VERSION>();
-            if (!ilVersions.empty()) {
-                program = clCreateProgramWithIL(
-                    context(),
-                    il.data(),
-                    il.size(),
-                    nullptr);
-            }
-        }
-        else
-#endif
-        {
-            auto clCreateProgramWithILKHR_ = (clCreateProgramWithILKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(
-                    platform(),
-                    "clCreateProgramWithILKHR");
+    // Use the core clCreateProgramWithIL if a device supports OpenCL 2.1 or
+    // newer and SPIR-V.
+    bool useCore = false;
 
-            if (clCreateProgramWithILKHR_) {
-                program = clCreateProgramWithILKHR_(
-                    context(),
-                    il.data(),
-                    il.size(),
-                    nullptr);
-            }
+    // Use the extension clCreateProgramWithILKHR if a device supports
+    // cl_khr_il_program.
+    bool useExtension = false;
+
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    for (auto device : devices) {
+#ifdef CL_VERSION_2_1
+        // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
+        if (getDeviceOpenCLVersion(device) >= 0x00020001 &&
+            !device.getInfo<CL_DEVICE_IL_VERSION>().empty()) {
+            useCore = true;
+        }
+#endif
+        if (checkDeviceForExtension(device, "cl_khr_il_program")) {
+            useExtension = true;
+        }
+    }
+
+#ifdef CL_VERSION_2_1
+    if (useCore) {
+        program = clCreateProgramWithIL(
+            context(),
+            il.data(),
+            il.size(),
+            nullptr);
+    }
+    else
+#endif
+    if (useExtension) {
+        cl::Platform platform{ devices[0].getInfo<CL_DEVICE_PLATFORM>() };
+
+        auto clCreateProgramWithILKHR_ = (clCreateProgramWithILKHR_fn)
+            clGetExtensionFunctionAddressForPlatform(
+                platform(),
+                "clCreateProgramWithILKHR");
+
+        if (clCreateProgramWithILKHR_) {
+            program = clCreateProgramWithILKHR_(
+                context(),
+                il.data(),
+                il.size(),
+                nullptr);
         }
     }
 
@@ -172,6 +161,24 @@ int main(
     printf("CL_DEVICE_ADDRESS_BITS is %d for this device.\n",
         devices[deviceIndex].getInfo<CL_DEVICE_ADDRESS_BITS>() );
 
+    // Check for SPIR-V support.  If the device supports OpenCL 2.1 or newer
+    // we can use the core clCreateProgramWithIL API.  Otherwise, if the device
+    // the cl_khr_il_program extension we can use the clCreateProgramWithILKHR
+    // extension API.  If neither is supported then we cannot run this sample.
+#ifdef CL_VERSION_2_1
+    // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
+    if (getDeviceOpenCLVersion(devices[deviceIndex]) >= 0x00020001 &&
+        !devices[deviceIndex].getInfo<CL_DEVICE_IL_VERSION>().empty()) {
+        printf("Device supports OpenCL 2.1 or newer, using clCreateProgramWithIL.\n");
+    } else
+#endif
+    if (checkDeviceForExtension(devices[deviceIndex], "cl_khr_il_program")) {
+        printf("Device supports cl_khr_il_program, using clCreateProgramWithILKHR.\n");
+    } else {
+        printf("Device does not support SPIR-V, exiting.\n");
+        return -1;
+    }
+
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
@@ -204,8 +211,22 @@ int main(
         cl::NullRange,
         cl::NDRange{gwx});
 
-    // No results to check for this sample, but do verify that execution
-    // has completed.
+    // verify results by printing the first few values
+    if (gwx > 3) {
+        auto ptr = (const cl_uint*)commandQueue.enqueueMapBuffer(
+            deviceMemDst,
+            CL_TRUE,
+            CL_MAP_READ,
+            0,
+            gwx * sizeof( cl_uint ) );
+
+        printf("First few values: [0] = %u, [1] = %u, [2] = %u\n", ptr[0], ptr[1], ptr[2]);
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemDst,
+            (void*)ptr );
+    }
+
     commandQueue.finish();
 
     printf("Done.\n");
