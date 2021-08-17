@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
     start = time.perf_counter()
     for i in range(iterations):
-        kernel(commandQueue, [gwx, gwy], None, 
+        kernel(commandQueue, [gwx, gwy], lws,
                deviceMemDst, np.float32(cr), np.float32(ci))
 
     # Ensure all processing is complete before stopping the timer.
