@@ -34,6 +34,10 @@ OpenCL ICD Loader:
 
     git clone https://github.com/KhronosGroup/opencl-icd-loader external/opencl-icd-loader
 
+Many samples that use extensions additionally require the OpenCL Extension Loader:
+
+    git clone https://github.com/bashbaug/opencl-extension-loader external/opencl-extension-loader
+
 After satisfying the external dependencies create build files using CMake.  For example:
 
     mkdir build && cd build

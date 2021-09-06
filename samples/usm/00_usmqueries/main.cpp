@@ -23,7 +23,6 @@
 #include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
-#include "libusm.h"
 
 void PrintUSMCaps(
     const char* label,
@@ -69,7 +68,6 @@ int main(
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-    libusm::initialize(platforms[platformIndex]());
 
     std::vector<cl::Device> devices;
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);

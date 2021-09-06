@@ -31,6 +31,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        ext: [YES, NO]
 
     runs-on: ${{matrix.os}}
 
@@ -53,6 +54,13 @@ jobs:
       with:
         repository: KhronosGroup/OpenCL-ICD-Loader
         path: external/opencl-icd-loader
+
+    - name: Get OpenCL Extension Loader
+      if: matrix.ext == 'YES'
+      uses: actions/checkout@master
+      with:
+        repository: bashbaug/opencl-extension-loader
+        path: external/opencl-extension-loader
 
     - name: Create Build Directory
       run: cmake -E make_directory ${{runner.workspace}}/build
