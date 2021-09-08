@@ -44,8 +44,10 @@ add_subdirectory(external/opencl-icd-loader)
 set_target_properties(OpenCL PROPERTIES FOLDER "OpenCL-ICD-Loader")
 set(OpenCL_LIBRARIES OpenCL)
 
-if(IS_DIRECTORY external/opencl-extension-loader)
+if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/opencl-extension-loader)
     add_subdirectory(external/opencl-extension-loader)
+else()
+    message(STATUS "OpenCL Extension Loader is not found.")
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
