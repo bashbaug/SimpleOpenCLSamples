@@ -97,6 +97,7 @@ if(NOT TARGET OpenCLExt)
 endif()
 
 if(BUILD_EXTENSION_SAMPLES)
+    add_subdirectory( 11_semaphores )
     add_subdirectory( 12_commandbuffers )
     add_subdirectory( 12_commandbufferspp )
     add_subdirectory( 13_mutablecommandbuffers )
