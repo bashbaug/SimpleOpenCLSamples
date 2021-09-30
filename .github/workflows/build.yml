@@ -41,7 +41,8 @@ jobs:
     - name: Get Ubuntu OpenGL Dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
-        sudo apt-get install libglfw3-dev
+        sudo apt-get update
+        sudo apt-get install -y libglfw3-dev
 
     - name: Get OpenCL Headers
       uses: actions/checkout@master
