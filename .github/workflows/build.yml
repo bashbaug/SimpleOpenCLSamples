@@ -31,6 +31,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        ext: [YES, NO]
 
     runs-on: ${{matrix.os}}
 
@@ -40,7 +41,8 @@ jobs:
     - name: Get Ubuntu OpenGL Dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
-        sudo apt-get install libglfw3-dev
+        sudo apt-get update
+        sudo apt-get install -y libglfw3-dev
 
     - name: Get OpenCL Headers
       uses: actions/checkout@master
@@ -54,6 +56,13 @@ jobs:
         repository: KhronosGroup/OpenCL-ICD-Loader
         path: external/opencl-icd-loader
 
+    - name: Get OpenCL Extension Loader
+      if: matrix.ext == 'YES'
+      uses: actions/checkout@master
+      with:
+        repository: bashbaug/opencl-extension-loader
+        path: external/opencl-extension-loader
+
     - name: Create Build Directory
       run: cmake -E make_directory ${{runner.workspace}}/build
 
@@ -65,7 +74,7 @@ jobs:
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config $BUILD_TYPE
+      run: cmake --build . --parallel --config $BUILD_TYPE
 
     #- name: Test
     #  working-directory: ${{runner.workspace}}/build

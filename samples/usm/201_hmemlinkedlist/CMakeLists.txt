@@ -25,5 +25,4 @@ add_opencl_sample(
     VERSION 200
     CATEGORY usm
     SOURCES main.cpp
-    INCLUDES ${LIBUSM_INCLUDE_DIR}
-    LIBS usm)
+    LIBS OpenCLExt)
