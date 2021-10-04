@@ -18,5 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-add_subdirectory( 00_enumimageformats )
-add_subdirectory( 10_rowpitchtester )
+add_opencl_sample(
+    TEST
+    NUMBER 10
+    TARGET rowpitchtester
+    VERSION 120
+    CATEGORY images
+    SOURCES main.cpp)
