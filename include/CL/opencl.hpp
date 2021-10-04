@@ -6051,7 +6051,7 @@ public:
         }
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
 
-#if defined(cl_khr_subgroups)
+#if defined(cl_khr_subgroups) && CL_HPP_MINIMUM_OPENCL_VERSION < 210
         if (error != CL_SUCCESS) {
             typedef clGetKernelSubGroupInfoKHR_fn PFN_clGetKernelSubGroupInfoKHR;
             static PFN_clGetKernelSubGroupInfoKHR pfn_clGetKernelSubGroupInfoKHR = NULL;
@@ -6061,7 +6061,7 @@ public:
                 error = pfn_clGetKernelSubGroupInfoKHR(object_, dev(), name, range.size(), range.get(), sizeof(size_type), param, nullptr);
             }
         }
-#endif // defined(cl_khr_subgroups)
+#endif // defined(cl_khr_subgroups) && CL_HPP_MINIMUM_OPENCL_VERSION < 210
 
         return detail::errHandler(error, __GET_KERNEL_SUB_GROUP_INFO_ERR);
     }
@@ -6453,7 +6453,7 @@ public:
         }
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
 
-#if defined(cl_khr_il_program)
+#if defined(cl_khr_il_program) && CL_HPP_MINIMUM_OPENCL_VERSION < 210
         if (error != CL_SUCCESS) {
             typedef clCreateProgramWithILKHR_fn PFN_clCreateProgramWithILKHR;
             static PFN_clCreateProgramWithILKHR pfn_clCreateProgramWithILKHR = NULL;
@@ -6464,7 +6464,7 @@ public:
                         context(), static_cast<const void*>(IL.data()), IL.size(), &error);
             }
         }
-#endif // defined(cl_khr_il_program)
+#endif // defined(cl_khr_il_program) && CL_HPP_MINIMUM_OPENCL_VERSION < 210
 
         detail::errHandler(error, __CREATE_PROGRAM_WITH_IL_ERR);
 
@@ -6516,7 +6516,7 @@ public:
         }
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
 
-#if defined(cl_khr_il_program)
+#if defined(cl_khr_il_program) && CL_HPP_MINIMUM_OPENCL_VERSION < 210
         if (error != CL_SUCCESS) {
             typedef clCreateProgramWithILKHR_fn PFN_clCreateProgramWithILKHR;
             static PFN_clCreateProgramWithILKHR pfn_clCreateProgramWithILKHR = NULL;
@@ -6527,7 +6527,7 @@ public:
                         context(), static_cast<const void*>(IL.data()), IL.size(), &error);
             }
         }
-#endif // defined(cl_khr_il_program)
+#endif // defined(cl_khr_il_program) && CL_HPP_MINIMUM_OPENCL_VERSION < 210
 
         detail::errHandler(error, __CREATE_PROGRAM_WITH_IL_ERR);
 

@@ -147,7 +147,50 @@ int main(
         {width, height, 1},
         0);
 
-    // verification
+    // verification via image
+    {
+        size_t rowPitch = 0;
+        auto pDst = (const cl_uchar*)commandQueue.enqueueMapImage(
+            srcImg,
+            CL_TRUE,
+            CL_MAP_READ,
+            {0, 0, 0},
+            {width, height, 1},
+            &rowPitch,
+            NULL );
+
+        printf("Mapped image row pitch is %zu\n", rowPitch);
+
+        unsigned int    mismatches = 0;
+
+        for (size_t h = 0; h < height; h++) {
+            for (size_t w = 0; w < width; w++) {
+                if (pDst[h * rowPitch + w] != 0xFF) {
+                    if (mismatches < 16) {
+                        fprintf(stderr, "MisMatch!  dst[%zu, %zu] == %02X, want %02X\n",
+                            w, h,
+                            pDst[h * rowPitch + w],
+                            0xFF );
+                    }
+                    mismatches++;
+                }
+            }
+        }
+
+        if (mismatches) {
+            fprintf(stderr, "Image Verification Error: Found %d mismatches / %zu values!!!\n",
+                mismatches,
+                width * height);
+        } else {
+            printf("Image Verification Success.\n");
+        }
+
+        commandQueue.enqueueUnmapMemObject(
+            dstBuf,
+            (void*)pDst);
+    }
+
+    // verification via buffer
     {
         auto pDst = (const cl_uchar*)commandQueue.enqueueMapBuffer(
             dstBuf,
@@ -173,11 +216,11 @@ int main(
         }
 
         if (mismatches) {
-            fprintf(stderr, "Error: Found %d mismatches / %zu values!!!\n",
+            fprintf(stderr, "Buffer Verification Error: Found %d mismatches / %zu values!!!\n",
                 mismatches,
                 width * height);
         } else {
-            printf("Success.\n");
+            printf("Buffer Verification Success.\n");
         }
 
         commandQueue.enqueueUnmapMemObject(
