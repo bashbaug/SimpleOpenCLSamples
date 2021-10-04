@@ -26,6 +26,20 @@
 
 #include <algorithm>
 
+static const char kernelString[] = R"CLC(
+constant sampler_t samp =
+    CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_NONE;
+kernel void ImageToBuffer(global uchar* dst, read_only image2d_t img)
+{
+    uint w = get_global_id(0);
+    uint h = get_global_id(1);
+    uint p = get_image_width(img);
+
+    float f = read_imagef(img, samp, (int2)(w, h)).x;
+    dst[h * p + w] = convert_uchar(f * 255);
+}
+)CLC";
+
 int main(
     int argc,
     char** argv )
@@ -37,6 +51,7 @@ int main(
     size_t width = 3;
     size_t height = 2;
     size_t pitch = 0;
+    bool useKernel;
 
     {
         popl::OptionParser op("Supported Options");
@@ -45,6 +60,7 @@ int main(
         op.add<popl::Value<size_t>>("w", "width", "Image Width", width, &width);
         op.add<popl::Value<size_t>>("h", "height", "Image Height", height, &height);
         op.add<popl::Value<size_t>>("", "pitch", "Test Image Pitch", pitch, &pitch);
+        op.add<popl::Switch>("k", "kernel", "Use a Kernel to Copy Image", &useKernel);
 
         bool printUsage = false;
         try {
@@ -88,8 +104,15 @@ int main(
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
-    size_t maxPitch = std::min((size_t)1024, width) * 2;
+#if 1
+    // By default, allocate a bigger buffer to check if the image goes out-of-bounds.
+    size_t maxPitch = std::min((size_t)1024, pitch) * 2;
     size_t maxHeight = height + 1;
+#else
+    // This will allocate a buffer that is exactly the size of the image, instead.
+    size_t maxPitch = pitch;
+    size_t maxHeight = height;
+#endif
 
     cl::Buffer srcBuf = cl::Buffer{
         context,
@@ -140,12 +163,24 @@ int main(
         width,
         height };
 
-    commandQueue.enqueueCopyImageToBuffer(
-        srcImg,
-        dstBuf,
-        {0, 0, 0},
-        {width, height, 1},
-        0);
+    if (useKernel) {
+        cl::Program program{context, kernelString};
+        program.build();
+        cl::Kernel kernel{program, "ImageToBuffer"};
+        kernel.setArg(0, dstBuf);
+        kernel.setArg(1, srcImg);
+        commandQueue.enqueueNDRangeKernel(
+            kernel,
+            cl::NullRange,
+            cl::NDRange{width, height});
+    } else {
+        commandQueue.enqueueCopyImageToBuffer(
+            srcImg,
+            dstBuf,
+            {0, 0, 0},
+            {width, height, 1},
+            0);
+    }
 
     // verification via image
     {
