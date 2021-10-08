@@ -18,18 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(LIBUSM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include )
-set(LIBUSM_INCLUDE_DIR ${LIBUSM_INCLUDE_DIR} PARENT_SCOPE)
-
-set( LIBUSM_SOURCE_FILES
-    include/libusm.h
-    src/libusm.cpp
-)
-
-source_group( Source FILES ${LIBUSM_SOURCE_FILES} )
-
-add_library( usm STATIC ${LIBUSM_SOURCE_FILES} )
-target_include_directories( usm PRIVATE ${OpenCL_INCLUDE_DIR} ${LIBUSM_INCLUDE_DIR} )
-target_compile_definitions( usm PRIVATE CL_TARGET_OPENCL_VERSION=120 )
-
-set_target_properties( usm PROPERTIES FOLDER "Samples/usm/libusm" )
+add_opencl_sample(
+    TEST
+    NUMBER 400
+    TARGET sysmemhelloworld
+    VERSION 120
+    CATEGORY usm
+    SOURCES main.cpp
+    LIBS OpenCLExt)

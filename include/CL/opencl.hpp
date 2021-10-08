@@ -1943,8 +1943,9 @@ protected:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
 #if CL_HPP_MINIMUM_OPENCL_VERSION < 120
         if (device != NULL) {
-            int version = getDevicePlatformVersion(device);
-            if(version > ((1 << 16) + 1)) {
+            cl_platform_id platform = getDevicePlatform(device);
+            cl_uint version = getPlatformVersion(platform);
+            if (version >= 0x10002) {
                 retVal = true;
             }
         }
@@ -4793,7 +4794,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120 && CL_HPP_MINIMUM_OPENCL_VERSION < 120
         // Run-time decision based on the actual platform
         {
-            cl_uint version = detail::getContextPlatformVersion(context());
+            cl_platform_id platform = detail::getContextPlatform(context());
+            cl_uint version = detail::getPlatformVersion(platform);
             useCreateImage = (version >= 0x10002); // OpenCL 1.2 or above
         }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 120
@@ -5212,7 +5214,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120 && CL_HPP_MINIMUM_OPENCL_VERSION < 120
         // Run-time decision based on the actual platform
         {
-            cl_uint version = detail::getContextPlatformVersion(context());
+            cl_platform_id platform = detail::getContextPlatform(context());
+            cl_uint version = detail::getPlatformVersion(platform);
             useCreateImage = (version >= 0x10002); // OpenCL 1.2 or above
         }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 120
@@ -7186,7 +7189,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
             // Run-time decision based on the actual platform
             {
-                cl_uint version = detail::getContextPlatformVersion(context());
+                cl_platform_id platform = detail::getDevicePlatform(device());
+                cl_uint version = detail::getPlatformVersion(platform);
                 useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
             }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 200
@@ -7252,7 +7256,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
            // Run-time decision based on the actual platform
            {
-               cl_uint version = detail::getContextPlatformVersion(context());
+               cl_platform_id platform = detail::getDevicePlatform(device());
+               cl_uint version = detail::getPlatformVersion(platform);
                useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
            }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 200
@@ -7317,7 +7322,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
         // Run-time decision based on the actual platform
         {
-            cl_uint version = detail::getContextPlatformVersion(context());
+            cl_platform_id platform = detail::getDevicePlatform(devices[0]());
+            cl_uint version = detail::getPlatformVersion(platform);
             useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
         }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 200
@@ -7384,7 +7390,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
         // Run-time decision based on the actual platform
         {
-            cl_uint version = detail::getContextPlatformVersion(context());
+            cl_platform_id platform = detail::getDevicePlatform(devices[0]());
+            cl_uint version = detail::getPlatformVersion(platform);
             useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
         }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 200
@@ -7435,7 +7442,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
         // Run-time decision based on the actual platform
         {
-            cl_uint version = detail::getContextPlatformVersion(context());
+            cl_platform_id platform = detail::getDevicePlatform(device());
+            cl_uint version = detail::getPlatformVersion(platform);
             useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
         }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 200
@@ -7486,7 +7494,8 @@ public:
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
         // Run-time decision based on the actual platform
         {
-            cl_uint version = detail::getContextPlatformVersion(context());
+            cl_platform_id platform = detail::getDevicePlatform(device());
+            cl_uint version = detail::getPlatformVersion(platform);
             useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
         }
 #elif CL_HPP_TARGET_OPENCL_VERSION >= 200
