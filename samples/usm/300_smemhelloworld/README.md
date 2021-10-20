@@ -25,8 +25,8 @@ Unified Shared Memory allocations are set as an argument to a kernel using `clSe
 When profiling an application using shared memory allocations, be aware that migrations between the host and the device may be occurring implicitly.
 These implicit transfers may cause additional apparent latency when launching a kernel (for transfers to the device) or completion latency (for transfers to the host) versus device memory or host memory allocations.
 
-Since Unified Shared Memory is an OpenCL extension, this sample uses the `libusm` library to query the extension APIs.
-Please see the `libusm` [README](../libusm/README.md) for more detail.
+Since Unified Shared Memory is an OpenCL extension, this sample uses the `OpenCLExt` extension loader library to query the extension APIs.
+Please see the OpenCL Extension Loader [README](https://github.com/bashbaug/opencl-extension-loader) for more detail.
 
 This sample currently uses c APIs because the C++ bindings do not support Unified Shared Memory (yet).
 When support for Unified Shared Memory is added to the C++ bindings the samples will be updated to use the C++ bindings instead, which should simplify the sample slightly.

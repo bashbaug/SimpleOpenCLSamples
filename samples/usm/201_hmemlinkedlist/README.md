@@ -11,8 +11,8 @@ Because host Unified Shared Memory can be directly read from and written to on t
 This sample demonstrates how to indicate that a kernel may access any host Unified Shared Memory allocation using `clSetKernelExecInfo` and `CL_KERNEL_EXEC_INFO_INDIRECT_HOST_ACCESS_INTEL`, without specifying all allocations explicitly.
 For kernels that operate on complex data structures consisting of many Unified Shared Memory allocations, this can considerably improve API efficiency.
 
-Since Unified Shared Memory is an OpenCL extension, this sample uses the `libusm` library to query the extension APIs.
-Please see the `libusm` [README](../libusm/README.md) for more detail.
+Since Unified Shared Memory is an OpenCL extension, this sample uses the `OpenCLExt` extension loader library to query the extension APIs.
+Please see the OpenCL Extension Loader [README](https://github.com/bashbaug/opencl-extension-loader) for more detail.
 
 This sample currently uses c APIs because the C++ bindings do not support Unified Shared Memory (yet).
 When support for Unified Shared Memory is added to the C++ bindings the samples will be updated to use the C++ bindings instead, which should simplify the sample slightly.
