@@ -24,6 +24,6 @@ add_opencl_sample(
     VERSION 120
     CATEGORY vulkan
     SOURCES main.cpp
-    KERNELS juliavk_vert.spv juliavk_frag.spv
+    KERNELS juliavk.vert.spv juliavk.frag.spv
     INCLUDES ${Vulkan_INCLUDE_DIR}
     LIBS ${Vulkan_LIBRARY} glfw)

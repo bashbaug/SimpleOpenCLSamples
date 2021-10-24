@@ -488,8 +488,8 @@ private:
     }
 
     void createGraphicsPipeline() {
-        auto vertShaderCode = readFile("juliavk_vert.spv");
-        auto fragShaderCode = readFile("juliavk_frag.spv");
+        auto vertShaderCode = readFile("juliavk.vert.spv");
+        auto fragShaderCode = readFile("juliavk.frag.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -515,7 +515,7 @@ private:
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkViewport viewport{};
@@ -670,7 +670,7 @@ private:
 
                 vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-                vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+                vkCmdDraw(commandBuffers[i], 4, 1, 0, 0);
 
             vkCmdEndRenderPass(commandBuffers[i]);
 
