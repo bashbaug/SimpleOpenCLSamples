@@ -1,3 +1,7 @@
+#include <popl/popl.hpp>
+
+#include <CL/opencl.hpp>
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -9,11 +13,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdint>
-#include <optional>
 #include <set>
-
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -66,7 +66,7 @@ struct SwapChainSupportDetails {
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-class HelloTriangleApplication {
+class JuliaVKApplication {
 public:
     void run() {
         initWindow();
@@ -77,6 +77,15 @@ public:
 
 private:
     GLFWwindow* window;
+
+    bool animate = true;
+    bool redraw = false;
+
+    size_t gwx = 512;
+    size_t gwy = 512;
+
+    float cr = -0.123f;
+    float ci =  0.745f;
 
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
@@ -109,12 +118,15 @@ private:
     size_t currentFrame = 0;
 
     void initWindow() {
-        glfwInit();
+        if (!glfwInit()) {
+            throw std::runtime_error("failed to initialize glfw!");
+        }
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+        window = glfwCreateWindow((int)gwx, (int)gwy, "Julia Set with Vulkan", nullptr, nullptr);
+        glfwSetWindowUserPointer(window, this);
     }
 
     void initVulkan() {
@@ -134,12 +146,58 @@ private:
     }
 
     void mainLoop() {
+        glfwSetKeyCallback(window, keyboard);
+
         while (!glfwWindowShouldClose(window)) {
+            if (animate || redraw) {
+                drawFrame();
+            }
             glfwPollEvents();
-            drawFrame();
         }
 
         vkDeviceWaitIdle(device);
+    }
+
+    void keyboard(int key, int scancode, int action, int mods) {
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            redraw = true;
+
+            switch (key) {
+            case GLFW_KEY_ESCAPE:
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+                break;
+            case GLFW_KEY_SPACE:
+                animate = !animate;
+                printf("animation is %s\n", animate ? "ON" : "OFF");
+                break;
+
+            case GLFW_KEY_A:
+                cr += 0.005f;
+                break;
+            case GLFW_KEY_Z:
+                cr -= 0.005f;
+                break;
+
+            case GLFW_KEY_S:
+                ci += 0.005f;
+                break;
+            case GLFW_KEY_X:
+                ci -= 0.005f;
+                break;
+
+#if 0
+            case GLFW_KEY_V:
+                pApp->vsync = !pApp->vsync;
+                printf("vsync is %s\n", pApp->vsync ? "ON" : "OFF");
+                if (vsync) {
+                    glfwSwapInterval(1);
+                } else {
+                    glfwSwapInterval(0);
+                }
+                break;
+#endif
+            }
+        }
     }
 
     void cleanup() {
@@ -895,10 +953,16 @@ private:
 
         return VK_FALSE;
     }
+
+    static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int mods)
+    {
+        auto pApp = (JuliaVKApplication*)glfwGetWindowUserPointer(pWindow);
+        pApp->keyboard(key, scancode, action, mods);
+    }
 };
 
 int main() {
-    HelloTriangleApplication app;
+    JuliaVKApplication app;
 
     try {
         app.run();
