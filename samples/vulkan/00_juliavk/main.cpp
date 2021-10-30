@@ -111,9 +111,13 @@ private:
 
     VkCommandPool commandPool;
 
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    std::vector<VkImage> textureImages;
+    std::vector<VkDeviceMemory> textureImageMemories;
+    std::vector<VkImageView> textureImageViews;
+
     VkSampler textureSampler;
 
     VkDescriptorPool descriptorPool;
@@ -235,11 +239,20 @@ private:
 
         vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
-        vkDestroySampler(device, textureSampler, nullptr);
-        vkDestroyImageView(device, textureImageView, nullptr);
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
 
-        vkDestroyImage(device, textureImage, nullptr);
-        vkFreeMemory(device, textureImageMemory, nullptr);
+        for (auto textureImageView : textureImageViews) {
+            vkDestroyImageView(device, textureImageView, nullptr);
+        }
+        for (auto textureImage : textureImages) {
+            vkDestroyImage(device, textureImage, nullptr);
+        }
+        for (auto textureImageMemory : textureImageMemories) {
+            vkFreeMemory(device, textureImageMemory, nullptr);
+        }
+
+        vkDestroySampler(device, textureSampler, nullptr);
 
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
@@ -726,35 +739,32 @@ private:
     void createTextureImage() {
         uint32_t texWidth = static_cast<uint32_t>(gwx);
         uint32_t texHeight = static_cast<uint32_t>(gwy);
-        std::vector<uint32_t> pixels(texWidth * texHeight);
-        for (uint32_t h = 0; h < texHeight; h++) {
-            for (uint32_t w = 0; w < texWidth; w++) {
-                pixels[h * texWidth + w] = juliatexel(w, h, texWidth, texHeight, cr, ci);
-            }
-        }
 
         VkDeviceSize imageSize = texWidth * texHeight * 4;
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
         createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
-        void* data;
-        vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-            memcpy(data, pixels.data(), static_cast<size_t>(imageSize));
-        vkUnmapMemory(device, stagingBufferMemory);
+        textureImages.resize(swapChainImages.size());
+        textureImageMemories.resize(swapChainImages.size());
 
-        createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
-
-        transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-        transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-        vkDestroyBuffer(device, stagingBuffer, nullptr);
-        vkFreeMemory(device, stagingBufferMemory, nullptr);
+        for (size_t i = 0; i < swapChainImages.size(); i++) {
+            createImage(
+                texWidth,
+                texHeight,
+                VK_FORMAT_R8G8B8A8_UNORM,
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                textureImages[i],
+                textureImageMemories[i]);
+        }
     }
 
     void createTextureImageView() {
-        textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+        textureImageViews.resize(swapChainImages.size());
+
+        for (size_t i = 0; i < swapChainImages.size(); i++) {
+            textureImageViews[i] = createImageView(textureImages[i], VK_FORMAT_R8G8B8A8_UNORM);
+        }
     }
 
     void createTextureSampler() {
@@ -939,7 +949,7 @@ private:
         for (size_t i = 0; i < swapChainImages.size(); i++) {
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = textureImageView;
+            imageInfo.imageView = textureImageViews[i];
             imageInfo.sampler = textureSampler;
 
             std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
@@ -1098,11 +1108,35 @@ private:
         }
     }
 
+    void updateTexture(uint32_t currentImage) {
+        uint32_t texWidth = static_cast<uint32_t>(gwx);
+        uint32_t texHeight = static_cast<uint32_t>(gwy);
+        std::vector<uint32_t> pixels(texWidth * texHeight);
+        for (uint32_t h = 0; h < texHeight; h++) {
+            for (uint32_t w = 0; w < texWidth; w++) {
+                pixels[h * texWidth + w] = juliatexel(w, h, texWidth, texHeight, cr, ci);
+            }
+        }
+
+        VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+        void* data;
+        vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+            memcpy(data, pixels.data(), static_cast<size_t>(imageSize));
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            copyBufferToImage(stagingBuffer, textureImages[currentImage], static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+
     void drawFrame() {
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
         vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+        updateTexture(imageIndex);
 
         if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
             vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
@@ -1164,7 +1198,7 @@ private:
 
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
         for (const auto& availableFormat : availableFormats) {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM) {
                 return availableFormat;
             }
         }
