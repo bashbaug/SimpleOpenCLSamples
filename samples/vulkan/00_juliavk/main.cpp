@@ -15,6 +15,51 @@
 #include <cstdint>
 #include <set>
 
+static const char kernelString[] = R"CLC(
+kernel void Julia( write_only image2d_t dst, float cr, float ci )
+{
+    const float cMinX = -1.5f;
+    const float cMaxX =  1.5f;
+    const float cMinY = -1.5f;
+    const float cMaxY =  1.5f;
+
+    const int cWidth = get_global_size(0);
+    const int cHeight = get_global_size(1);
+    const int cIterations = 16;
+
+    int x = (int)get_global_id(0);
+    int y = (int)get_global_id(1);
+
+    float a = x * ( cMaxX - cMinX ) / cWidth + cMinX;
+    float b = y * ( cMaxY - cMinY ) / cHeight + cMinY;
+
+    float result = 0.0f;
+    const float thresholdSquared = cIterations * cIterations / 64.0f;
+
+    for( int i = 0; i < cIterations; i++ ) {
+        float aa = a * a;
+        float bb = b * b;
+
+        float magnitudeSquared = aa + bb;
+        if( magnitudeSquared >= thresholdSquared ) {
+            break;
+        }
+
+        result += 1.0f / cIterations;
+        b = 2 * a * b + ci;
+        a = aa - bb + cr;
+    }
+
+    result = max( result, 0.0f );
+    result = min( result, 1.0f );
+
+    // RGBA
+    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
+
+    write_imagef(dst, (int2)(x, y), color);
+}
+)CLC";
+
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> validationLayers = {
@@ -68,8 +113,10 @@ struct SwapChainSupportDetails {
 
 class JuliaVKApplication {
 public:
-    void run() {
+    void run(int argc, char** argv) {
+        commandLine(argc, argv);
         initWindow();
+        initOpenCL();
         initVulkan();
         mainLoop();
         cleanup();
@@ -78,7 +125,7 @@ public:
 private:
     GLFWwindow* window;
 
-    bool animate = true;
+    bool animate = false;   // TODO: reenable
     bool redraw = false;
 
     size_t gwx = 512;
@@ -131,6 +178,37 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
+    int platformIndex = 0;
+    int deviceIndex = 0;
+
+    cl::Context context;
+    cl::CommandQueue commandQueue;
+    cl::Kernel kernel;
+    cl::Image2D mem;
+
+    void commandLine(int argc, char** argv) {
+        popl::OptionParser op("Supported Options");
+        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
+        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
+        op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
+
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
+        }
+
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: juliagl [options]\n"
+                "%s", op.help().c_str());
+            throw std::runtime_error("exiting.");
+        }
+    }
+
     void initWindow() {
         if (!glfwInit()) {
             throw std::runtime_error("failed to initialize glfw!");
@@ -141,6 +219,33 @@ private:
 
         window = glfwCreateWindow((int)gwx, (int)gwy, "Julia Set with Vulkan", nullptr, nullptr);
         glfwSetWindowUserPointer(window, this);
+    }
+
+    void initOpenCL() {
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+
+        printf("Running on platform: %s\n",
+            platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
+
+        std::vector<cl::Device> devices;
+        platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+
+        printf("Running on device: %s\n",
+            devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+
+        context = cl::Context{devices[deviceIndex]};
+        commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+
+        cl::Program program{ context, kernelString };
+        program.build();
+        kernel = cl::Kernel{ program, "Julia" };
+
+        mem = cl::Image2D{
+            context,
+            CL_MEM_WRITE_ONLY,
+            cl::ImageFormat{CL_RGBA, CL_UNORM_INT8},
+            gwx, gwy };
     }
 
     void initVulkan() {
@@ -696,46 +801,6 @@ private:
         }
     }
 
-    static uint32_t juliatexel(uint32_t x, uint32_t y, uint32_t cWidth, uint32_t cHeight, float cr, float ci)
-    {
-        const float cMinX = -1.5f;
-        const float cMaxX =  1.5f;
-        const float cMinY = -1.5f;
-        const float cMaxY =  1.5f;
-
-        const int cIterations = 16;
-
-        float a = x * ( cMaxX - cMinX ) / cWidth + cMinX;
-        float b = y * ( cMaxY - cMinY ) / cHeight + cMinY;
-
-        float result = 0.0f;
-        const float thresholdSquared = cIterations * cIterations / 64.0f;
-
-        for( int i = 0; i < cIterations; i++ ) {
-            float aa = a * a;
-            float bb = b * b;
-
-            float magnitudeSquared = aa + bb;
-            if( magnitudeSquared >= thresholdSquared ) {
-                break;
-            }
-
-            result += 1.0f / cIterations;
-            b = 2 * a * b + ci;
-            a = aa - bb + cr;
-        }
-
-        result = std::max( result, 0.0f );
-        result = std::min( result, 1.0f );
-
-        uint32_t ret =
-            (static_cast<uint32_t>(result * 255) << 0) |
-            (static_cast<uint32_t>(sqrtf(result) * 255) << 8) |
-            (255 << 16) |
-            (255 << 24);
-        return ret;
-    }
-
     void createTextureImage() {
         uint32_t texWidth = static_cast<uint32_t>(gwx);
         uint32_t texHeight = static_cast<uint32_t>(gwy);
@@ -1109,28 +1174,49 @@ private:
     }
 
     void updateTexture(uint32_t currentImage) {
-        uint32_t texWidth = static_cast<uint32_t>(gwx);
-        uint32_t texHeight = static_cast<uint32_t>(gwy);
-        std::vector<uint32_t> pixels(texWidth * texHeight);
-        for (uint32_t h = 0; h < texHeight; h++) {
-            for (uint32_t w = 0; w < texWidth; w++) {
-                pixels[h * texWidth + w] = juliatexel(w, h, texWidth, texHeight, cr, ci);
-            }
-        }
+        kernel.setArg(0, mem);
+        kernel.setArg(1, cr);
+        kernel.setArg(2, ci);
 
-        VkDeviceSize imageSize = texWidth * texHeight * 4;
+        // TODO: add lws?
+
+        commandQueue.enqueueNDRangeKernel(
+            kernel,
+            cl::NullRange,
+            cl::NDRange{gwx, gwy});
+
+        size_t rowPitch = 0;
+        void* pixels = commandQueue.enqueueMapImage(
+            mem,
+            CL_TRUE,
+            CL_MAP_READ,
+            {0, 0, 0},
+            {gwx, gwy, 1},
+            &rowPitch,
+            nullptr);
+
+        VkDeviceSize imageSize = gwx * gwy * 4;
 
         void* data;
         vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-            memcpy(data, pixels.data(), static_cast<size_t>(imageSize));
+            memcpy(data, pixels, static_cast<size_t>(imageSize));
         vkUnmapMemory(device, stagingBufferMemory);
 
+        commandQueue.enqueueUnmapMemObject(
+            mem,
+            pixels);
+        commandQueue.flush();
+
         transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            copyBufferToImage(stagingBuffer, textureImages[currentImage], static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+            copyBufferToImage(stagingBuffer, textureImages[currentImage], static_cast<uint32_t>(gwx), static_cast<uint32_t>(gwy));
         transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
     void drawFrame() {
+        if (redraw) {
+            redraw = false;
+        }
+
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -1391,11 +1477,11 @@ private:
     }
 };
 
-int main() {
+int main(int argc, char** argv) {
     JuliaVKApplication app;
 
     try {
-        app.run();
+        app.run(argc, argv);
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
