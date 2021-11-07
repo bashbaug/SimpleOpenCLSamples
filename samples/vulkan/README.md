@@ -64,6 +64,6 @@ In these instructions we will clone into the `external` directory.
 
 After installing, GLFW should be found by the OpenCL samples.
 
-## Summary of OpenGL Samples
+## Summary of Vulkan Samples
 
 * [juliavk](./00_juliavk): Demonstrates sharing an Vulkan texture with OpenCL.
