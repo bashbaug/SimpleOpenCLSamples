@@ -1,3 +1,30 @@
+/*
+// Copyright (c) 2021 Ben Ashbaugh
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+*/
+
+// The code in this sample was derived from several samples in the Vulkan
+// Tutorial: https://vulkan-tutorial.com
+//
+// The code samples in the Vulkan Tutorial are licensed as CC0 1.0 Universal.
+
 #include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
@@ -5,15 +32,14 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <iostream>
-#include <fstream>
-#include <stdexcept>
 #include <algorithm>
-#include <vector>
-#include <cstring>
-#include <cstdlib>
-#include <cstdint>
+#include <chrono>
+#include <fstream>
 #include <set>
+#include <stdexcept>
+#include <vector>
+
+#include <math.h>
 
 static const char kernelString[] = R"CLC(
 kernel void Julia( write_only image2d_t dst, float cr, float ci )
@@ -54,7 +80,7 @@ kernel void Julia( write_only image2d_t dst, float cr, float ci )
     result = min( result, 1.0f );
 
     // RGBA
-    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
+    float4 color = (float4)(result + 0.6f, result, result * result, 1.0f);
 
     write_imagef(dst, (int2)(x, y), color);
 }
@@ -125,14 +151,21 @@ public:
 private:
     GLFWwindow* window;
 
-    bool animate = false;   // TODO: reenable
+    bool animate = false;
     bool redraw = false;
 
     size_t gwx = 512;
     size_t gwy = 512;
+    size_t lwx = 0;
+    size_t lwy = 0;
 
     float cr = -0.123f;
     float ci =  0.745f;
+
+    size_t startFrame = 0;
+    size_t frame = 0;
+    std::chrono::system_clock::time_point start =
+        std::chrono::system_clock::now();
 
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
@@ -192,6 +225,8 @@ private:
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
         op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
+        op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
+        op.add<popl::Value<size_t>>("", "lwy", "Local Work Size Y", lwy, &lwy);
 
         bool printUsage = false;
         try {
@@ -309,18 +344,6 @@ private:
             case GLFW_KEY_X:
                 ci -= 0.005f;
                 break;
-
-#if 0
-            case GLFW_KEY_V:
-                pApp->vsync = !pApp->vsync;
-                printf("vsync is %s\n", pApp->vsync ? "ON" : "OFF");
-                if (vsync) {
-                    glfwSwapInterval(1);
-                } else {
-                    glfwSwapInterval(0);
-                }
-                break;
-#endif
             }
         }
     }
@@ -487,7 +510,6 @@ private:
         }
 
         VkPhysicalDeviceFeatures deviceFeatures{};
-        //deviceFeatures.samplerAnisotropy = VK_TRUE; // TODO: check!
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -843,9 +865,6 @@ private:
         samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        // TODO: check
-        //samplerInfo.anisotropyEnable = VK_TRUE;
-        //samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
         samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
         samplerInfo.compareEnable = VK_FALSE;
@@ -1178,12 +1197,17 @@ private:
         kernel.setArg(1, cr);
         kernel.setArg(2, ci);
 
-        // TODO: add lws?
+        cl::NDRange lws;    // NullRange by default.
+        if( lwx > 0 && lwy > 0 )
+        {
+            lws = cl::NDRange{lwx, lwy};
+        }
 
         commandQueue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
-            cl::NDRange{gwx, gwy});
+            cl::NDRange{gwx, gwy},
+            lws);
 
         size_t rowPitch = 0;
         void* pixels = commandQueue.enqueueMapImage(
@@ -1213,6 +1237,23 @@ private:
     }
 
     void drawFrame() {
+        if (animate) {
+            float fcr = (frame % 599) / 599.f * 2.0f * CL_M_PI_F;
+            float fci = (frame % 773) / 773.f * 2.0f * CL_M_PI_F;
+            cr = sinf(fcr);
+            ci = sinf(fci);
+
+            ++frame;
+
+            auto end = std::chrono::system_clock::now();
+            std::chrono::duration<float> delta = end - start;
+            float elapsed_seconds = delta.count();
+            if (elapsed_seconds > 2.0f) {
+                printf("FPS: %.1f\n", (frame - startFrame) / elapsed_seconds);
+                startFrame = frame;
+                start = end;
+            }
+        }
         if (redraw) {
             redraw = false;
         }
@@ -1314,8 +1355,8 @@ private:
                 static_cast<uint32_t>(height)
             };
 
-            //actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-            //actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+            actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(actualExtent.width, capabilities.maxImageExtent.width));
+            actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(actualExtent.height, capabilities.maxImageExtent.height));
 
             return actualExtent;
         }
@@ -1465,7 +1506,7 @@ private:
     }
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-        std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+        fprintf(stderr, "validation layer: %s\n", pCallbackData->pMessage);
 
         return VK_FALSE;
     }
@@ -1483,7 +1524,7 @@ int main(int argc, char** argv) {
     try {
         app.run(argc, argv);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fprintf(stderr, "%s\n", e.what());
         return EXIT_FAILURE;
     }
 

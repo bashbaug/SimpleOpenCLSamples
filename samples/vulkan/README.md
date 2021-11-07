@@ -1,17 +1,23 @@
-# OpenGL Samples
+# Vulkan Samples
 
-This directory contains samples that use [OpenGL](https://www.khronos.org/opengl/) to visualize results.
-OpenGL is a widely supported industry standard for graphics and rendering and can interoperate well with many OpenCL devices.
+This directory contains samples that use [Vulkan](https://www.vulkan.org/) to visualize results.
+Vulkan is a widely supported industry standard for graphics and rendering.
+Vulkan is a lower-level API that can provide more control and hence more performance compared to other graphics APIs like OpenGL.
+Several recent OpenCL extensions enable [interop between OpenCL and Vulkan devices](https://www.khronos.org/blog/khronos-releases-opencl-3.0-extensions-for-neural-network-inferencing-and-opencl-vulkan-interop).
 
 ## Dependencies
 
-These samples require OpenGL headers and libraries.
+These samples require Vulkan headers and libraries, which are most commonly provided by the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/).
 
-Additionally, these samples use [GLFW](https://www.glfw.org/) to abstract many of the operating system specific parts of OpenGL.
+Additionally, these samples use [GLFW](https://www.glfw.org/) to abstract many of the operating system specific parts of Vulkan.
 GLFW supports Windows, macOS, and Linux.
 Pre-built packages are available for many platforms, or GLFW may be built from source.
 
-If these dependencies are not found then the OpenGL samples will not be built.
+If these dependencies are not found then the Vulkan samples will not be built.
+
+## Validation Layers
+
+Please note that `Debug` builds will enable Vulkan validation layers to help catch bugs and to verify correct usage of the Vulkan APIs.
 
 ### Using Pre-build GLFW Packages
 
@@ -23,7 +29,7 @@ Please see the [GLFW Download Page](https://www.glfw.org/download.html) for deta
 The following steps are recommended when GLFW is built from source.
 Please refer to the [Compiling GLFW](https://www.glfw.org/docs/latest/compile_guide.html) reference page for details.
 
-1. Build GLFW separately from these OpenCL samples.
+1. Build GLFW separately from these Vulkan samples.
 The GLFW source code may be cloned into a completely separate directory or into the `external` directory for these samples.
 2. Build GLFW as a static library.
 3. On Linux, build GLFW for X11.
@@ -60,4 +66,4 @@ After installing, GLFW should be found by the OpenCL samples.
 
 ## Summary of OpenGL Samples
 
-* [juliagl](./00_juliagl): Demonstrates sharing an OpenGL texture with OpenCL.
+* [juliavk](./00_juliavk): Demonstrates sharing an Vulkan texture with OpenCL.
