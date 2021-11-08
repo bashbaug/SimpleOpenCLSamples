@@ -447,6 +447,7 @@ static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int
             } else {
                 glfwSwapInterval(0);
             }
+            break;
         }
     }
 }
