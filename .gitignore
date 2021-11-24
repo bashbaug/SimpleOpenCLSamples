@@ -11,3 +11,4 @@ external/OpenCL-Headers/
 external/OpenCL-ICD-Loader/
 install/
 *~
+.ipynb_checkpoints
