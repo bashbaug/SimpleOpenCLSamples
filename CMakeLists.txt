@@ -34,15 +34,11 @@ project(SimpleOpenCLSamples VERSION 1.0)
 
 option(SAMPLES_ENABLE_EXCEPTIONS "Enable Exceptions for OpenCL Errors")
 
-set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
-find_package(OpenCL)
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${OpenCL_INCLUDE_DIR})
 
+add_subdirectory(external/OpenCL-Headers)
 add_subdirectory(external/opencl-icd-loader)
 set_target_properties(OpenCL PROPERTIES FOLDER "OpenCL-ICD-Loader")
-set(OpenCL_LIBRARIES OpenCL)
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/opencl-extension-loader)
     add_subdirectory(external/opencl-extension-loader)

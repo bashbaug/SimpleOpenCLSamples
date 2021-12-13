@@ -38,8 +38,8 @@ function(add_opencl_sample)
 
     add_executable(${OPENCL_SAMPLE_TARGET} ${OPENCL_SAMPLE_SOURCES})
 
-    target_include_directories(${OPENCL_SAMPLE_TARGET} PRIVATE ${OpenCL_INCLUDE_DIR} ${OPENCL_SAMPLE_INCLUDES})
-    target_link_libraries(${OPENCL_SAMPLE_TARGET} ${OpenCL_LIBRARIES} ${OPENCL_SAMPLE_LIBS})
+    target_include_directories(${OPENCL_SAMPLE_TARGET} PRIVATE ${OPENCL_SAMPLE_INCLUDES})
+    target_link_libraries(${OPENCL_SAMPLE_TARGET} PRIVATE OpenCL::OpenCL ${OPENCL_SAMPLE_LIBS})
 
     target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_TARGET_OPENCL_VERSION=${OPENCL_SAMPLE_VERSION})
     target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${OPENCL_SAMPLE_VERSION})
