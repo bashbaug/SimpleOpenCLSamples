@@ -55,7 +55,7 @@ int main(
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    std::string fileName("sample_kernel.cl");
+    std::string fileName("largeenqueue_kernel.cl");
     std::string kernelName("Test");
     std::string buildOptions;
     size_t gwx = 2ULL << 32;
@@ -122,6 +122,16 @@ int main(
         context,
         CL_MEM_ALLOC_HOST_PTR,
         sizeof( cl_uint ) };
+
+    // initialization
+    {
+        cl_uint pattern = 0;
+        commandQueue.enqueueFillBuffer(
+            deviceMemDst,
+            pattern,
+            0,
+            sizeof( pattern ) );
+    }
 
     // execution
     kernel.setArg(0, deviceMemDst);
