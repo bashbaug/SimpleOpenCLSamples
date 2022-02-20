@@ -88,3 +88,5 @@ add_subdirectory( 05_spirvkernelfromfile )
 add_subdirectory( 06_ndrangekernelfromfile )
 
 add_subdirectory( 10_queueexperiments )
+
+add_subdirectory( 11_apitimes )
