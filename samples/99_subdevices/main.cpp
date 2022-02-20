@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2022 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 */
+
+#include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
 
@@ -42,68 +44,67 @@ const char* partition_property_to_string(cl_device_partition_property property)
     }
 }
 
+void run(cl::Context& context)
+{
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+
+    printf("Testing %zu devices...\n", devices.size());
+
+    cl_int  result = 0;
+    cl::Buffer buffer{context, CL_MEM_READ_WRITE, sizeof(result)};
+
+    for( size_t i = 0; i < devices.size(); i++ )
+    {
+        cl::Device& device = devices[i];
+        printf("%zu: Running test on %s... ", i, device.getInfo<CL_DEVICE_NAME>().c_str());
+        fflush(stdout);
+
+        cl::CommandQueue queue{context, devices[i]};
+
+        cl_int  pattern = (cl_int)i + 5;
+        queue.enqueueFillBuffer(buffer, pattern, 0, sizeof(result));
+
+        result = 0;
+        queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(result), &result);
+
+        if( result != pattern )
+        {
+            printf("Mismatch!  Wanted %d, got %d.\n", pattern, result);
+        }
+        else
+        {
+            printf("Success.\n");
+        }
+    }
+}
+
 int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
     int platformIndex = 0;
     int deviceIndex = 0;
     int partitionType = 0;
 
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( size_t i = 1; i < argc; i++ )
-        {
-            if( !strcmp( argv[i], "-d" ) )
-            {
-                ++i;
-                if( i < argc )
-                {
-                    deviceIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                ++i;
-                if( i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-pt" ) )
-            {
-                ++i;
-                if( i < argc )
-                {
-                    partitionType = strtol(argv[i], NULL, 10);
-                }
-            }
-            else
-            {
-                printUsage = true;
-            }
+        popl::OptionParser op("Supported Options");
+        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
+        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Value<int>>("t", "partitiontype", "Partition Type (0 = affinity domain, 1 = equally, 2 = counts, 3 = name)", partitionType, &partitionType);
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
         }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: subdevices [options]\n"
-            "Options:\n"
-            "      -d: Device Index (default = 0)\n"
-            "      -p: Platform Index (default = 0)\n"
-            "      -pt: Partition Type (default = 0)\n"
-            "               0 = by affinity domain\n"
-            "               1 = equally\n"
-            "               2 = by counts\n"
-            "               3 = by names\n"
-            );
 
-        return -1;
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: subdevices[options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;
@@ -150,7 +151,7 @@ int main(
     };
     std::vector<cl::Device> subdevices;
     devices[deviceIndex].createSubDevices(
-        partitionType == 0 ? partitionByAffinity : 
+        partitionType == 0 ? partitionByAffinity :
         partitionType == 1 ? partitionEqually :
         partitionType == 2 ? partitionByCounts :
         partitionType == 3 ? partitionByNames :
@@ -162,12 +163,14 @@ int main(
     {
         printf("Creating a context with the first sub-device:\n");
         cl::Context context{subdevices[0]};
+        run(context);
     }
 
     if( subdevices.size() != 0)
     {
         printf("Creating a context with all sub-devices:\n");
         cl::Context context{subdevices};
+        run(context);
     }
 
     if( subdevices.size() != 0)
@@ -177,7 +180,8 @@ int main(
         subdevices.push_back(devices[deviceIndex]);
 
         cl::Context context{subdevices};
+        run(context);
     }
 
     return 0;
-}
+ }
