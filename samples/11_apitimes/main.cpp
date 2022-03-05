@@ -76,6 +76,38 @@ void test_clGetDeviceInfo(cl::Device& device)
     printf("finished in %f ms\n", ms);
 }
 
+void test_clSetKernelArg(cl::Device& device)
+{
+    const size_t iterations = 1024 * 1024;
+    printf("Testing %s (%zu): ", __FUNCTION__, iterations); fflush(stdout);
+
+    cl::Context context{device};
+
+    static const char kernelString[] = R"CLC( kernel void Empty(int a) {} )CLC";
+
+    cl::Program program{context, kernelString};
+    program.build();
+    cl::Kernel kernel = cl::Kernel{program, "Empty"};
+
+    cl_kernel k = kernel();
+
+    auto start = std::chrono::system_clock::now();
+    for( int i = 0; i < iterations; i++ )
+    {
+        int x = 0;
+        clSetKernelArg(
+            k,
+            0,
+            sizeof(x),
+            &x);
+    }
+    auto end = std::chrono::system_clock::now();
+
+    std::chrono::duration<float> elapsed_seconds = end - start;
+    float ms = elapsed_seconds.count() * 1000;
+    printf("finished in %f ms\n", ms);
+}
+
 int main(
     int argc,
     char** argv )
@@ -116,8 +148,9 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    test_clGetDeviceIDs(platforms[platformIndex]);
+    //test_clGetDeviceIDs(platforms[platformIndex]);
     //test_clGetDeviceInfo(devices[deviceIndex]);
+    test_clSetKernelArg(devices[deviceIndex]);
 
     return 0;
  }
