@@ -39,6 +39,10 @@ Many samples that use extensions additionally require the OpenCL Extension Loade
 
     git clone https://github.com/bashbaug/opencl-extension-loader external/opencl-extension-loader
 
+Some benchmark samples use Google Benchmark:
+
+    git clone https://github.com/google/benchmark external/benchmark
+
 After satisfying the external dependencies create build files using CMake.  For example:
 
     mkdir build && cd build
