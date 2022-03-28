@@ -67,6 +67,7 @@ function(add_opencl_sample)
     endif()
 endfunction()
 
+add_subdirectory( benchmarks )
 add_subdirectory( images )
 add_subdirectory( opengl )
 add_subdirectory( python )
