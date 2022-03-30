@@ -33,22 +33,27 @@ void test_clGetDeviceIDs(cl::Platform& platform)
 
     cl_platform_id p = platform();
 
-    auto start = std::chrono::system_clock::now();
-    for( int i = 0; i < iterations; i++ )
+    float ms = 0.0f;
+    for( int w = 0; w < 2; w++ )
     {
-        cl_uint numDevices = 0;
-        clGetDeviceIDs(
-            p,
-            CL_DEVICE_TYPE_ALL,
-            0,
-            NULL,
-            &numDevices);
-    }
-    auto end = std::chrono::system_clock::now();
+        auto start = std::chrono::system_clock::now();
+        for( int i = 0; i < iterations; i++ )
+        {
+            cl_uint numDevices = 0;
+            clGetDeviceIDs(
+                p,
+                CL_DEVICE_TYPE_ALL,
+                0,
+                NULL,
+                &numDevices);
+        }
+        auto end = std::chrono::system_clock::now();
 
-    std::chrono::duration<float> elapsed_seconds = end - start;
-    float ms = elapsed_seconds.count() * 1000;
-    printf("finished in %f ms\n", ms);
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        ms = elapsed_seconds.count() * 1000;
+    }
+
+    printf("finished in %f ms (%f ns/iteration)\n", ms, ms * iterations / 1000000.0f);
 }
 
 void test_clGetDeviceInfo(cl::Device& device)
@@ -58,22 +63,27 @@ void test_clGetDeviceInfo(cl::Device& device)
 
     cl_device_id d = device();
 
-    auto start = std::chrono::system_clock::now();
-    for( int i = 0; i < iterations; i++ )
+    float ms = 0.0f;
+    for( int w = 0; w < 2; w++ )
     {
-        cl_device_type type = 0;
-        clGetDeviceInfo(
-            d,
-            CL_DEVICE_TYPE,
-            sizeof(type),
-            &type,
-            NULL);
-    }
-    auto end = std::chrono::system_clock::now();
+        auto start = std::chrono::system_clock::now();
+        for( int i = 0; i < iterations; i++ )
+        {
+            cl_device_type type = 0;
+            clGetDeviceInfo(
+                d,
+                CL_DEVICE_TYPE,
+                sizeof(type),
+                &type,
+                NULL);
+        }
+        auto end = std::chrono::system_clock::now();
 
-    std::chrono::duration<float> elapsed_seconds = end - start;
-    float ms = elapsed_seconds.count() * 1000;
-    printf("finished in %f ms\n", ms);
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        ms = elapsed_seconds.count() * 1000;
+    }
+
+    printf("finished in %f ms (%f ns/iteration)\n", ms, ms * iterations / 1000000.0f);
 }
 
 void test_clSetKernelArg(cl::Device& device)
@@ -91,21 +101,26 @@ void test_clSetKernelArg(cl::Device& device)
 
     cl_kernel k = kernel();
 
-    auto start = std::chrono::system_clock::now();
-    for( int i = 0; i < iterations; i++ )
+    float ms = 0.0f;
+    for( int w = 0; w < 2; w++ )
     {
-        int x = 0;
-        clSetKernelArg(
-            k,
-            0,
-            sizeof(x),
-            &x);
-    }
-    auto end = std::chrono::system_clock::now();
+        auto start = std::chrono::system_clock::now();
+        for( int i = 0; i < iterations; i++ )
+        {
+            int x = 0;
+            clSetKernelArg(
+                k,
+                0,
+                sizeof(x),
+                &x);
+        }
+        auto end = std::chrono::system_clock::now();
 
-    std::chrono::duration<float> elapsed_seconds = end - start;
-    float ms = elapsed_seconds.count() * 1000;
-    printf("finished in %f ms\n", ms);
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        ms = elapsed_seconds.count() * 1000;
+    }
+
+    printf("finished in %f ms (%f ns/iteration)\n", ms, ms * iterations / 1000000.0f);
 }
 
 void test_clSetKernelArgSVMPointer(cl::Device& device)
@@ -127,19 +142,24 @@ void test_clSetKernelArgSVMPointer(cl::Device& device)
 
     cl_kernel k = kernel();
 
-    auto start = std::chrono::system_clock::now();
-    for( int i = 0; i < iterations; i++ )
+    float ms = 0.0f;
+    for( int w = 0; w < 2; w++ )
     {
-        clSetKernelArgSVMPointer(
-            k,
-            0,
-            ptrs[i&1] );
-    }
-    auto end = std::chrono::system_clock::now();
+        auto start = std::chrono::system_clock::now();
+        for( int i = 0; i < iterations; i++ )
+        {
+            clSetKernelArgSVMPointer(
+                k,
+                0,
+                ptrs[i&1] );
+        }
+        auto end = std::chrono::system_clock::now();
 
-    std::chrono::duration<float> elapsed_seconds = end - start;
-    float ms = elapsed_seconds.count() * 1000;
-    printf("finished in %f ms\n", ms);
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        ms = elapsed_seconds.count() * 1000;
+    }
+
+    printf("finished in %f ms (%f ns/iteration)\n", ms, ms * iterations / 1000000.0f);
 
     for (auto ptr : ptrs)
     {
@@ -187,9 +207,9 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    //test_clGetDeviceIDs(platforms[platformIndex]);
-    //test_clGetDeviceInfo(devices[deviceIndex]);
-    //test_clSetKernelArg(devices[deviceIndex]);
+    test_clGetDeviceIDs(platforms[platformIndex]);
+    test_clGetDeviceInfo(devices[deviceIndex]);
+    test_clSetKernelArg(devices[deviceIndex]);
     test_clSetKernelArgSVMPointer(devices[deviceIndex]);
 
     return 0;
