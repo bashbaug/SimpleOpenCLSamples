@@ -18,13 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(BUILD_BENCHMARK_SAMPLES TRUE)
-if(NOT TARGET benchmark::benchmark)
-    message(STATUS "Skipping Benchmark Samples - Google Benchmark is not found.")
-    set(BUILD_BENCHMARK_SAMPLES FALSE)
-endif()
-
-if(BUILD_BENCHMARK_SAMPLES)
-    add_subdirectory( 00_apibenchmark )
-    add_subdirectory( 00_fileiobenchmark )
-endif()
+add_opencl_sample(
+    TEST
+    NUMBER 00
+    TARGET fileiobenchmark
+    VERSION 200
+    CATEGORY benchmarks
+    SOURCES main.cpp
+    LIBS benchmark::benchmark)
