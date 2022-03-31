@@ -53,6 +53,11 @@
 
 using test_clock = std::chrono::steady_clock;
 
+
+
+
+
+
 struct ofstream_fixture : public benchmark::Fixture
 {
     std::ofstream   trace;
@@ -88,6 +93,14 @@ struct ofstream_fixture : public benchmark::Fixture
         trace.close();
     }
 };
+
+BENCHMARK_DEFINE_F(ofstream_fixture, ChromeCallLogging_StringLiteral)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        trace << "{\"ph\":\"X\",\"pid\":33692,\"tid\":33752,\"name\":\"test_function\",\"ts\":9191,\"dur\":8},\n";
+    }
+}
+BENCHMARK_REGISTER_F(ofstream_fixture, ChromeCallLogging_StringLiteral);
 
 BENCHMARK_DEFINE_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs)(benchmark::State& state)
 {
@@ -201,6 +214,129 @@ BENCHMARK_DEFINE_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospac
 }
 BENCHMARK_REGISTER_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid);
 
+BENCHMARK_DEFINE_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_sprintf_insertion)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        std::string name;
+        name += "test_function";
+
+        std::ostringstream args;
+
+        uint64_t    processId = GET_PROCESS_ID();
+        uint64_t    threadId = GET_THREAD_ID();
+
+        using us = std::chrono::microseconds;
+        uint64_t    usStart =
+            std::chrono::duration_cast<us>(start - global_start).count();
+        uint64_t    usDelta =
+            std::chrono::duration_cast<us>(end - start).count();
+
+        int size = CLI_SPRINTF(buffer, BUFFER_SIZE,
+            "{\"ph\":\"X\",\"pid\":%" PRIu64 ",\"tid\":%" PRIu64 ",\"name\":\"%s\",\"ts\":%" PRIu64 ",\"dur\":%" PRIu64 "%s},\n",
+            processId,
+            threadId,
+            name.c_str(),
+            usStart,
+            usDelta,
+            args.str().c_str() );
+        trace << buffer;
+    }
+}
+BENCHMARK_REGISTER_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_sprintf_insertion);
+
+BENCHMARK_DEFINE_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_sprintf_write)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        std::string name;
+        name += "test_function";
+
+        std::ostringstream args;
+
+        uint64_t    processId = GET_PROCESS_ID();
+        uint64_t    threadId = GET_THREAD_ID();
+
+        using us = std::chrono::microseconds;
+        uint64_t    usStart =
+            std::chrono::duration_cast<us>(start - global_start).count();
+        uint64_t    usDelta =
+            std::chrono::duration_cast<us>(end - start).count();
+
+        int size = CLI_SPRINTF(buffer, BUFFER_SIZE,
+            "{\"ph\":\"X\",\"pid\":%" PRIu64 ",\"tid\":%" PRIu64 ",\"name\":\"%s\",\"ts\":%" PRIu64 ",\"dur\":%" PRIu64 "%s},\n",
+            processId,
+            threadId,
+            name.c_str(),
+            usStart,
+            usDelta,
+            args.str().c_str() );
+        trace.write(buffer, size);
+    }
+}
+BENCHMARK_REGISTER_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_sprintf_write);
+
+BENCHMARK_DEFINE_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_insertion)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        std::string name;
+        name += "test_function";
+
+        std::ostringstream args;
+
+        uint64_t    threadId = GET_THREAD_ID();
+
+        using us = std::chrono::microseconds;
+        uint64_t    usStart =
+            std::chrono::duration_cast<us>(start - global_start).count();
+        uint64_t    usDelta =
+            std::chrono::duration_cast<us>(end - start).count();
+
+        int size = CLI_SPRINTF(buffer, BUFFER_SIZE,
+            "{\"ph\":\"X\",\"pid\":%" PRIu64 ",\"tid\":%" PRIu64 ",\"name\":\"%s\",\"ts\":%" PRIu64 ",\"dur\":%" PRIu64 "%s},\n",
+            fixture_processId,
+            threadId,
+            name.c_str(),
+            usStart,
+            usDelta,
+            args.str().c_str() );
+        trace << buffer;
+    }
+}
+BENCHMARK_REGISTER_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_insertion);
+
+BENCHMARK_DEFINE_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_write)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        std::string name;
+        name += "test_function";
+
+        std::ostringstream args;
+
+        uint64_t    threadId = GET_THREAD_ID();
+
+        using us = std::chrono::microseconds;
+        uint64_t    usStart =
+            std::chrono::duration_cast<us>(start - global_start).count();
+        uint64_t    usDelta =
+            std::chrono::duration_cast<us>(end - start).count();
+
+        int size = CLI_SPRINTF(buffer, BUFFER_SIZE,
+            "{\"ph\":\"X\",\"pid\":%" PRIu64 ",\"tid\":%" PRIu64 ",\"name\":\"%s\",\"ts\":%" PRIu64 ",\"dur\":%" PRIu64 "%s},\n",
+            fixture_processId,
+            threadId,
+            name.c_str(),
+            usStart,
+            usDelta,
+            args.str().c_str() );
+        trace.write(buffer, size);
+    }
+}
+BENCHMARK_REGISTER_F(ofstream_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_write);
+
+
+
+
+
+
 struct ofstream_text_fixture : public benchmark::Fixture
 {
     std::ofstream   trace;
@@ -237,6 +373,14 @@ struct ofstream_text_fixture : public benchmark::Fixture
     }
 };
 
+BENCHMARK_DEFINE_F(ofstream_text_fixture, ChromeCallLogging_StringLiteral)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        trace << "{\"ph\":\"X\",\"pid\":33692,\"tid\":33752,\"name\":\"test_function\",\"ts\":9191,\"dur\":8},\n";
+    }
+}
+BENCHMARK_REGISTER_F(ofstream_text_fixture, ChromeCallLogging_StringLiteral);
+
 BENCHMARK_DEFINE_F(ofstream_text_fixture, ChromeCallLogging_WithTimes_WithArgs)(benchmark::State& state)
 {
     while(state.KeepRunning()) {
@@ -265,6 +409,11 @@ BENCHMARK_DEFINE_F(ofstream_text_fixture, ChromeCallLogging_WithTimes_WithArgs)(
     }
 }
 BENCHMARK_REGISTER_F(ofstream_text_fixture, ChromeCallLogging_WithTimes_WithArgs);
+
+
+
+
+
 
 struct FILE_fixture : public benchmark::Fixture
 {
@@ -300,6 +449,14 @@ struct FILE_fixture : public benchmark::Fixture
         fclose(trace);;
     }
 };
+
+BENCHMARK_DEFINE_F(FILE_fixture, ChromeCallLogging_StringLiteral)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        fprintf(trace, "{\"ph\":\"X\",\"pid\":33692,\"tid\":33752,\"name\":\"test_function\",\"ts\":9191,\"dur\":8},\n");
+    }
+}
+BENCHMARK_REGISTER_F(FILE_fixture, ChromeCallLogging_StringLiteral);
 
 BENCHMARK_DEFINE_F(FILE_fixture, ChromeCallLogging_WithTimes_WithArgs)(benchmark::State& state)
 {
@@ -443,6 +600,64 @@ BENCHMARK_DEFINE_F(FILE_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_s
     }
 }
 BENCHMARK_REGISTER_F(FILE_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_sprintf_fwrite);
+
+BENCHMARK_DEFINE_F(FILE_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_fprintf)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        std::string name;
+        name += "test_function";
+
+        std::ostringstream args;
+
+        uint64_t    threadId = GET_THREAD_ID();
+
+        using us = std::chrono::microseconds;
+        uint64_t    usStart =
+            std::chrono::duration_cast<us>(start - global_start).count();
+        uint64_t    usDelta =
+            std::chrono::duration_cast<us>(end - start).count();
+
+        int size = CLI_SPRINTF(buffer, BUFFER_SIZE,
+            "{\"ph\":\"X\",\"pid\":%" PRIu64 ",\"tid\":%" PRIu64 ",\"name\":\"%s\",\"ts\":%" PRIu64 ",\"dur\":%" PRIu64 "%s},\n",
+            fixture_processId,
+            threadId,
+            name.c_str(),
+            usStart,
+            usDelta,
+            args.str().c_str() );
+        fprintf(trace, "%s", buffer);
+    }
+}
+BENCHMARK_REGISTER_F(FILE_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_fprintf);
+
+BENCHMARK_DEFINE_F(FILE_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_fwrite)(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        std::string name;
+        name += "test_function";
+
+        std::ostringstream args;
+
+        uint64_t    threadId = GET_THREAD_ID();
+
+        using us = std::chrono::microseconds;
+        uint64_t    usStart =
+            std::chrono::duration_cast<us>(start - global_start).count();
+        uint64_t    usDelta =
+            std::chrono::duration_cast<us>(end - start).count();
+
+        int size = CLI_SPRINTF(buffer, BUFFER_SIZE,
+            "{\"ph\":\"X\",\"pid\":%" PRIu64 ",\"tid\":%" PRIu64 ",\"name\":\"%s\",\"ts\":%" PRIu64 ",\"dur\":%" PRIu64 "%s},\n",
+            fixture_processId,
+            threadId,
+            name.c_str(),
+            usStart,
+            usDelta,
+            args.str().c_str() );
+        fwrite(buffer, size, 1, trace);
+    }
+}
+BENCHMARK_REGISTER_F(FILE_fixture, ChromeCallLogging_WithTimes_WithArgs_nospaces_fixturepid_sprintf_fwrite);
 
 
 BENCHMARK_MAIN();
