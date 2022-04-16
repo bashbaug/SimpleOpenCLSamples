@@ -21,7 +21,7 @@
 add_opencl_sample(
     NUMBER 00
     TARGET juliavk
-    VERSION 120
+    VERSION 300 # clCreateImageWithProperties
     CATEGORY vulkan
     SOURCES main.cpp
     KERNELS juliavk.vert.spv juliavk.frag.spv

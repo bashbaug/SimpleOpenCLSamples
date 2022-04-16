@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2021 Ben Ashbaugh
+// Copyright (c) 2021-2022 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,9 +28,18 @@
 #include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
+#if !defined(cl_khr_external_memory)
+#error cl_khr_external_memory not found, please update your OpenCL headers!
+#endif
+
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#include "util.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -93,7 +102,12 @@ const std::vector<const char*> validationLayers = {
 };
 
 const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+//#ifdef _WIN32
+//    VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+//    //VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
+//    VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,    // TODO: handle the case where the extension is not supported!
+//#endif
 };
 
 #ifdef NDEBUG
@@ -144,6 +158,7 @@ public:
         initWindow();
         initOpenCL();
         initVulkan();
+        initOpenCLMems();
         mainLoop();
         cleanup();
     }
@@ -211,18 +226,29 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
+#ifdef _WIN32
+    PFN_vkGetMemoryWin32HandleKHR pvkGetMemoryWin32HandleKHR;
+    PFN_vkGetSemaphoreWin32HandleKHR pvkGetSemaphoreWin32HandleKHR;
+#endif
+
     int platformIndex = 0;
     int deviceIndex = 0;
+
+    bool useExternalMemory = true;
 
     cl::Context context;
     cl::CommandQueue commandQueue;
     cl::Kernel kernel;
-    cl::Image2D mem;
+
+    std::vector<cl::Image2D> mems;
 
     void commandLine(int argc, char** argv) {
+        bool hostCopy = false;
+
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
         op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
         op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
@@ -242,6 +268,8 @@ private:
                 "%s", op.help().c_str());
             throw std::runtime_error("exiting.");
         }
+
+        useExternalMemory = !hostCopy;
     }
 
     void initWindow() {
@@ -269,18 +297,90 @@ private:
         printf("Running on device: %s\n",
             devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
+        if (checkDeviceForExtension(devices[deviceIndex], "cl_khr_external_memory")) {
+            printf("Device supports cl_khr_external_memory.\n");
+            printf("Supported external memory handle types:\n");
+            std::vector<cl_external_memory_handle_type_khr> types =
+                devices[deviceIndex].getInfo<CL_DEVICE_EXTERNAL_MEMORY_IMPORT_HANDLE_TYPES_KHR>();
+            for (auto type : types) {
+                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
+                switch(type) {
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KMT_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KMT_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_HEAP_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_RESOURCE_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR);
+                default: printf("Unknown cl_external_memory_handle_type_khr %04X\n", type);
+                }
+                #undef CASE_TO_STRING
+            }
+        } else {
+            printf("Device does not support cl_khr_external_memory.\n");
+            useExternalMemory = false;
+        }
+
         context = cl::Context{devices[deviceIndex]};
         commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
         cl::Program program{ context, kernelString };
         program.build();
         kernel = cl::Kernel{ program, "Julia" };
+    }
 
-        mem = cl::Image2D{
-            context,
-            CL_MEM_WRITE_ONLY,
-            cl::ImageFormat{CL_RGBA, CL_UNORM_INT8},
-            gwx, gwy };
+    void initOpenCLMems() {
+        mems.resize(swapChainImages.size());
+
+        for (size_t i = 0; i < swapChainImages.size(); i++) {
+            if (useExternalMemory) {
+                // Note: we are using a single device context so we do not need
+                // to specify a list of devices using CL_DEVICE_HANDLE_LIST_KHR.
+#ifdef _WIN32
+                HANDLE handle = NULL;
+                VkMemoryGetWin32HandleInfoKHR getWin32HandleInfo{};
+                getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
+                getWin32HandleInfo.memory = textureImageMemories[i];
+                getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: KMT handles?
+                pvkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
+
+                const cl_mem_properties props[] = {
+                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
+                    (cl_mem_properties)handle,
+                    0,
+                };
+
+                cl_image_format format{};
+                format.image_channel_order = CL_RGBA;
+                format.image_channel_data_type = CL_UNORM_INT8;
+
+                cl_image_desc desc{};
+                desc.image_type = VK_IMAGE_TYPE_2D;
+                desc.image_width = gwx;
+                desc.image_height = gwy;
+
+                mems[i] = cl::Image2D{
+                    clCreateImageWithProperties(
+                        context(),
+                        props,
+                        CL_MEM_WRITE_ONLY,
+                        &format,
+                        &desc,
+                        NULL,
+                        NULL)};
+#else
+#error Unsupported OS.
+#endif
+
+            } else {
+                mems[i] = cl::Image2D{
+                    context,
+                    CL_MEM_WRITE_ONLY,
+                    cl::ImageFormat{CL_RGBA, CL_UNORM_INT8},
+                    gwx, gwy };
+            }
+        }
     }
 
     void initVulkan() {
@@ -417,7 +517,11 @@ private:
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "No Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
+        if (useExternalMemory) {
+            appInfo.apiVersion = VK_API_VERSION_1_1;
+        } else {
+            appInfo.apiVersion = VK_API_VERSION_1_0;
+        }
 
         VkInstanceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -443,6 +547,19 @@ private:
         if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
             throw std::runtime_error("failed to create instance!");
         }
+
+#ifdef _WIN32
+        if (useExternalMemory) {
+            pvkGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryWin32HandleKHR");
+            pvkGetSemaphoreWin32HandleKHR = (PFN_vkGetSemaphoreWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreWin32HandleKHR");
+            if (pvkGetMemoryWin32HandleKHR == NULL) {
+                throw std::runtime_error("couldn't get external function pointer for vkGetMemoryWin32HandleKHR");
+            }
+            if (pvkGetSemaphoreWin32HandleKHR == NULL) {
+                throw std::runtime_error("couldn't get external function pointer for vkGetSemaphoreWin32HandleKHR");
+            }
+        }
+#endif
     }
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
@@ -897,8 +1014,17 @@ private:
     }
 
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
+#ifdef _WIN32
+        VkExternalMemoryImageCreateInfo externalMemCreateInfo{};
+        externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
+        externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: support KMT handles also?
+#endif
+
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        if (useExternalMemory) {
+            imageInfo.pNext = &externalMemCreateInfo;
+        }
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
         imageInfo.extent.width = width;
         imageInfo.extent.height = height;
@@ -919,8 +1045,21 @@ private:
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements(device, image, &memRequirements);
 
+#ifdef _WIN32
+        // TODO: Do we need this?
+        VkExportMemoryWin32HandleInfoKHR handleInfoWin32{};
+        handleInfoWin32.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR;
+
+        VkExportMemoryAllocateInfoKHR exportMemoryAllocInfo{};
+        exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR;
+        exportMemoryAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: support KMT handles also?
+#endif
+
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        if (useExternalMemory) {
+            allocInfo.pNext = &exportMemoryAllocInfo;
+        }
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
@@ -1193,7 +1332,7 @@ private:
     }
 
     void updateTexture(uint32_t currentImage) {
-        kernel.setArg(0, mem);
+        kernel.setArg(0, mems[currentImage]);
         kernel.setArg(1, cr);
         kernel.setArg(2, ci);
 
@@ -1211,7 +1350,7 @@ private:
 
         size_t rowPitch = 0;
         void* pixels = commandQueue.enqueueMapImage(
-            mem,
+            mems[currentImage],
             CL_TRUE,
             CL_MAP_READ,
             {0, 0, 0},
@@ -1227,7 +1366,7 @@ private:
         vkUnmapMemory(device, stagingBufferMemory);
 
         commandQueue.enqueueUnmapMemObject(
-            mem,
+            mems[currentImage],
             pixels);
         commandQueue.flush();
 
