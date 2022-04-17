@@ -98,16 +98,15 @@ kernel void Julia( write_only image2d_t dst, float cr, float ci )
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
+    "VK_LAYER_KHRONOS_validation",
+    "VK_LAYER_LUNARG_api_dump",
 };
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-//#ifdef _WIN32
-//    VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-//    //VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
-//    VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,    // TODO: handle the case where the extension is not supported!
-//#endif
+#ifdef _WIN32
+    VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
+#endif
 };
 
 #ifdef NDEBUG
@@ -226,6 +225,14 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
+#define CREATE_DUMMY_OBJECTS
+#ifdef CREATE_DUMMY_OBJECTS
+    VkBuffer dummyBuffer;
+    VkDeviceMemory dummyBufferMemory;
+
+    cl::Buffer dummyCLBuffer;
+#endif
+
 #ifdef _WIN32
     PFN_vkGetMemoryWin32HandleKHR pvkGetMemoryWin32HandleKHR;
     PFN_vkGetSemaphoreWin32HandleKHR pvkGetSemaphoreWin32HandleKHR;
@@ -331,6 +338,55 @@ private:
     }
 
     void initOpenCLMems() {
+#ifdef CREATE_DUMMY_OBJECTS
+        {
+            HANDLE handle = NULL;
+            VkMemoryGetWin32HandleInfoKHR getWin32HandleInfo{};
+            getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
+            getWin32HandleInfo.memory = dummyBufferMemory;
+            getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: KMT handles?
+            pvkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
+
+#if 0
+            // This works:
+            const cl_mem_properties props[] = {
+                CL_DEVICE_HANDLE_LIST_KHR,
+                (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
+                0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
+                CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
+                (cl_mem_properties)handle,
+                0,
+            };
+#elif 0
+            // This uses the proper CL_DEVICE_HANDLE_LIST_END_KHR and does not work:
+            const cl_mem_properties props[] = {
+                CL_DEVICE_HANDLE_LIST_KHR,
+                (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
+                CL_DEVICE_HANDLE_LIST_END_KHR,
+                CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
+                (cl_mem_properties)handle,
+                0,
+            };
+#elif 1
+            // This omits the device handle list entirely and does not work:
+            const cl_mem_properties props[] = {
+                CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
+                (cl_mem_properties)handle,
+                0,
+            };
+#endif
+
+            dummyCLBuffer = cl::Buffer{
+                clCreateBufferWithProperties(
+                    context(),
+                    props,
+                    CL_MEM_WRITE_ONLY,
+                    1024 * 1024,
+                    NULL,
+                    NULL)};
+        }
+#endif
+
         mems.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -342,10 +398,13 @@ private:
                 VkMemoryGetWin32HandleInfoKHR getWin32HandleInfo{};
                 getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
                 getWin32HandleInfo.memory = textureImageMemories[i];
-                getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: KMT handles?
+                getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
                 pvkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
 
                 const cl_mem_properties props[] = {
+                    CL_DEVICE_HANDLE_LIST_KHR,
+                    (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
+                    0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
                     CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
                     (cl_mem_properties)handle,
                     0,
@@ -356,7 +415,7 @@ private:
                 format.image_channel_data_type = CL_UNORM_INT8;
 
                 cl_image_desc desc{};
-                desc.image_type = VK_IMAGE_TYPE_2D;
+                desc.image_type = CL_MEM_OBJECT_IMAGE2D;
                 desc.image_width = gwx;
                 desc.image_height = gwy;
 
@@ -513,7 +572,7 @@ private:
 
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Hello Triangle";
+        appInfo.pApplicationName = "Julia Set OpenCL+Vulkan Sample";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "No Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -1068,6 +1127,56 @@ private:
         }
 
         vkBindImageMemory(device, image, imageMemory, 0);
+
+#ifdef CREATE_DUMMY_OBJECTS
+        {
+#ifdef _WIN32
+            VkExternalMemoryBufferCreateInfo externalMemCreateInfo{};
+            externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
+            externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#endif
+
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            if (useExternalMemory) {
+                bufferInfo.pNext = &externalMemCreateInfo;
+            }
+            bufferInfo.size = 1024*1024;
+            bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            if (vkCreateBuffer(device, &bufferInfo, nullptr, &dummyBuffer) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate dummy buffer!");
+            }
+
+            VkMemoryRequirements memRequirements;
+            vkGetBufferMemoryRequirements(device, dummyBuffer, &memRequirements);
+
+#ifdef _WIN32
+            // TODO: Do we need this?
+            VkExportMemoryWin32HandleInfoKHR handleInfoWin32{};
+            handleInfoWin32.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR;
+
+            VkExportMemoryAllocateInfoKHR exportMemoryAllocInfo{};
+            exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR;
+            exportMemoryAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#endif
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            if (useExternalMemory) {
+                allocInfo.pNext = &exportMemoryAllocInfo;
+            }
+            allocInfo.allocationSize = memRequirements.size;
+            allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+            if (vkAllocateMemory(device, &allocInfo, nullptr, &dummyBufferMemory) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate dummy buffer memory!");
+            }
+
+            vkBindBufferMemory(device, dummyBuffer, dummyBufferMemory, 0);
+        }
+#endif
     }
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -1594,6 +1703,11 @@ private:
 
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
+        if (useExternalMemory) {
+            extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+        }
         if (enableValidationLayers) {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
