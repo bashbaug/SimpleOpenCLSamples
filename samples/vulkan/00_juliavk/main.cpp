@@ -98,7 +98,7 @@ kernel void Julia( write_only image2d_t dst, float cr, float ci )
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> validationLayers = {
-//    "VK_LAYER_KHRONOS_validation",
+    "VK_LAYER_KHRONOS_validation",
     "VK_LAYER_LUNARG_api_dump",
 };
 
@@ -225,7 +225,7 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
-//#define CREATE_DUMMY_OBJECTS
+#define CREATE_DUMMY_OBJECTS
 #ifdef CREATE_DUMMY_OBJECTS
     VkBuffer dummyBuffer;
     VkDeviceMemory dummyBufferMemory;
@@ -402,18 +402,17 @@ private:
                 pvkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
 
                 const cl_mem_properties props[] = {
-                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
-                    (cl_mem_properties)handle,
                     CL_DEVICE_HANDLE_LIST_KHR,
                     (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
                     0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
+                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
+                    (cl_mem_properties)handle,
                     0,
                 };
 
                 cl_image_format format{};
                 format.image_channel_order = CL_RGBA;
-                //format.image_channel_data_type = CL_UNORM_INT8;
-                format.image_channel_data_type = CL_UNSIGNED_INT8;
+                format.image_channel_data_type = CL_UNORM_INT8;
 
                 cl_image_desc desc{};
                 desc.image_type = CL_MEM_OBJECT_IMAGE2D;
@@ -425,8 +424,7 @@ private:
                     clCreateImageWithProperties(
                         context(),
                         props,
-                        //CL_MEM_WRITE_ONLY,
-                        CL_MEM_READ_WRITE,
+                        CL_MEM_WRITE_ONLY,
                         &format,
                         &desc,
                         NULL,
@@ -1016,13 +1014,10 @@ private:
             createImage(
                 texWidth,
                 texHeight,
-                VK_FORMAT_R8G8B8A8_UINT,
-                //VK_FORMAT_R8G8B8A8_UNORM,
+                VK_FORMAT_R8G8B8A8_UNORM,
                 VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                //VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                0,
-                //VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 textureImages[i],
                 textureImageMemories[i]);
         }
