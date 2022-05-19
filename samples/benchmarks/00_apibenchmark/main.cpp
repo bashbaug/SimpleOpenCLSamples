@@ -133,16 +133,21 @@ BENCHMARK_REGISTER_F(Device, clGetDeviceInfo);
 
 struct Kernel : public benchmark::Fixture
 {
+    cl::CommandQueue queue;
     cl::Program program;
     cl::Kernel kernel;
 
     virtual void SetUp(benchmark::State& state) override {
+        queue = env.ioq;
+
         static const char kernelString[] = R"CLC( kernel void Empty(int a) {} )CLC";
 
         program = cl::Program{env.context, kernelString};
 
         program.build();
         kernel = cl::Kernel{program, "Empty"};
+
+        kernel.setArg(0, 0);
     }
     virtual void TearDown(benchmark::State& state) override {
         program = NULL;
@@ -162,6 +167,112 @@ BENCHMARK_DEFINE_F(Kernel, clSetKernelArg)(benchmark::State& state)
     }
 }
 BENCHMARK_REGISTER_F(Kernel, clSetKernelArg);
+
+BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_NullQueueError)(benchmark::State& state)
+{
+    const size_t work_dim = 1;
+    const size_t global_work_size[work_dim] = { 1 };
+    const size_t local_work_size[work_dim] = { 1 };
+    const size_t global_work_offset[work_dim] = { 0 };
+    while(state.KeepRunning()) {
+        clEnqueueNDRangeKernel(
+            NULL,
+            kernel(),
+            work_dim,
+            NULL,
+            global_work_size,
+            NULL,
+            0,
+            NULL,
+            NULL );
+    }
+}
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_NullQueueError);
+
+BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_NullKernelError)(benchmark::State& state)
+{
+    const size_t work_dim = 1;
+    const size_t global_work_size[work_dim] = { 1 };
+    const size_t local_work_size[work_dim] = { 1 };
+    const size_t global_work_offset[work_dim] = { 0 };
+    while(state.KeepRunning()) {
+        clEnqueueNDRangeKernel(
+            queue(),
+            NULL,
+            work_dim,
+            NULL,
+            global_work_size,
+            NULL,
+            0,
+            NULL,
+            NULL );
+    }
+}
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_NullKernelError);
+
+BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_1x1_NoEvent)(benchmark::State& state)
+{
+    const int flushFrequency = (int)state.range(0);
+
+    const size_t work_dim = 1;
+    const size_t global_work_size[work_dim] = { 1 };
+    const size_t local_work_size[work_dim] = { 1 };
+    const size_t global_work_offset[work_dim] = { 0 };
+
+    size_t count = 0;
+
+    while(state.KeepRunning()) {
+        clEnqueueNDRangeKernel(
+            queue(),
+            kernel(),
+            work_dim,
+            NULL,
+            global_work_size,
+            local_work_size,
+            0,
+            NULL,
+            NULL );
+        if (++count % flushFrequency) {
+            clFlush(queue());
+        }
+    }
+
+    clFinish(queue());
+}
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_1x1_NoEvent)->Arg(1)->Arg(32)->Arg(512)->Arg(2048);
+
+BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_1x1_Event)(benchmark::State& state)
+{
+    const int flushFrequency = (int)state.range(0);
+
+    const size_t work_dim = 1;
+    const size_t global_work_size[work_dim] = { 1 };
+    const size_t local_work_size[work_dim] = { 1 };
+    const size_t global_work_offset[work_dim] = { 0 };
+
+    size_t count = 0;
+
+    while(state.KeepRunning()) {
+        cl_event event = NULL;
+        clEnqueueNDRangeKernel(
+            queue(),
+            kernel(),
+            work_dim,
+            NULL,
+            global_work_size,
+            local_work_size,
+            0,
+            NULL,
+            &event );
+        clReleaseEvent(event);
+        if (++count % flushFrequency) {
+            clFlush(queue());
+        }
+    }
+
+    clFinish(queue());
+}
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_1x1_Event)->Arg(1)->Arg(32)->Arg(512)->Arg(2048);
 
 struct SVMKernel : public benchmark::Fixture
 {
