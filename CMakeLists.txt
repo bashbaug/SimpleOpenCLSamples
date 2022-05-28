@@ -55,6 +55,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
 endif()
 
+add_subdirectory(layers)
 add_subdirectory(samples)
 add_subdirectory(tutorials)
 
