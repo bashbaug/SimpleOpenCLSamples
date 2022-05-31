@@ -52,3 +52,5 @@ function(add_opencl_layer)
 endfunction()
 
 add_subdirectory( 00_example )
+
+add_subdirectory( 10_cmdbufemu )
