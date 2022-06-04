@@ -23,6 +23,7 @@
 
 #include <CL/cl_layer.h>
 
+#include <cstring>
 #include <vector>
 
 template<class T>

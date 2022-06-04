@@ -19,7 +19,9 @@
 #endif
 
 #include <CL/cl_layer.h>
-#include <stdio.h>
+
+#include <cstring>
+#include <cstdio>
 
 #include "layer_util.hpp"
 
