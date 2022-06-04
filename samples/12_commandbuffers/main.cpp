@@ -118,6 +118,7 @@ int main(
 
     kernel.setArg(0, deviceMemDst);
     kernel.setArg(1, deviceMemSrc);
+    cl_sync_point_khr sync_point;
     clCommandNDRangeKernelKHR(
         cmdbuf,
         NULL,
@@ -129,7 +130,7 @@ int main(
         NULL,
         0,
         NULL,
-        NULL,
+        &sync_point,
         NULL);
     clFinalizeCommandBufferKHR(cmdbuf);
 
