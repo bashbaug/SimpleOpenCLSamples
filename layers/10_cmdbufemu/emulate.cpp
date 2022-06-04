@@ -9,6 +9,7 @@
 #include <CL/cl_layer.h>
 
 #include <array>
+#include <atomic>
 #include <vector>
 
 #include "layer_util.hpp"
@@ -493,6 +494,91 @@ typedef struct _cl_command_buffer_khr
         return cmdbuf && cmdbuf->Magic == cMagic;
     }
 
+    cl_int  retain()
+    {
+        RefCount.fetch_add(1, std::memory_order_relaxed);
+        return CL_SUCCESS;
+    }
+
+    cl_int  release()
+    {
+        RefCount.fetch_sub(1, std::memory_order_relaxed);
+        if( RefCount.load(std::memory_order_relaxed) == 0 )
+        {
+            delete this;
+        }
+        return CL_SUCCESS;
+    }
+
+    cl_command_queue    getQueue() const
+    {
+        return Queues[0];
+    }
+
+    cl_int  getInfo(
+                cl_command_buffer_info_khr param_name,
+                size_t param_value_size,
+                void* param_value,
+                size_t* param_value_size_ret)
+    {
+        switch( param_name )
+        {
+        case CL_COMMAND_BUFFER_QUEUES_KHR:
+            {
+                auto*   ptr = (cl_command_queue*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    Queues,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_COMMAND_BUFFER_NUM_QUEUES_KHR:
+            {
+                auto*   ptr = (cl_uint*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    static_cast<cl_uint>(Queues.size()),
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_COMMAND_BUFFER_REFERENCE_COUNT_KHR:
+            {
+                auto*   ptr = (cl_uint*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    RefCount.load(std::memory_order_relaxed),
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_COMMAND_BUFFER_STATE_KHR:
+            {
+                auto*   ptr = (cl_command_buffer_state_khr*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    State,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR:
+            {
+                auto*   ptr = (cl_command_buffer_properties_khr*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    {}, // No properties are currently supported.
+                    param_value_size_ret,
+                    ptr );
+            }
+        default:
+            break;
+        }
+
+        return CL_INVALID_VALUE;
+    }
+
     cl_int  checkRecordErrors(
                 cl_command_queue queue,
                 cl_uint num_sync_points_in_wait_list,
@@ -515,6 +601,15 @@ typedef struct _cl_command_buffer_khr
             ( sync_point_wait_list != NULL && num_sync_points_in_wait_list == 0 ) )
         {
             return CL_INVALID_SYNC_POINT_WAIT_LIST_KHR;
+        }
+
+        uint32_t numSyncPoints = NextSyncPoint.load(std::memory_order_relaxed);
+        for( cl_uint i = 0; i < num_sync_points_in_wait_list; i++ )
+        {
+            if( sync_point_wait_list[i] >= numSyncPoints )
+            {
+                return CL_INVALID_SYNC_POINT_WAIT_LIST_KHR;
+            }
         }
 
         // CL_INVALID_CONTEXT if queue and cmdbuf do not have the same context?
@@ -549,19 +644,60 @@ typedef struct _cl_command_buffer_khr
         return CL_SUCCESS;
     }
 
-    const cl_uint Magic;
-    std::vector<cl_command_queue>   Queues;
-    cl_uint RefCount;
-    cl_command_buffer_state_khr State;
-    std::vector<CmdBuf::Command*>   Commands;
+    void    addCommand(
+                CmdBuf::Command* command,
+                cl_sync_point_khr* sync_point )
+    {
+        Commands.push_back(command);
+
+        if( sync_point != nullptr )
+        {
+            sync_point[0] = NextSyncPoint.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
+    cl_int  finalize()
+    {
+        if( State != CL_COMMAND_BUFFER_STATE_RECORDING_KHR )
+        {
+            return CL_INVALID_OPERATION;
+        }
+
+        State = CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR;
+        return CL_SUCCESS;
+    }
+
+    cl_int  replay(
+                cl_command_queue queue) const
+    {
+        for( auto& command : Commands )
+        {
+            cl_int  errorCode = command->playback(queue);
+            if( errorCode != CL_SUCCESS )
+            {
+                return errorCode;
+            }
+        }
+
+        return CL_SUCCESS;
+    }
 
 private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
 
+    const cl_uint Magic;
+    std::vector<cl_command_queue>   Queues;
+    cl_command_buffer_state_khr State;
+    std::atomic<uint32_t> RefCount;
+
+    std::vector<CmdBuf::Command*> Commands;
+    std::atomic<uint32_t> NextSyncPoint;
+
     _cl_command_buffer_khr() :
         Magic(cMagic),
+        State(CL_COMMAND_BUFFER_STATE_RECORDING_KHR),
         RefCount(1),
-        State(CL_COMMAND_BUFFER_STATE_RECORDING_KHR) {}
+        NextSyncPoint(0) {}
 } CommandBuffer;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -590,13 +726,8 @@ cl_int CL_API_CALL clFinalizeCommandBufferKHR_EMU(
     {
         return CL_INVALID_COMMAND_BUFFER_KHR;
     }
-    if( cmdbuf->State != CL_COMMAND_BUFFER_STATE_RECORDING_KHR )
-    {
-        return CL_INVALID_OPERATION;
-    }
 
-    cmdbuf->State = CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR;
-    return CL_INVALID_OPERATION;
+    return cmdbuf->finalize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -610,8 +741,7 @@ cl_int CL_API_CALL clRetainCommandBufferKHR_EMU(
         return CL_INVALID_COMMAND_BUFFER_KHR;
     }
 
-    cmdbuf->RefCount++;
-    return CL_SUCCESS;
+    return cmdbuf->retain();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -625,12 +755,7 @@ cl_int CL_API_CALL clReleaseCommandBufferKHR_EMU(
         return CL_INVALID_COMMAND_BUFFER_KHR;
     }
 
-    cmdbuf->RefCount--;
-    if( cmdbuf->RefCount == 0 )
-    {
-        delete cmdbuf;
-    }
-    return CL_SUCCESS;
+    return cmdbuf->release();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -657,7 +782,7 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
         return errorCode;
     }
 
-    cl_command_queue queue = cmdbuf->Queues[0];
+    cl_command_queue queue = cmdbuf->getQueue();
     if( num_queues > 0 )
     {
         queue = queues[0];
@@ -674,12 +799,9 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
             NULL );
     }
 
-    for( auto& command : cmdbuf->Commands )
+    if( errorCode == CL_SUCCESS )
     {
-        if( errorCode == CL_SUCCESS )
-        {
-            errorCode = command->playback(queue);
-        }
+        errorCode = cmdbuf->replay(queue);
     }
 
     if( errorCode == CL_SUCCESS && event )
@@ -718,7 +840,9 @@ cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::BarrierWithWaitList::create());
+    cmdbuf->addCommand(
+        CmdBuf::BarrierWithWaitList::create(),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -751,12 +875,14 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::CopyBuffer::create(
-        src_buffer,
-        dst_buffer,
-        src_offset,
-        dst_offset,
-        size));
+    cmdbuf->addCommand(
+        CmdBuf::CopyBuffer::create(
+            src_buffer,
+            dst_buffer,
+            src_offset,
+            dst_offset,
+            size),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -793,16 +919,18 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::CopyBufferRect::create(
-        src_buffer,
-        dst_buffer,
-        src_origin,
-        dst_origin,
-        region,
-        src_row_pitch,
-        src_slice_pitch,
-        dst_row_pitch,
-        dst_slice_pitch));
+    cmdbuf->addCommand(
+        CmdBuf::CopyBufferRect::create(
+            src_buffer,
+            dst_buffer,
+            src_origin,
+            dst_origin,
+            region,
+            src_row_pitch,
+            src_slice_pitch,
+            dst_row_pitch,
+            dst_slice_pitch),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -835,12 +963,14 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::CopyBufferToImage::create(
-        src_buffer,
-        dst_image,
-        src_offset,
-        dst_origin,
-        region));
+    cmdbuf->addCommand(
+        CmdBuf::CopyBufferToImage::create(
+            src_buffer,
+            dst_image,
+            src_offset,
+            dst_origin,
+            region),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -873,12 +1003,14 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::CopyImage::create(
-        src_image,
-        dst_image,
-        src_origin,
-        dst_origin,
-        region));
+    cmdbuf->addCommand(
+        CmdBuf::CopyImage::create(
+            src_image,
+            dst_image,
+            src_origin,
+            dst_origin,
+            region),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -911,12 +1043,14 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::CopyImageToBuffer::create(
-        src_image,
-        dst_buffer,
-        src_origin,
-        region,
-        dst_offset));
+    cmdbuf->addCommand(
+        CmdBuf::CopyImageToBuffer::create(
+            src_image,
+            dst_buffer,
+            src_origin,
+            region,
+            dst_offset),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -949,12 +1083,14 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::FillBuffer::create(
-        buffer,
-        pattern,
-        pattern_size,
-        offset,
-        size));
+    cmdbuf->addCommand(
+        CmdBuf::FillBuffer::create(
+            buffer,
+            pattern,
+            pattern_size,
+            offset,
+            size),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -986,11 +1122,13 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::FillImage::create(
-        image,
-        fill_color,
-        origin,
-        region));
+    cmdbuf->addCommand(
+        CmdBuf::FillImage::create(
+            image,
+            fill_color,
+            origin,
+            region),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -1024,12 +1162,14 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->Commands.push_back(CmdBuf::NDRangeKernel::create(
-        kernel,
-        work_dim,
-        global_work_offset,
-        global_work_size,
-        local_work_size));
+    cmdbuf->addCommand(
+        CmdBuf::NDRangeKernel::create(
+            kernel,
+            work_dim,
+            global_work_offset,
+            global_work_size,
+            local_work_size),
+        sync_point);
     return CL_SUCCESS;
 }
 
@@ -1048,60 +1188,9 @@ cl_int CL_API_CALL clGetCommandBufferInfoKHR_EMU(
         return CL_INVALID_COMMAND_BUFFER_KHR;
     }
 
-    switch( param_name )
-    {
-    case CL_COMMAND_BUFFER_QUEUES_KHR:
-        {
-            auto*   ptr = (cl_command_queue*)param_value;
-            return writeVectorToMemory(
-                param_value_size,
-                cmdbuf->Queues,
-                param_value_size_ret,
-                ptr );
-        }
-        break;
-    case CL_COMMAND_BUFFER_NUM_QUEUES_KHR:
-        {
-            auto*   ptr = (cl_uint*)param_value;
-            return writeParamToMemory(
-                param_value_size,
-                static_cast<cl_uint>(cmdbuf->Queues.size()),
-                param_value_size_ret,
-                ptr );
-        }
-        break;
-    case CL_COMMAND_BUFFER_REFERENCE_COUNT_KHR:
-        {
-            auto*   ptr = (cl_uint*)param_value;
-            return writeParamToMemory(
-                param_value_size,
-                cmdbuf->RefCount,
-                param_value_size_ret,
-                ptr );
-        }
-        break;
-    case CL_COMMAND_BUFFER_STATE_KHR:
-        {
-            auto*   ptr = (cl_command_buffer_state_khr*)param_value;
-            return writeParamToMemory(
-                param_value_size,
-                cmdbuf->State,
-                param_value_size_ret,
-                ptr );
-        }
-        break;
-    case CL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR:
-        {
-            auto*   ptr = (cl_command_buffer_properties_khr*)param_value;
-            return writeVectorToMemory(
-                param_value_size,
-                {}, // No properties are currently supported.
-                param_value_size_ret,
-                ptr );
-        }
-    default:
-        break;
-    }
-
-    return CL_INVALID_VALUE;
+    return cmdbuf->getInfo(
+        param_name,
+        param_value_size,
+        param_value,
+        param_value_size_ret);
 }
