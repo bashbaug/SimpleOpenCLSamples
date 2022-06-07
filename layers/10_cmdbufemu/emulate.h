@@ -7,6 +7,9 @@
 #include <CL/cl.h>
 #include <CL/cl_ext.h>
 
+///////////////////////////////////////////////////////////////////////////////
+// Emulated Functions
+
 cl_command_buffer_khr CL_API_CALL clCreateCommandBufferKHR_EMU(
     cl_uint num_queues,
     const cl_command_queue* queues,
@@ -152,3 +155,22 @@ cl_int CL_API_CALL clGetCommandBufferInfoKHR_EMU(
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret);
+
+///////////////////////////////////////////////////////////////////////////////
+// Override Functions
+
+bool clGetDeviceInfo_override(
+    cl_device_id device,
+    cl_device_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret,
+    cl_int* errcode_ret);
+
+bool clGetPlatformInfo_override(
+    cl_platform_id platform,
+    cl_platform_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret,
+    cl_int* errcode_ret);

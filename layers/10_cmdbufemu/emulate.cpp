@@ -10,11 +10,14 @@
 
 #include <array>
 #include <atomic>
+#include <string>
 #include <vector>
 
 #include "layer_util.hpp"
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
+
+static const char* CL_KHR_COMMAND_BUFFER_name = "cl_khr_command_buffer";
 
 namespace CmdBuf {
 
@@ -1194,3 +1197,145 @@ cl_int CL_API_CALL clGetCommandBufferInfoKHR_EMU(
         param_value,
         param_value_size_ret);
 }
+
+bool clGetDeviceInfo_override(
+    cl_device_id device,
+    cl_device_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret,
+    cl_int* errcode_ret)
+{
+    switch(param_name) {
+    case CL_DEVICE_EXTENSIONS:
+        {
+            size_t  size = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_EXTENSIONS,
+                0,
+                nullptr,
+                &size );
+
+            std::vector<char> cvec(size);
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_EXTENSIONS,
+                size,
+                cvec.data(),
+                nullptr );
+
+            if( checkStringForExtension(
+                    cvec.data(),
+                    CL_KHR_COMMAND_BUFFER_name ) == false )
+            {
+                std::string newExtensions(CL_KHR_COMMAND_BUFFER_name);
+                std::string oldExtensions(cvec.data());
+
+                // If the old extension string ends with a space ensure the
+                // new extension string does too.
+                if( oldExtensions.back() == ' ' )
+                {
+                    newExtensions += ' ';
+                }
+                else
+                {
+                    oldExtensions += ' ';
+                }
+
+                oldExtensions += newExtensions;
+
+                auto*   ptr = (char*)param_value;
+                cl_int errorCode = writeStringToMemory(
+                    param_value_size,
+                    oldExtensions.c_str(),
+                    param_value_size_ret,
+                    ptr );
+
+                if( errcode_ret )
+                {
+                    errcode_ret[0] = errorCode;
+                }
+                return true;
+            }
+        }
+        break;
+    case CL_DEVICE_EXTENSIONS_WITH_VERSION:
+        {
+            size_t  sizeInBytes = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_EXTENSIONS_WITH_VERSION,
+                0,
+                nullptr,
+                &sizeInBytes );
+
+            size_t  numExtensions = sizeInBytes / sizeof(cl_name_version);
+            std::vector<cl_name_version>    extensions(numExtensions);
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_EXTENSIONS_WITH_VERSION,
+                sizeInBytes,
+                extensions.data(),
+                nullptr );
+
+            bool found = false;
+            for( const auto& extension : extensions )
+            {
+                if( strcmp(extension.name, CL_KHR_COMMAND_BUFFER_name) == 0 )
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if( found == false )
+            {
+                extensions.emplace_back();
+
+                cl_name_version& extension = extensions.back();
+
+                memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+                strcpy(extension.name, CL_KHR_COMMAND_BUFFER_name);
+
+                extension.version = CL_MAKE_VERSION(0, 9, 0);
+
+                auto*   ptr = (cl_name_version*)param_value;
+                cl_int errorCode = writeVectorToMemory(
+                    param_value_size,
+                    extensions,
+                    param_value_size_ret,
+                    ptr );
+
+                if( errcode_ret )
+                {
+                    errcode_ret[0] = errorCode;
+                }
+                return true;
+            }
+        }
+        break;
+    case CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR:
+    case CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR:
+    default: break;
+    }
+
+    return false;
+}
+
+bool clGetPlatformInfo_override(
+    cl_platform_id platform,
+    cl_platform_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret,
+    cl_int* errcode_ret)
+{
+    switch(param_name) {
+    case CL_PLATFORM_EXTENSIONS:
+    case CL_PLATFORM_EXTENSIONS_WITH_VERSION:
+    default: break;
+    }
+    return false;
+}
+

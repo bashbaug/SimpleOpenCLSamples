@@ -47,35 +47,74 @@ cl_int writeParamToMemory(
     return CL_SUCCESS;
 }
 
-template< class T >
+template<class T>
 cl_int writeVectorToMemory(
     size_t param_value_size,
     const std::vector<T>& param,
     size_t *param_value_size_ret,
     T* pointer )
 {
-    cl_int  errorCode = CL_SUCCESS;
-
     size_t  size = param.size() * sizeof(T);
 
-    if( pointer != NULL )
-    {
-        if( param_value_size < size )
-        {
-            errorCode = CL_INVALID_VALUE;
+    if (pointer != nullptr) {
+        if (param_value_size < size) {
+            return CL_INVALID_VALUE;
         }
-        else
-        {
-            memcpy(pointer, param.data(), size);
-        }
+        memcpy(pointer, param.data(), size);
     }
 
-    if( param_value_size_ret != NULL )
-    {
+    if (param_value_size_ret != nullptr) {
         *param_value_size_ret = size;
     }
 
-    return errorCode;
+    return CL_SUCCESS;
 }
 
+static inline cl_int writeStringToMemory(
+    size_t param_value_size,
+    const char* param,
+    size_t* param_value_size_ret,
+    char* pointer )
+{
+    size_t  size = strlen(param) + 1;
 
+    if (pointer != nullptr) {
+        if (param_value_size < size) {
+            return CL_INVALID_VALUE;
+        }
+        strcpy(pointer, param);
+    }
+
+    if (param_value_size_ret != nullptr) {
+        *param_value_size_ret = size;
+    }
+
+    return CL_SUCCESS;
+}
+
+static inline bool checkStringForExtension(
+    const char* str,
+    const char* extensionName )
+{
+    bool    supported = false;
+
+    if (extensionName && !strchr(extensionName, ' ')) {
+        const char* start = str;
+        while (true) {
+            const char* where = strstr(start, extensionName);
+            if (!where) {
+                break;
+            }
+            const char* terminator = where + strlen(extensionName);
+            if (where == start || *(where - 1) == ' ') {
+                if (*terminator == ' ' || *terminator == '\0') {
+                    supported = true;
+                    break;
+                }
+            }
+            start = terminator;
+        }
+    }
+
+    return supported;
+}

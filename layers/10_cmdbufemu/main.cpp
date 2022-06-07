@@ -37,12 +37,23 @@ clGetDeviceInfo_layer(
     void *          param_value,
     size_t *        param_value_size_ret)
 {
-    return g_pNextDispatch->clGetDeviceInfo(
-        device,
-        param_name,
-        param_value_size,
-        param_value,
-        param_value_size_ret);
+    cl_int  errorCode = CL_SUCCESS;
+    if (clGetDeviceInfo_override(
+            device,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret,
+            &errorCode) == false) {
+        return g_pNextDispatch->clGetDeviceInfo(
+            device,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret);
+    }
+
+    return errorCode;
 }
 
 #define CHECK_RETURN_EXTENSION_FUNCTION( _funcname )                        \
