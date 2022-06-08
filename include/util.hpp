@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2021 Ben Ashbaugh
+// Copyright (c) 2021-2022 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,9 @@
 #pragma once
 
 #include <CL/opencl.hpp>
+#include <fstream>
 #include <string>
+#include <vector>
 
 static cl_uint getDeviceOpenCLVersion(
     const cl::Device& device)
@@ -82,4 +84,28 @@ static bool checkDeviceForExtension(
     }
 
     return supported;
+}
+
+static std::vector<cl_uchar> readSPIRVFromFile(
+    const std::string& filename )
+{
+    std::ifstream is(filename, std::ios::binary);
+    std::vector<cl_uchar> ret;
+    if (!is.good()) {
+        printf("Couldn't open file '%s'!\n", filename.c_str());
+        return ret;
+    }
+
+    size_t filesize = 0;
+    is.seekg(0, std::ios::end);
+    filesize = (size_t)is.tellg();
+    is.seekg(0, std::ios::beg);
+
+    ret.reserve(filesize);
+    ret.insert(
+        ret.begin(),
+        std::istreambuf_iterator<char>(is),
+        std::istreambuf_iterator<char>() );
+
+    return ret;
 }

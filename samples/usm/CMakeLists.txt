@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Ben Ashbaugh
+# Copyright (c) 2022 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -39,4 +39,7 @@ if(BUILD_USM_SAMPLES)
     add_subdirectory( 310_usmmigratemem )
 
     add_subdirectory( 400_sysmemhelloworld )
+
+    add_subdirectory( 500_juliaspirv )
+
 endif()
