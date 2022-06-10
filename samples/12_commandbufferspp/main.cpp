@@ -160,7 +160,7 @@ int main(
         printf("\t\tCL_COMMAND_BUFFER_NUM_QUEUES_KHR: %u\n",
             cmdbuf.getInfo<CL_COMMAND_BUFFER_NUM_QUEUES_KHR>());
 
-        cl::CommandQueue testQueue = 
+        cl::CommandQueue testQueue =
             cmdbuf.getInfo<CL_COMMAND_BUFFER_QUEUES_KHR>().front();
         printf("\t\tCL_COMMAND_BUFFER_QUEUES_KHR: %p (%s)\n",
             testQueue(),
