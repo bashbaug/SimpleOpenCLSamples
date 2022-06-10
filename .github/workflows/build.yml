@@ -6,7 +6,7 @@ on:
       - '**/*.md'
   pull_request:
     branches:
-      - master
+      - main
 
 env:
   BUILD_TYPE: RelWithDebInfo
@@ -45,13 +45,13 @@ jobs:
         sudo apt-get install -y libglfw3-dev
 
     - name: Get OpenCL Headers
-      uses: actions/checkout@master
+      uses: actions/checkout@main
       with:
         repository: KhronosGroup/OpenCL-Headers
         path: external/OpenCL-Headers
 
     - name: Get OpenCL ICD Loader
-      uses: actions/checkout@master
+      uses: actions/checkout@main
       with:
         repository: KhronosGroup/OpenCL-ICD-Loader
         path: external/opencl-icd-loader
