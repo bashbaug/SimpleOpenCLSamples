@@ -39,4 +39,6 @@ if(BUILD_USM_SAMPLES)
     add_subdirectory( 310_usmmigratemem )
 
     add_subdirectory( 400_sysmemhelloworld )
+
+    add_subdirectory( 501_simpleoverlap )
 endif()
