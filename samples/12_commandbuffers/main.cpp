@@ -24,6 +24,8 @@
 
 #include <CL/opencl.hpp>
 
+#include <cinttypes>
+
 const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
@@ -33,6 +35,47 @@ kernel void CopyBuffer( global uint* dst, global uint* src )
     dst[id] = src[id];
 }
 )CLC";
+
+static void PrintCommandBufferCapabilities(
+    cl_device_command_buffer_capabilities_khr caps )
+{
+    if (caps & CL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR       ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR\n");
+    if (caps & CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR\n");
+    if (caps & CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR    ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR\n");
+    if (caps & CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR        ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR\n");
+
+    cl_device_command_buffer_capabilities_khr extra = caps & ~(
+        CL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR |
+        CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR |
+        CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR |
+        CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR );
+    if (extra) {
+        printf("\t\t(Unknown capability: %016" PRIx64 ")\n", extra);
+    }
+}
+
+static void PrintCommandBufferRequiredQueueProperties(
+    cl_command_queue_properties props )
+{
+    if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE  ) printf("\t\tCL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE\n");
+    if (props & CL_QUEUE_PROFILING_ENABLE               ) printf("\t\tCL_QUEUE_PROFILING_ENABLE\n");
+#ifdef CL_VERSION_2_0
+    if (props & CL_QUEUE_ON_DEVICE                      ) printf("\t\tCL_QUEUE_ON_DEVICE\n");
+    if (props & CL_QUEUE_ON_DEVICE_DEFAULT              ) printf("\t\tCL_QUEUE_ON_DEVICE_DEFAULT\n");
+#endif
+
+    cl_command_queue_properties extra = props & ~(
+        CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE |
+        CL_QUEUE_PROFILING_ENABLE |
+#ifdef CL_VERSION_2_0
+        CL_QUEUE_ON_DEVICE |
+        CL_QUEUE_ON_DEVICE_DEFAULT |
+#endif
+        0);
+    if (extra) {
+        printf("\t\t(Unknown property: %016" PRIx64 ")\n", extra);
+    }
+}
 
 int main(
     int argc,
@@ -73,6 +116,28 @@ int main(
 
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+
+    // device queries:
+
+    cl_device_command_buffer_capabilities_khr caps = 0;
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR,
+        sizeof(caps),
+        &caps,
+        NULL );
+    printf("\tCommand Buffer Capabilities:\n");
+    PrintCommandBufferCapabilities(caps);
+
+    cl_command_queue_properties requiredProps = 0;
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR,
+        sizeof(requiredProps),
+        &requiredProps,
+        NULL );
+    printf("\tCommand Buffer Required Queue Properties:\n");
+    PrintCommandBufferRequiredQueueProperties(requiredProps);
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
@@ -115,6 +180,62 @@ int main(
         &commandQueue(),
         NULL,
         NULL);
+
+    // command buffer queries:
+    {
+        printf("\tCommand Buffer Info:\n");
+
+        cl_uint numQueues = 0;
+        clGetCommandBufferInfoKHR(
+            cmdbuf,
+            CL_COMMAND_BUFFER_NUM_QUEUES_KHR,
+            sizeof(numQueues),
+            &numQueues,
+            NULL );
+        printf("\t\tCL_COMMAND_BUFFER_NUM_QUEUES_KHR: %u\n", numQueues);
+
+        cl_command_queue testQueue = NULL;
+        clGetCommandBufferInfoKHR(
+            cmdbuf,
+            CL_COMMAND_BUFFER_QUEUES_KHR,
+            sizeof(testQueue),
+            &testQueue,
+            NULL );
+        printf("\t\tCL_COMMAND_BUFFER_QUEUES_KHR: %p (%s)\n",
+            testQueue,
+            testQueue == commandQueue() ? "matches" : "MISMATCH!");
+
+        cl_uint refCount = 0;
+        clGetCommandBufferInfoKHR(
+            cmdbuf,
+            CL_COMMAND_BUFFER_REFERENCE_COUNT_KHR,
+            sizeof(refCount),
+            &refCount,
+            NULL );
+        printf("\t\tCL_COMMAND_BUFFER_REFERENCE_COUNT_KHR: %u\n", refCount);
+
+        cl_command_buffer_state_khr state = 0;
+        clGetCommandBufferInfoKHR(
+            cmdbuf,
+            CL_COMMAND_BUFFER_STATE_KHR,
+            sizeof(state),
+            &state,
+            NULL );
+        printf("\t\tCL_COMMAND_BUFFER_STATE_KHR: %s\n",
+            state == CL_COMMAND_BUFFER_STATE_RECORDING_KHR ? "RECORDING" :
+            state == CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR ? "EXECUTABLE" :
+            state == CL_COMMAND_BUFFER_STATE_PENDING_KHR ? "PENDING" :
+            state == CL_COMMAND_BUFFER_STATE_INVALID_KHR ? "INVALID" : "UNKNOWN!");
+
+        size_t propsSize = 0;
+        clGetCommandBufferInfoKHR(
+            cmdbuf,
+            CL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR,
+            0,
+            NULL,
+            &propsSize );
+        printf("\t\tCL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR size: %zu\n", propsSize);
+    }
 
     kernel.setArg(0, deviceMemDst);
     kernel.setArg(1, deviceMemSrc);

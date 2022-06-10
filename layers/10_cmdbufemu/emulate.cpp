@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 20220 Ben Ashbaugh
+// Copyright (c) 2022 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -17,7 +17,10 @@
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
-static const char* CL_KHR_COMMAND_BUFFER_name = "cl_khr_command_buffer";
+// Supported command buffer capabilites not dependent on kernels:
+// CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR
+// CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR
+const cl_device_command_buffer_capabilities_khr g_CommandBufferCaps = 0;
 
 namespace CmdBuf {
 
@@ -25,19 +28,19 @@ struct Command
 {
     virtual ~Command() = default;
     virtual int playback(
-        cl_command_queue) = 0;
+        cl_command_queue) const = 0;
 };
 
 struct BarrierWithWaitList : Command
 {
     static BarrierWithWaitList* create(void)
     {
-        auto* ret = new BarrierWithWaitList();
+        auto ret = new BarrierWithWaitList();
         return ret;
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
@@ -59,7 +62,7 @@ struct CopyBuffer : Command
         size_t dst_offset,
         size_t size)
     {
-        auto* ret = new CopyBuffer();
+        auto ret = new CopyBuffer();
 
         ret->src_buffer = src_buffer;
         ret->dst_buffer = dst_buffer;
@@ -71,7 +74,7 @@ struct CopyBuffer : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueCopyBuffer(
             queue,
@@ -108,7 +111,7 @@ struct CopyBufferRect : Command
         size_t dst_row_pitch,
         size_t dst_slice_pitch)
     {
-        auto* ret = new CopyBufferRect();
+        auto ret = new CopyBufferRect();
 
         ret->src_buffer = src_buffer;
         ret->dst_buffer = dst_buffer;
@@ -124,7 +127,7 @@ struct CopyBufferRect : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueCopyBufferRect(
             queue,
@@ -165,7 +168,7 @@ struct CopyBufferToImage : Command
         const size_t* dst_origin,
         const size_t* region)
     {
-        auto* ret = new CopyBufferToImage();
+        auto ret = new CopyBufferToImage();
 
         ret->src_buffer = src_buffer;
         ret->dst_image = dst_image;
@@ -177,7 +180,7 @@ struct CopyBufferToImage : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueCopyBufferToImage(
             queue,
@@ -210,7 +213,7 @@ struct CopyImage : Command
         const size_t* dst_origin,
         const size_t* region)
     {
-        auto* ret = new CopyImage();
+        auto ret = new CopyImage();
 
         ret->src_image = src_image;
         ret->dst_image = dst_image;
@@ -222,7 +225,7 @@ struct CopyImage : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
@@ -250,7 +253,7 @@ struct CopyImageToBuffer : Command
         const size_t* region,
         size_t dst_offset)
     {
-        auto* ret = new CopyImageToBuffer();
+        auto ret = new CopyImageToBuffer();
 
         ret->src_image = src_image;
         ret->dst_buffer = dst_buffer;
@@ -262,7 +265,7 @@ struct CopyImageToBuffer : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueCopyImageToBuffer(
             queue,
@@ -295,11 +298,11 @@ struct FillBuffer : Command
         size_t offset,
         size_t size)
     {
-        auto* ret = new FillBuffer();
+        auto ret = new FillBuffer();
 
         ret->buffer = buffer;
 
-        auto* p = reinterpret_cast<const uint8_t*>(pattern);
+        auto p = reinterpret_cast<const uint8_t*>(pattern);
         ret->pattern.reserve(pattern_size);
         ret->pattern.insert(
             ret->pattern.begin(),
@@ -313,7 +316,7 @@ struct FillBuffer : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueFillBuffer(
             queue,
@@ -344,11 +347,11 @@ struct FillImage : Command
         const size_t* origin,
         const size_t* region)
     {
-        auto* ret = new FillImage();
+        auto ret = new FillImage();
 
         ret->image = image;
 
-        auto* p = reinterpret_cast<const uint8_t*>(fill_color);
+        auto p = reinterpret_cast<const uint8_t*>(fill_color);
 
         size_t s = 0;
         g_pNextDispatch->clGetImageInfo(
@@ -370,7 +373,7 @@ struct FillImage : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueFillImage(
             queue,
@@ -401,7 +404,7 @@ struct NDRangeKernel : Command
         const size_t* global_work_size,
         const size_t* local_work_size)
     {
-        auto* ret = new NDRangeKernel();
+        auto ret = new NDRangeKernel();
 
         ret->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
         ret->work_dim = work_dim;
@@ -437,7 +440,7 @@ struct NDRangeKernel : Command
     }
 
     int playback(
-        cl_command_queue queue) override
+        cl_command_queue queue) const override
     {
         return g_pNextDispatch->clEnqueueNDRangeKernel(
             queue,
@@ -528,7 +531,7 @@ typedef struct _cl_command_buffer_khr
         {
         case CL_COMMAND_BUFFER_QUEUES_KHR:
             {
-                auto*   ptr = (cl_command_queue*)param_value;
+                auto ptr = (cl_command_queue*)param_value;
                 return writeVectorToMemory(
                     param_value_size,
                     Queues,
@@ -538,7 +541,7 @@ typedef struct _cl_command_buffer_khr
             break;
         case CL_COMMAND_BUFFER_NUM_QUEUES_KHR:
             {
-                auto*   ptr = (cl_uint*)param_value;
+                auto ptr = (cl_uint*)param_value;
                 return writeParamToMemory(
                     param_value_size,
                     static_cast<cl_uint>(Queues.size()),
@@ -548,7 +551,7 @@ typedef struct _cl_command_buffer_khr
             break;
         case CL_COMMAND_BUFFER_REFERENCE_COUNT_KHR:
             {
-                auto*   ptr = (cl_uint*)param_value;
+                auto ptr = (cl_uint*)param_value;
                 return writeParamToMemory(
                     param_value_size,
                     RefCount.load(std::memory_order_relaxed),
@@ -558,7 +561,7 @@ typedef struct _cl_command_buffer_khr
             break;
         case CL_COMMAND_BUFFER_STATE_KHR:
             {
-                auto*   ptr = (cl_command_buffer_state_khr*)param_value;
+                auto ptr = (cl_command_buffer_state_khr*)param_value;
                 return writeParamToMemory(
                     param_value_size,
                     State,
@@ -568,7 +571,7 @@ typedef struct _cl_command_buffer_khr
             break;
         case CL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR:
             {
-                auto*   ptr = (cl_command_buffer_properties_khr*)param_value;
+                auto ptr = (cl_command_buffer_properties_khr*)param_value;
                 return writeVectorToMemory(
                     param_value_size,
                     {}, // No properties are currently supported.
@@ -673,7 +676,7 @@ typedef struct _cl_command_buffer_khr
     cl_int  replay(
                 cl_command_queue queue) const
     {
-        for( auto& command : Commands )
+        for( auto command : Commands )
         {
             cl_int  errorCode = command->playback(queue);
             if( errorCode != CL_SUCCESS )
@@ -1227,9 +1230,9 @@ bool clGetDeviceInfo_override(
 
             if( checkStringForExtension(
                     cvec.data(),
-                    CL_KHR_COMMAND_BUFFER_name ) == false )
+                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false )
             {
-                std::string newExtensions(CL_KHR_COMMAND_BUFFER_name);
+                std::string newExtensions(CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
                 std::string oldExtensions(cvec.data());
 
                 // If the old extension string ends with a space ensure the
@@ -1282,7 +1285,7 @@ bool clGetDeviceInfo_override(
             bool found = false;
             for( const auto& extension : extensions )
             {
-                if( strcmp(extension.name, CL_KHR_COMMAND_BUFFER_name) == 0 )
+                if( strcmp(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME) == 0 )
                 {
                     found = true;
                     break;
@@ -1296,7 +1299,181 @@ bool clGetDeviceInfo_override(
                 cl_name_version& extension = extensions.back();
 
                 memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                strcpy(extension.name, CL_KHR_COMMAND_BUFFER_name);
+                strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
+
+                extension.version = CL_MAKE_VERSION(0, 9, 0);
+
+                auto ptr = (cl_name_version*)param_value;
+                cl_int errorCode = writeVectorToMemory(
+                    param_value_size,
+                    extensions,
+                    param_value_size_ret,
+                    ptr );
+
+                if( errcode_ret )
+                {
+                    errcode_ret[0] = errorCode;
+                }
+                return true;
+            }
+        }
+        break;
+    case CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR:
+        {
+            cl_device_command_buffer_capabilities_khr caps =
+                g_CommandBufferCaps |
+                CL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR;
+
+            cl_device_device_enqueue_capabilities dseCaps = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_DEVICE_ENQUEUE_CAPABILITIES,
+                sizeof(dseCaps),
+                &dseCaps,
+                nullptr );
+            if( dseCaps != 0 )
+            {
+                caps |= CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR;
+            }
+
+            auto ptr = (cl_device_command_buffer_capabilities_khr*)param_value;
+            cl_int errorCode = writeParamToMemory(
+                param_value_size,
+                caps,
+                param_value_size_ret,
+                ptr );
+
+            if( errcode_ret )
+            {
+                errcode_ret[0] = errorCode;
+            }
+            return true;
+        }
+        break;
+    case CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR:
+        {
+            // No properties are currently required.
+            cl_command_queue_properties props = 0;
+
+            auto ptr = (cl_command_queue_properties*)param_value;
+            cl_int errorCode = writeParamToMemory(
+                param_value_size,
+                props,
+                param_value_size_ret,
+                ptr );
+
+            if( errcode_ret )
+            {
+                errcode_ret[0] = errorCode;
+            }
+            return true;
+        }
+        break;
+    default: break;
+    }
+
+    return false;
+}
+
+bool clGetPlatformInfo_override(
+    cl_platform_id platform,
+    cl_platform_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret,
+    cl_int* errcode_ret)
+{
+    switch(param_name) {
+    case CL_PLATFORM_EXTENSIONS:
+        {
+            size_t  size = 0;
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_EXTENSIONS,
+                0,
+                nullptr,
+                &size );
+
+            std::vector<char> cvec(size);
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_EXTENSIONS,
+                size,
+                cvec.data(),
+                nullptr );
+
+            if( checkStringForExtension(
+                    cvec.data(),
+                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false )
+            {
+                std::string newExtensions(CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
+                std::string oldExtensions(cvec.data());
+
+                // If the old extension string ends with a space ensure the
+                // new extension string does too.
+                if( oldExtensions.back() == ' ' )
+                {
+                    newExtensions += ' ';
+                }
+                else
+                {
+                    oldExtensions += ' ';
+                }
+
+                oldExtensions += newExtensions;
+
+                auto*   ptr = (char*)param_value;
+                cl_int errorCode = writeStringToMemory(
+                    param_value_size,
+                    oldExtensions.c_str(),
+                    param_value_size_ret,
+                    ptr );
+
+                if( errcode_ret )
+                {
+                    errcode_ret[0] = errorCode;
+                }
+                return true;
+            }
+        }
+        break;
+    case CL_PLATFORM_EXTENSIONS_WITH_VERSION:
+        {
+            size_t  sizeInBytes = 0;
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_EXTENSIONS_WITH_VERSION,
+                0,
+                nullptr,
+                &sizeInBytes );
+
+            size_t  numExtensions = sizeInBytes / sizeof(cl_name_version);
+            std::vector<cl_name_version>    extensions(numExtensions);
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_EXTENSIONS_WITH_VERSION,
+                sizeInBytes,
+                extensions.data(),
+                nullptr );
+
+            bool found = false;
+            for( const auto& extension : extensions )
+            {
+                if( strcmp(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME) == 0 )
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if( found == false )
+            {
+                extensions.emplace_back();
+
+                cl_name_version& extension = extensions.back();
+
+                memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+                strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
 
                 extension.version = CL_MAKE_VERSION(0, 9, 0);
 
@@ -1315,27 +1492,7 @@ bool clGetDeviceInfo_override(
             }
         }
         break;
-    case CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR:
-    case CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR:
-    default: break;
-    }
-
-    return false;
-}
-
-bool clGetPlatformInfo_override(
-    cl_platform_id platform,
-    cl_platform_info param_name,
-    size_t param_value_size,
-    void* param_value,
-    size_t* param_value_size_ret,
-    cl_int* errcode_ret)
-{
-    switch(param_name) {
-    case CL_PLATFORM_EXTENSIONS:
-    case CL_PLATFORM_EXTENSIONS_WITH_VERSION:
     default: break;
     }
     return false;
 }
-

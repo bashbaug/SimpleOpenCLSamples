@@ -969,6 +969,11 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 #define __CLONE_KERNEL_ERR     CL_HPP_ERR_STR_(clCloneKernel)
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 210
 
+#if defined(cl_khr_command_buffer)
+#define __GET_COMMAND_BUFFER_INFO_KHR_ERR   CL_HPP_ERR_STR_(clGetCommandBufferInfoKHR)
+#define __FINALIZE_COMMAND_BUFFER_KHR_ERR   CL_HPP_ERR_STR_(clFinalizeCommandBufferKHR)
+#endif // cl_khr_command_buffer
+
 #endif // CL_HPP_USER_OVERRIDE_ERROR_STRINGS
 //! \endcond
 
@@ -1532,6 +1537,16 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_PCI_BUS_INFO_KHR, cl_devi
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_INTEGER_DOT_PRODUCT_CAPABILITIES_KHR, cl_device_integer_dot_product_capabilities_khr)
 #endif
 
+#if defined(cl_khr_command_buffer)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR, cl_device_command_buffer_capabilities_khr)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR, cl_command_queue_properties)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_command_buffer_info_khr, CL_COMMAND_BUFFER_QUEUES_KHR, cl_uint)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_command_buffer_info_khr, CL_COMMAND_BUFFER_NUM_QUEUES_KHR, cl::vector<CommandQueue>)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_command_buffer_info_khr, CL_COMMAND_BUFFER_REFERENCE_COUNT_KHR, cl_uint)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_command_buffer_info_khr, CL_COMMAND_BUFFER_STATE_KHR, cl_command_buffer_state_khr)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_command_buffer_info_khr, CL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR, cl::vector<cl_command_buffer_properties_khr>)
+#endif // cl_khr_command_buffer
+
 #ifdef CL_PLATFORM_ICD_SUFFIX_KHR
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_ICD_SUFFIX_KHR, string)
 #endif
@@ -1790,6 +1805,16 @@ struct ReferenceHandler<cl_event>
     { return ::clReleaseEvent(event); }
 };
 
+#if defined(cl_khr_command_buffer)
+template <>
+struct ReferenceHandler<cl_command_buffer_khr>
+{
+    static cl_int retain(cl_command_buffer_khr cmdbuf)
+    { return ::clRetainCommandBufferKHR(cmdbuf); }
+    static cl_int release(cl_command_buffer_khr cmdbuf)
+    { return ::clReleaseCommandBufferKHR(cmdbuf); }
+};
+#endif // cl_khr_command_buffer
 
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120 && CL_HPP_MINIMUM_OPENCL_VERSION < 120
 // Extracts version number with major in the upper 16 bits, minor in the lower 16
@@ -7097,6 +7122,93 @@ inline Kernel::Kernel(const Program& program, const char* name, cl_int* err)
 
 }
 
+#if defined(cl_khr_command_buffer)
+
+/*! \class CommandBuffer
+ * \brief CommandBuffer interface for cl_command_buffer_khr.
+ */
+class CommandBuffer : public detail::Wrapper<cl_command_buffer_khr>
+{
+public:
+    CommandBuffer() {}
+
+    /*! \brief Constructor from cl_command_queue - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     */
+    explicit CommandBuffer(cl_command_buffer_khr cmdbuf, bool retainObject = false) :
+        detail::Wrapper<cl_type>(cmdbuf, retainObject) { }
+
+    // TODO: other overloads!
+
+    CommandBuffer& operator = (const cl_command_buffer_khr& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandBuffer(const CommandBuffer& cmdbuf) : detail::Wrapper<cl_type>(cmdbuf) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandBuffer& operator = (const CommandBuffer& cmdbuf)
+    {
+        detail::Wrapper<cl_type>::operator=(cmdbuf);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandBuffer(CommandBuffer&& cmdbuf) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(cmdbuf)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandBuffer& operator = (CommandBuffer &&cmdbuf)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(cmdbuf));
+        return *this;
+    }
+
+    template <typename T>
+    cl_int getInfo(cl_command_buffer_info_khr name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(
+                &::clGetCommandBufferInfoKHR, object_, name, param),
+                __GET_COMMAND_BUFFER_INFO_KHR_ERR);
+    }
+
+    template <cl_command_buffer_info_khr name> typename
+    detail::param_traits<detail::cl_command_buffer_info_khr, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_command_buffer_info_khr, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    cl_int finalize(void)
+    {
+        return detail::errHandler(
+            ::clFinalizeCommandBufferKHR(object_),
+            __FINALIZE_COMMAND_BUFFER_KHR_ERR);
+    }
+}; // CommandBuffer
+
+#endif // cl_khr_command_buffer
+
 enum class QueueProperties : cl_command_queue_properties
 {
     None = 0,
@@ -10340,6 +10452,8 @@ namespace compatibility {
 #undef __CLONE_KERNEL_ERR     
 #undef __GET_HOST_TIMER_ERR
 #undef __GET_DEVICE_AND_HOST_TIMER_ERR
+#undef __GET_COMMAND_BUFFER_INFO_KHR_ERR
+#undef __FINALIZE_COMMAND_BUFFER_KHR_ERR
 
 #endif //CL_HPP_USER_OVERRIDE_ERROR_STRINGS
 
