@@ -103,25 +103,13 @@ int main(
 
     // device queries:
 
-    cl_device_command_buffer_capabilities_khr caps = 0;
-    clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR,
-        sizeof(caps),
-        &caps,
-        NULL );
     printf("\tCommand Buffer Capabilities:\n");
-    PrintCommandBufferCapabilities(caps);
+    PrintCommandBufferCapabilities(
+        devices[deviceIndex].getInfo<CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR>());
 
-    cl_command_queue_properties requiredProps = 0;
-    clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR,
-        sizeof(requiredProps),
-        &requiredProps,
-        NULL );
     printf("\tCommand Buffer Required Queue Properties:\n");
-    PrintCommandBufferRequiredQueueProperties(requiredProps);
+    PrintCommandBufferRequiredQueueProperties(
+        devices[deviceIndex].getInfo<CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR>());
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
@@ -159,73 +147,45 @@ int main(
             pSrc );
     }
 
-    cl_command_buffer_khr cmdbuf = clCreateCommandBufferKHR(
+    cl::CommandBuffer cmdbuf{clCreateCommandBufferKHR(
         1,
         &commandQueue(),
         NULL,
-        NULL);
+        NULL)};
 
     // command buffer queries:
     {
         printf("\tCommand Buffer Info:\n");
 
-        cl_uint numQueues = 0;
-        clGetCommandBufferInfoKHR(
-            cmdbuf,
-            CL_COMMAND_BUFFER_NUM_QUEUES_KHR,
-            sizeof(numQueues),
-            &numQueues,
-            NULL );
-        printf("\t\tCL_COMMAND_BUFFER_NUM_QUEUES_KHR: %u\n", numQueues);
+        printf("\t\tCL_COMMAND_BUFFER_NUM_QUEUES_KHR: %u\n",
+            cmdbuf.getInfo<CL_COMMAND_BUFFER_NUM_QUEUES_KHR>());
 
-        cl_command_queue testQueue = NULL;
-        clGetCommandBufferInfoKHR(
-            cmdbuf,
-            CL_COMMAND_BUFFER_QUEUES_KHR,
-            sizeof(testQueue),
-            &testQueue,
-            NULL );
+        cl::CommandQueue testQueue = 
+            cmdbuf.getInfo<CL_COMMAND_BUFFER_QUEUES_KHR>().front();
         printf("\t\tCL_COMMAND_BUFFER_QUEUES_KHR: %p (%s)\n",
-            testQueue,
-            testQueue == commandQueue() ? "matches" : "MISMATCH!");
+            testQueue(),
+            testQueue() == commandQueue() ? "matches" : "MISMATCH!");
 
-        cl_uint refCount = 0;
-        clGetCommandBufferInfoKHR(
-            cmdbuf,
-            CL_COMMAND_BUFFER_REFERENCE_COUNT_KHR,
-            sizeof(refCount),
-            &refCount,
-            NULL );
-        printf("\t\tCL_COMMAND_BUFFER_REFERENCE_COUNT_KHR: %u\n", refCount);
+        printf("\t\tCL_COMMAND_BUFFER_REFERENCE_COUNT_KHR: %u\n",
+            cmdbuf.getInfo<CL_COMMAND_BUFFER_REFERENCE_COUNT_KHR>());
 
-        cl_command_buffer_state_khr state = 0;
-        clGetCommandBufferInfoKHR(
-            cmdbuf,
-            CL_COMMAND_BUFFER_STATE_KHR,
-            sizeof(state),
-            &state,
-            NULL );
+        cl_command_buffer_state_khr state =
+            cmdbuf.getInfo<CL_COMMAND_BUFFER_STATE_KHR>();
         printf("\t\tCL_COMMAND_BUFFER_STATE_KHR: %s\n",
             state == CL_COMMAND_BUFFER_STATE_RECORDING_KHR ? "RECORDING" :
             state == CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR ? "EXECUTABLE" :
             state == CL_COMMAND_BUFFER_STATE_PENDING_KHR ? "PENDING" :
             state == CL_COMMAND_BUFFER_STATE_INVALID_KHR ? "INVALID" : "UNKNOWN!");
 
-        size_t propsSize = 0;
-        clGetCommandBufferInfoKHR(
-            cmdbuf,
-            CL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR,
-            0,
-            NULL,
-            &propsSize );
-        printf("\t\tCL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR size: %zu\n", propsSize);
+        printf("\t\tCL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR size: %zu\n",
+            cmdbuf.getInfo<CL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR>().size());
     }
 
     kernel.setArg(0, deviceMemDst);
     kernel.setArg(1, deviceMemSrc);
     cl_sync_point_khr sync_point;
     clCommandNDRangeKernelKHR(
-        cmdbuf,
+        cmdbuf(),
         NULL,
         NULL,
         kernel(),
@@ -237,12 +197,12 @@ int main(
         NULL,
         &sync_point,
         NULL);
-    clFinalizeCommandBufferKHR(cmdbuf);
+    cmdbuf.finalize();
 
     clEnqueueCommandBufferKHR(
         0,
         NULL,
-        cmdbuf,
+        cmdbuf(),
         0,
         NULL,
         NULL);

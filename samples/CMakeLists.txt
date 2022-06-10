@@ -97,4 +97,5 @@ endif()
 
 if(BUILD_EXTENSION_SAMPLES)
     add_subdirectory( 12_commandbuffers )
+    add_subdirectory( 12_commandbufferspp )
 endif()
