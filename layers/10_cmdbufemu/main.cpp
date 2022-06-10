@@ -101,12 +101,23 @@ clGetPlatformInfo_layer(
     void *           param_value,
     size_t *         param_value_size_ret)
 {
-    return g_pNextDispatch->clGetPlatformInfo(
-        platform,
-        param_name,
-        param_value_size,
-        param_value,
-        param_value_size_ret);
+    cl_int  errorCode = CL_SUCCESS;
+    if (clGetPlatformInfo_override(
+            platform,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret,
+            &errorCode) == false) {
+        return g_pNextDispatch->clGetPlatformInfo(
+            platform,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret);
+    }
+
+    return errorCode;
 }
 
 static struct _cl_icd_dispatch dispatch;
