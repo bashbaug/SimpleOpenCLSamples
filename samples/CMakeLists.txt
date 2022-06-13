@@ -88,3 +88,14 @@ add_subdirectory( 05_spirvkernelfromfile )
 add_subdirectory( 06_ndrangekernelfromfile )
 
 add_subdirectory( 10_queueexperiments )
+
+set(BUILD_EXTENSION_SAMPLES TRUE)
+if(NOT TARGET OpenCLExt)
+    message(STATUS "Skipping Extension Samples - OpenCL Extension Loader is not found.")
+    set(BUILD_EXTENSION_SAMPLES FALSE)
+endif()
+
+if(BUILD_EXTENSION_SAMPLES)
+    add_subdirectory( 12_commandbuffers )
+    add_subdirectory( 12_commandbufferspp )
+endif()
