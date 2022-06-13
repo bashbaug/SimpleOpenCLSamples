@@ -18,7 +18,8 @@ LICENSE                 License information
 CMakeLists.txt          Top-level CMakefile
 external/               External Projects (headers and libs)
 include/                Include Files (OpenCL C++ bindings)
-samples/                Samples
+layers/                 Sample Layers
+samples/                Sample Applications
 tutorials/              Tutorials
 ```
 
