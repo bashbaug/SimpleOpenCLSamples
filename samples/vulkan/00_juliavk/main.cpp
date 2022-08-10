@@ -218,6 +218,8 @@ private:
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkSemaphore> vulkanFinishedSemaphores;
+    std::vector<VkSemaphore> openclFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
@@ -231,6 +233,7 @@ private:
     int deviceIndex = 0;
 
     bool useExternalMemory = true;
+    bool useExternalSemaphore = true;
 
     cl::Context context;
     cl::CommandQueue commandQueue;
@@ -240,11 +243,13 @@ private:
 
     void commandLine(int argc, char** argv) {
         bool hostCopy = false;
+        bool hostSync = false;
 
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
+        op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
         op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
         op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
@@ -266,6 +271,7 @@ private:
         }
 
         useExternalMemory = !hostCopy;
+        useExternalSemaphore = !hostSync;
     }
 
     void initWindow() {
@@ -316,6 +322,28 @@ private:
         } else {
             printf("Device does not support cl_khr_external_memory.\n");
             useExternalMemory = false;
+        }
+
+        if (checkDeviceForExtension(devices[deviceIndex], "cl_khr_external_semaphore")) {
+            printf("Device supports cl_khr_external_semaphore.\n");
+            printf("Supported external semaphore import handle types:\n");
+            std::vector<cl_external_semaphore_handle_type_khr> types =
+                devices[deviceIndex].getInfo<CL_DEVICE_SEMAPHORE_IMPORT_HANDLE_TYPES_KHR>();
+            for (auto type : types) {
+                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
+                switch(type) {
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_SYNC_FD_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KMT_KHR);
+                default: printf("Unknown cl_external_semaphore_handle_type_khr %04X\n", type);
+                }
+                #undef CASE_TO_STRING
+            }
+        } else {
+            printf("Device does not support cl_khr_external_semaphore.\n");
+            useExternalSemaphore = false;
         }
 
         context = cl::Context{devices[deviceIndex]};
@@ -487,6 +515,8 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+            if (useExternalSemaphore) {
+            }
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
 
@@ -517,7 +547,7 @@ private:
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "No Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        if (useExternalMemory) {
+        if (useExternalMemory || useExternalSemaphore) {
             appInfo.apiVersion = VK_API_VERSION_1_1;
         } else {
             appInfo.apiVersion = VK_API_VERSION_1_0;
@@ -551,10 +581,12 @@ private:
 #ifdef _WIN32
         if (useExternalMemory) {
             pvkGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryWin32HandleKHR");
-            pvkGetSemaphoreWin32HandleKHR = (PFN_vkGetSemaphoreWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreWin32HandleKHR");
             if (pvkGetMemoryWin32HandleKHR == NULL) {
                 throw std::runtime_error("couldn't get external function pointer for vkGetMemoryWin32HandleKHR");
             }
+        }
+        if (useExternalSemaphore) {
+            pvkGetSemaphoreWin32HandleKHR = (PFN_vkGetSemaphoreWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreWin32HandleKHR");
             if (pvkGetSemaphoreWin32HandleKHR == NULL) {
                 throw std::runtime_error("couldn't get external function pointer for vkGetSemaphoreWin32HandleKHR");
             }
@@ -1444,18 +1476,20 @@ private:
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+        std::vector<VkSemaphore> waitSemaphores;
+        waitSemaphores.push_back(imageAvailableSemaphores[currentFrame]);
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
+        submitInfo.pWaitSemaphores = waitSemaphores.data();
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
 
-        VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        std::vector<VkSemaphore> signalSemaphores;
+        signalSemaphores.push_back(renderFinishedSemaphores[currentFrame]);
+        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size());
+        submitInfo.pSignalSemaphores = signalSemaphores.data();
 
         vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
@@ -1467,7 +1501,7 @@ private:
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
 
         VkSwapchainKHR swapChains[] = {swapChain};
         presentInfo.swapchainCount = 1;
@@ -1627,9 +1661,13 @@ private:
 
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-        if (useExternalMemory) {
+        if (useExternalMemory || useExternalSemaphore) {
             extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        }
+        if (useExternalMemory) {
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+        }
+        if (useExternalSemaphore) {
             extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
         }
         if (enableValidationLayers) {
@@ -1646,6 +1684,12 @@ private:
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
 #ifdef _WIN32
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
+#endif
+        }
+        if (useExternalSemaphore) {
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+#ifdef _WIN32
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
 #endif
         }
 
