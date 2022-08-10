@@ -225,7 +225,7 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
-//#define CREATE_DUMMY_OBJECTS
+#define CREATE_DUMMY_OBJECTS
 #ifdef CREATE_DUMMY_OBJECTS
     VkBuffer dummyBuffer;
     VkDeviceMemory dummyBufferMemory;
@@ -339,7 +339,7 @@ private:
 
     void initOpenCLMems() {
 #ifdef CREATE_DUMMY_OBJECTS
-        {
+        if (useExternalMemory) {
             HANDLE handle = NULL;
             VkMemoryGetWin32HandleInfoKHR getWin32HandleInfo{};
             getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
@@ -1130,7 +1130,7 @@ private:
         vkBindImageMemory(device, image, imageMemory, 0);
 
 #ifdef CREATE_DUMMY_OBJECTS
-        {
+        if (useExternalMemory) {
 #ifdef _WIN32
             VkExternalMemoryBufferCreateInfo externalMemCreateInfo{};
             externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
