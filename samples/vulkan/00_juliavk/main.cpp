@@ -225,7 +225,7 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
-#define CREATE_DUMMY_OBJECTS
+//#define CREATE_DUMMY_OBJECTS
 #ifdef CREATE_DUMMY_OBJECTS
     VkBuffer dummyBuffer;
     VkDeviceMemory dummyBufferMemory;
@@ -1442,6 +1442,17 @@ private:
     }
 
     void updateTexture(uint32_t currentImage) {
+        if (useExternalMemory) {
+            vkDeviceWaitIdle(device);   // for now
+            clEnqueueAcquireExternalMemObjectsKHR(
+                commandQueue(),
+                1,
+                &mems[currentImage](),
+                0,
+                nullptr,
+                nullptr);
+        }
+
         kernel.setArg(0, mems[currentImage]);
         kernel.setArg(1, cr);
         kernel.setArg(2, ci);
@@ -1458,31 +1469,42 @@ private:
             cl::NDRange{gwx, gwy},
             lws);
 
-        size_t rowPitch = 0;
-        void* pixels = commandQueue.enqueueMapImage(
-            mems[currentImage],
-            CL_TRUE,
-            CL_MAP_READ,
-            {0, 0, 0},
-            {gwx, gwy, 1},
-            &rowPitch,
-            nullptr);
+        if (useExternalMemory) {
+            clEnqueueReleaseExternalMemObjectsKHR(
+                commandQueue(),
+                1,
+                &mems[currentImage](),
+                0,
+                nullptr,
+                nullptr);
+            commandQueue.finish();  // for now
+        } else {
+            size_t rowPitch = 0;
+            void* pixels = commandQueue.enqueueMapImage(
+                mems[currentImage],
+                CL_TRUE,
+                CL_MAP_READ,
+                {0, 0, 0},
+                {gwx, gwy, 1},
+                &rowPitch,
+                nullptr);
 
-        VkDeviceSize imageSize = gwx * gwy * 4;
+            VkDeviceSize imageSize = gwx * gwy * 4;
 
-        void* data;
-        vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-            memcpy(data, pixels, static_cast<size_t>(imageSize));
-        vkUnmapMemory(device, stagingBufferMemory);
+            void* data;
+            vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+                memcpy(data, pixels, static_cast<size_t>(imageSize));
+            vkUnmapMemory(device, stagingBufferMemory);
 
-        commandQueue.enqueueUnmapMemObject(
-            mems[currentImage],
-            pixels);
-        commandQueue.flush();
+            commandQueue.enqueueUnmapMemObject(
+                mems[currentImage],
+                pixels);
+            commandQueue.flush();
 
-        transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            copyBufferToImage(stagingBuffer, textureImages[currentImage], static_cast<uint32_t>(gwx), static_cast<uint32_t>(gwy));
-        transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                copyBufferToImage(stagingBuffer, textureImages[currentImage], static_cast<uint32_t>(gwx), static_cast<uint32_t>(gwy));
+            transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
     }
 
     void drawFrame() {
