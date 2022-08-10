@@ -104,9 +104,6 @@ const std::vector<const char*> validationLayers = {
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#ifdef _WIN32
-    VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
-#endif
 };
 
 #ifdef NDEBUG
@@ -225,14 +222,6 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
-#define CREATE_DUMMY_OBJECTS
-#ifdef CREATE_DUMMY_OBJECTS
-    VkBuffer dummyBuffer;
-    VkDeviceMemory dummyBufferMemory;
-
-    cl::Buffer dummyCLBuffer;
-#endif
-
 #ifdef _WIN32
     PFN_vkGetMemoryWin32HandleKHR pvkGetMemoryWin32HandleKHR;
     PFN_vkGetSemaphoreWin32HandleKHR pvkGetSemaphoreWin32HandleKHR;
@@ -338,55 +327,6 @@ private:
     }
 
     void initOpenCLMems() {
-#ifdef CREATE_DUMMY_OBJECTS
-        if (useExternalMemory) {
-            HANDLE handle = NULL;
-            VkMemoryGetWin32HandleInfoKHR getWin32HandleInfo{};
-            getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
-            getWin32HandleInfo.memory = dummyBufferMemory;
-            getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: KMT handles?
-            pvkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
-
-#if 1
-            // This works:
-            const cl_mem_properties props[] = {
-                CL_DEVICE_HANDLE_LIST_KHR,
-                (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
-                0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
-                CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
-                (cl_mem_properties)handle,
-                0,
-            };
-#elif 0
-            // This uses the proper CL_DEVICE_HANDLE_LIST_END_KHR and does not work:
-            const cl_mem_properties props[] = {
-                CL_DEVICE_HANDLE_LIST_KHR,
-                (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
-                CL_DEVICE_HANDLE_LIST_END_KHR,
-                CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
-                (cl_mem_properties)handle,
-                0,
-            };
-#elif 0
-            // This omits the device handle list entirely and does not work:
-            const cl_mem_properties props[] = {
-                CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
-                (cl_mem_properties)handle,
-                0,
-            };
-#endif
-
-            dummyCLBuffer = cl::Buffer{
-                clCreateBufferWithProperties(
-                    context(),
-                    props,
-                    CL_MEM_WRITE_ONLY,
-                    1024 * 1024,
-                    NULL,
-                    NULL)};
-        }
-#endif
-
         mems.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -696,8 +636,9 @@ private:
 
         createInfo.pEnabledFeatures = &deviceFeatures;
 
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-        createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+        auto extensions = getRequiredDeviceExtensions();
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+        createInfo.ppEnabledExtensionNames = extensions.data();
 
         if (enableValidationLayers) {
             createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -1020,6 +961,9 @@ private:
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 textureImages[i],
                 textureImageMemories[i]);
+            if (useExternalMemory) {
+                transitionImageLayout(textureImages[i], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            }
         }
     }
 
@@ -1128,56 +1072,6 @@ private:
         }
 
         vkBindImageMemory(device, image, imageMemory, 0);
-
-#ifdef CREATE_DUMMY_OBJECTS
-        if (useExternalMemory) {
-#ifdef _WIN32
-            VkExternalMemoryBufferCreateInfo externalMemCreateInfo{};
-            externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
-            externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-#endif
-
-            VkBufferCreateInfo bufferInfo{};
-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            if (useExternalMemory) {
-                bufferInfo.pNext = &externalMemCreateInfo;
-            }
-            bufferInfo.size = 1024*1024;
-            bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-            if (vkCreateBuffer(device, &bufferInfo, nullptr, &dummyBuffer) != VK_SUCCESS) {
-                throw std::runtime_error("failed to allocate dummy buffer!");
-            }
-
-            VkMemoryRequirements memRequirements;
-            vkGetBufferMemoryRequirements(device, dummyBuffer, &memRequirements);
-
-#ifdef _WIN32
-            // TODO: Do we need this?
-            VkExportMemoryWin32HandleInfoKHR handleInfoWin32{};
-            handleInfoWin32.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR;
-
-            VkExportMemoryAllocateInfoKHR exportMemoryAllocInfo{};
-            exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR;
-            exportMemoryAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-#endif
-
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            if (useExternalMemory) {
-                allocInfo.pNext = &exportMemoryAllocInfo;
-            }
-            allocInfo.allocationSize = memRequirements.size;
-            allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-            if (vkAllocateMemory(device, &allocInfo, nullptr, &dummyBufferMemory) != VK_SUCCESS) {
-                throw std::runtime_error("failed to allocate dummy buffer memory!");
-            }
-
-            vkBindBufferMemory(device, dummyBuffer, dummyBufferMemory, 0);
-        }
-#endif
     }
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -1211,6 +1105,12 @@ private:
 
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;   
         } else {
             throw std::invalid_argument("unsupported layout transition!");
         }
@@ -1678,7 +1578,8 @@ private:
         std::vector<VkExtensionProperties> availableExtensions(extensionCount);
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-        std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+        auto extensions = getRequiredDeviceExtensions();
+        std::set<std::string> requiredExtensions(extensions.begin(), extensions.end());
 
         for (const auto& extension : availableExtensions) {
             requiredExtensions.erase(extension.extensionName);
@@ -1733,6 +1634,19 @@ private:
         }
         if (enableValidationLayers) {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
+
+        return extensions;
+    }
+
+    std::vector<const char*> getRequiredDeviceExtensions() {
+        std::vector<const char*> extensions(deviceExtensions);
+
+        if (useExternalMemory) {
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
+#ifdef _WIN32
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
+#endif
         }
 
         return extensions;
