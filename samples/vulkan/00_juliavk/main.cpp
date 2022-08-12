@@ -228,17 +228,16 @@ private:
     size_t currentFrame = 0;
 
 #ifdef _WIN32
-    PFN_vkGetMemoryWin32HandleKHR pvkGetMemoryWin32HandleKHR;
-    PFN_vkGetSemaphoreWin32HandleKHR pvkGetSemaphoreWin32HandleKHR;
+    PFN_vkGetMemoryWin32HandleKHR vkGetMemoryWin32HandleKHR = NULL;
+    PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR = NULL;
 #elif defined(__linux__)
-    PFN_vkGetMemoryFdKHR pvkGetMemoryFdKHR;
-    PFN_vkGetSemaphoreFdKHR pvkGetSemaphoreFdKHR;
+    PFN_vkGetMemoryFdKHR vkGetMemoryFdKHR = NULL;
+    PFN_vkGetSemaphoreFdKHR vkGetSemaphoreFdKHR = NULL;
 #endif
 
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    bool useNvidiaWorkarounds = false;
     bool force = false;
     bool useExternalMemory = true;
     bool useExternalSemaphore = true;
@@ -251,6 +250,13 @@ private:
     std::vector<cl_semaphore_khr> waitSemaphores;
     std::vector<cl_semaphore_khr> signalSemaphores;
 
+    clEnqueueAcquireExternalMemObjectsKHR_fn clEnqueueAcquireExternalMemObjectsKHR = NULL;
+    clEnqueueReleaseExternalMemObjectsKHR_fn clEnqueueReleaseExternalMemObjectsKHR = NULL;
+
+    clCreateSemaphoreWithPropertiesKHR_fn clCreateSemaphoreWithPropertiesKHR = NULL;
+    clEnqueueSignalSemaphoresKHR_fn clEnqueueSignalSemaphoresKHR = NULL;
+    clReleaseSemaphoreKHR_fn clReleaseSemaphoreKHR = NULL;
+
     void commandLine(int argc, char** argv) {
         bool hostCopy = false;
         bool hostSync = false;
@@ -258,7 +264,6 @@ private:
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
-        op.add<popl::Switch>("", "nvidia", "Enable Nvidia Workarounds", &useNvidiaWorkarounds);
         op.add<popl::Switch>("", "force", "Bypass Extension Checks", &force);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
         op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
@@ -362,9 +367,29 @@ private:
             }
         }
 
-        if (devices[deviceIndex].getInfo<CL_DEVICE_VENDOR_ID>() == 0x10de &&
-            !useNvidiaWorkarounds) {
-            printf("Note: If the sample does not run correctly, consider enabling Nvidia workarounds with --nvidia!\n");
+        if (useExternalMemory) {
+            clEnqueueAcquireExternalMemObjectsKHR = (clEnqueueAcquireExternalMemObjectsKHR_fn)
+                clGetExtensionFunctionAddressForPlatform( platforms[platformIndex](), "clEnqueueAcquireExternalMemObjectsKHR");
+            clEnqueueReleaseExternalMemObjectsKHR = (clEnqueueReleaseExternalMemObjectsKHR_fn)
+                clGetExtensionFunctionAddressForPlatform( platforms[platformIndex](), "clEnqueueReleaseExternalMemObjectsKHR");
+            if (clEnqueueAcquireExternalMemObjectsKHR == NULL ||
+                clEnqueueReleaseExternalMemObjectsKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointers for cl_khr_external_memory");
+            }
+        }
+
+        if (useExternalSemaphore) {
+            clCreateSemaphoreWithPropertiesKHR = (clCreateSemaphoreWithPropertiesKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clCreateSemaphoreWithPropertiesKHR");
+            clEnqueueSignalSemaphoresKHR = (clEnqueueSignalSemaphoresKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clEnqueueSignalSemaphoresKHR");
+            clReleaseSemaphoreKHR = (clReleaseSemaphoreKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clReleaseSemaphoreKHR");
+            if (clCreateSemaphoreWithPropertiesKHR == NULL ||
+                clEnqueueSignalSemaphoresKHR == NULL ||
+                clReleaseSemaphoreKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointers for cl_khr_external_semaphore");
+            }
         }
 
         context = cl::Context{devices[deviceIndex]};
@@ -386,16 +411,7 @@ private:
                 getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
                 getWin32HandleInfo.memory = textureImageMemories[i];
                 getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-                pvkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
-
-                const cl_mem_properties nvprops[] = {
-                    CL_DEVICE_HANDLE_LIST_KHR,
-                    (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
-                    0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
-                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
-                    (cl_mem_properties)handle,
-                    0,
-                };
+                vkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
 
                 const cl_mem_properties props[] = {
                     CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
@@ -408,16 +424,7 @@ private:
                 getFdInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
                 getFdInfo.memory = textureImageMemories[i];
                 getFdInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-                pvkGetMemoryFdKHR(device, &getFdInfo, &fd);
-
-                const cl_mem_properties nvprops[] = {
-                    CL_DEVICE_HANDLE_LIST_KHR,
-                    (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
-                    0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
-                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR,
-                    (cl_mem_properties)fd,
-                    0,
-                };
+                vkGetMemoryFdKHR(device, &getFdInfo, &fd);
 
                 const cl_mem_properties props[] = {
                     CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR,
@@ -425,7 +432,6 @@ private:
                     0,
                 };
 #else
-                const cl_mem_properties* nvprops = NULL;
                 const cl_mem_properties* props = NULL;
 #endif
                 cl_image_format format{};
@@ -436,12 +442,11 @@ private:
                 desc.image_type = CL_MEM_OBJECT_IMAGE2D;
                 desc.image_width = gwx;
                 desc.image_height = gwy;
-                desc.num_mip_levels = useNvidiaWorkarounds ? 1 : 0;
 
                 mems[i] = cl::Image2D{
                     clCreateImageWithProperties(
                         context(),
-                        useNvidiaWorkarounds ? nvprops : props,
+                        props,
                         CL_MEM_WRITE_ONLY,
                         &format,
                         &desc,
@@ -641,28 +646,28 @@ private:
 
 #ifdef _WIN32
         if (useExternalMemory) {
-            pvkGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryWin32HandleKHR");
-            if (pvkGetMemoryWin32HandleKHR == NULL) {
-                throw std::runtime_error("couldn't get external function pointer for vkGetMemoryWin32HandleKHR");
+            vkGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryWin32HandleKHR");
+            if (vkGetMemoryWin32HandleKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetMemoryWin32HandleKHR");
             }
         }
         if (useExternalSemaphore) {
-            pvkGetSemaphoreWin32HandleKHR = (PFN_vkGetSemaphoreWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreWin32HandleKHR");
-            if (pvkGetSemaphoreWin32HandleKHR == NULL) {
-                throw std::runtime_error("couldn't get external function pointer for vkGetSemaphoreWin32HandleKHR");
+            vkGetSemaphoreWin32HandleKHR = (PFN_vkGetSemaphoreWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreWin32HandleKHR");
+            if (vkGetSemaphoreWin32HandleKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetSemaphoreWin32HandleKHR");
             }
         }
 #elif defined(__linux__)
         if (useExternalMemory) {
-            pvkGetMemoryFdKHR = (PFN_vkGetMemoryFdKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR");
-            if (pvkGetMemoryFdKHR == NULL) {
-                throw std::runtime_error("couldn't get external function pointer for vkGetMemoryFdKHR");
+            vkGetMemoryFdKHR = (PFN_vkGetMemoryFdKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR");
+            if (vkGetMemoryFdKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetMemoryFdKHR");
             }
         }
         if (useExternalSemaphore) {
-            pvkGetSemaphoreFdKHR = (PFN_vkGetSemaphoreFdKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreFdKHR");
-            if (pvkGetSemaphoreFdKHR == NULL) {
-                throw std::runtime_error("couldn't get external function pointer for vkGetSemaphoreFdKHR");
+            vkGetSemaphoreFdKHR = (PFN_vkGetSemaphoreFdKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreFdKHR");
+            if (vkGetSemaphoreFdKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetSemaphoreFdKHR");
             }
         }
 #endif
@@ -1193,18 +1198,7 @@ private:
         getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR;
         getWin32HandleInfo.semaphore = srcSemaphore;
         getWin32HandleInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-        pvkGetSemaphoreWin32HandleKHR(device, &getWin32HandleInfo, &handle);
-
-        const cl_semaphore_properties_khr nvprops[] = {
-            0x2455, //CL_SEMAPHORE_TYPE_KHR
-            CL_SEMAPHORE_TYPE_BINARY_KHR,
-            CL_DEVICE_HANDLE_LIST_KHR,
-            (cl_semaphore_properties_khr)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
-            0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR
-            CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR,
-            (cl_semaphore_properties_khr)handle,
-            0,
-        };
+        vkGetSemaphoreWin32HandleKHR(device, &getWin32HandleInfo, &handle);
 
         const cl_semaphore_properties_khr props[] = {
             CL_SEMAPHORE_TYPE_KHR,
@@ -1219,18 +1213,7 @@ private:
         getFdInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR;
         getFdInfo.semaphore = srcSemaphore;
         getFdInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
-        pvkGetSemaphoreFdKHR(device, &getFdInfo, &fd);
-
-        const cl_semaphore_properties_khr nvprops[] = {
-            0x2455, //CL_SEMAPHORE_TYPE_KHR
-            CL_SEMAPHORE_TYPE_BINARY_KHR,
-            CL_DEVICE_HANDLE_LIST_KHR,
-            (cl_semaphore_properties_khr)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
-            0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
-            CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR,
-            (cl_semaphore_properties_khr)fd,
-            0,
-        };
+        vkGetSemaphoreFdKHR(device, &getFdInfo, &fd);
 
         const cl_mem_properties props[] = {
             CL_SEMAPHORE_TYPE_KHR,
@@ -1240,13 +1223,12 @@ private:
             0,
         };
 #else
-        const cl_mem_properties* nvprops = NULL;
         const cl_mem_properties* props = NULL;
 #endif
 
         semaphore = clCreateSemaphoreWithPropertiesKHR(
             context(),
-            useNvidiaWorkarounds ? nvprops : props,
+            props,
             NULL);
     }
 

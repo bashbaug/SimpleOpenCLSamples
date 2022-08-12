@@ -30,11 +30,6 @@ if(NOT glfw3_FOUND)
     message(STATUS "Skipping Vulkan Samples - GLFW is not found.")
     set(BUILD_VULKAN_SAMPLES FALSE)
 endif()
-if(NOT TARGET OpenCLExt)
-    message(STATUS "Skipping Vulkan Samples - OpenCL Extension Loader is not found.")
-    set(BUILD_VULKAN_SAMPLES FALSE)
-endif()
-
 
 if(BUILD_VULKAN_SAMPLES)
     add_subdirectory( 00_juliavk )

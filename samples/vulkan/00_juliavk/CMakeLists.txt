@@ -26,4 +26,4 @@ add_opencl_sample(
     SOURCES main.cpp
     KERNELS juliavk.vert.spv juliavk.frag.spv
     INCLUDES ${Vulkan_INCLUDE_DIR}
-    LIBS ${Vulkan_LIBRARY} glfw OpenCLExt)
+    LIBS ${Vulkan_LIBRARY} glfw)
