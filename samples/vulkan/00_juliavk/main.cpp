@@ -238,7 +238,6 @@ private:
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    bool force = false;
     bool useExternalMemory = true;
     bool useExternalSemaphore = true;
 
@@ -264,7 +263,6 @@ private:
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
-        op.add<popl::Switch>("", "force", "Bypass Extension Checks", &force);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
         op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
@@ -338,9 +336,7 @@ private:
             }
         } else {
             printf("Device does not support cl_khr_external_memory.\n");
-            if (!force) {
-                useExternalMemory = false;
-            }
+            useExternalMemory = false;
         }
 
         if (checkDeviceForExtension(devices[deviceIndex], "cl_khr_external_semaphore")) {
@@ -362,9 +358,7 @@ private:
             }
         } else {
             printf("Device does not support cl_khr_external_semaphore.\n");
-            if (!force) {
-                useExternalSemaphore = false;
-            }
+            useExternalSemaphore = false;
         }
 
         if (useExternalMemory) {

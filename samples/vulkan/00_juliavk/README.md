@@ -6,12 +6,31 @@ This is a modified version of the earlier Julia set sample.
 Similar to the earlier Julia Set sample, an OpenCL kernel is used to generate a Julia set image.
 The main difference between this sample and the earlier sample is that in this sample the Julia set image is used as an Vulkan texture and rendered to the screen instead of writing it to a BMP file.
 
-This sample currently copies the result of the OpenCL kernel to the Vulkan texture on the host, however several new extensions were recently provisionally released to enable [interop between OpenCL and Vulkan devices](https://www.khronos.org/blog/khronos-releases-opencl-3.0-extensions-for-neural-network-inferencing-and-opencl-vulkan-interop).
-When drivers are available that support these extensions, this sample will be updated to use them!
+This sample can create an OpenCL image directly from the Vulkan texture when supported.
+In order to share the Vulkan texture with OpenCL, the OpenCL device must support [cl_khr_external_memory](https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_external_memory).
+Additionally, the Vulkan device must support exporting the Vulkan texture as an OS-specific external memory handle, and the OpenCL device must support importing external memory handles of that type.
+Creating the OpenCL image directly from the Vulkan texture avoids a memory copy and can improve performance.
+
+This sample can also share semaphores between Vulkan and OpenCL when supported.
+In order to share a Vulkan semaphore with OpenCL, the OpenCL device must support [cl_khr_external_semaphore](https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_external_semaphore).
+Additionally, the Vulkan device must support exporting the Vulkan semaphore as an OS-specific external semaphore handle, and the OpenCL device must support importing external semaphore handles of that type.
+Sharing a semaphore object between Vulkan and OpenCL avoids synchronization on the host and can also improve performance.
+
+For more information about these extensions, please see [this blog post](https://www.khronos.org/blog/khronos-releases-opencl-3.0-extensions-for-neural-network-inferencing-and-opencl-vulkan-interop).
+When the extensions are not supported the sample will still run, although perhaps with lower performance.
 
 ## Key APIs and Concepts
 
-This example shows how to share an Vulkan texture with OpenCL.
+This example shows how to share an Vulkan texture and semaphore with OpenCL.
+
+```c
+clEnqueueAcquireExternalMemObjectsKHR
+clEnqueueReleaseExternalMemObjectsKHR
+
+clCreateSemaphoreWithPropertiesKHR
+clEnqueueSignalSemaphoresKHR
+clReleaseSemaphoreKHR
+```
 
 ## Command Line Options
 
@@ -21,6 +40,8 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
+| `--hostcopy` | n/a | Do not use the `cl_khr_external_memory` extension and unconditionally copy on the host.
+| `--hostsync` | n/a | Do not use the `cl_khr_external_semaphore` extension and exclusively synchronize on the host.
 | `--gwx <number>` | 512 | Specify the global work size to execute, in the X direction.  This also determines the width of the generated image.
 | `--gwy <number>` | 512 | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
 | `--lwx <number>` | 0 | Specify the local work size in the X direction.  If either local works size dimension is zero a `NULL` local work size is used.
