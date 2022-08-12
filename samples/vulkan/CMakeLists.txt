@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021 Ben Ashbaugh
+# Copyright (c) 2020-2022 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,11 @@ if(NOT glfw3_FOUND)
     message(STATUS "Skipping Vulkan Samples - GLFW is not found.")
     set(BUILD_VULKAN_SAMPLES FALSE)
 endif()
+if(NOT TARGET OpenCLExt)
+    message(STATUS "Skipping Vulkan Samples - OpenCL Extension Loader is not found.")
+    set(BUILD_VULKAN_SAMPLES FALSE)
+endif()
+
 
 if(BUILD_VULKAN_SAMPLES)
     add_subdirectory( 00_juliavk )
