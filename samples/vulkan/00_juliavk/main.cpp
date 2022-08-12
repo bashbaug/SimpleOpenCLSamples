@@ -102,7 +102,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation",
-    "VK_LAYER_LUNARG_api_dump",
+    //"VK_LAYER_LUNARG_api_dump", // useful for debugging but adds a LOT of output!
 };
 
 const std::vector<const char*> deviceExtensions = {
@@ -230,11 +230,15 @@ private:
 #ifdef _WIN32
     PFN_vkGetMemoryWin32HandleKHR pvkGetMemoryWin32HandleKHR;
     PFN_vkGetSemaphoreWin32HandleKHR pvkGetSemaphoreWin32HandleKHR;
+#elif defined(__linux__)
+    PFN_vkGetMemoryFdKHR pvkGetMemoryFdKHR;
+    PFN_vkGetSemaphoreFdKHR pvkGetSemaphoreFdKHR;
 #endif
 
     int platformIndex = 0;
     int deviceIndex = 0;
 
+    bool useNvidiaWorkarounds = false;
     bool useExternalMemory = true;
     bool useExternalSemaphore = true;
 
@@ -253,6 +257,7 @@ private:
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Switch>("", "nvidia", "Enable Nvidia Workarounds", &useNvidiaWorkarounds);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
         op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
@@ -351,6 +356,11 @@ private:
             useExternalSemaphore = false;
         }
 
+        if (devices[deviceIndex].getInfo<CL_DEVICE_VENDOR_ID>() == 0x10de &&
+            !useNvidiaWorkarounds) {
+            printf("Note: If the sample does not run correctly, consider enabling Nvidia workarounds with --nvidia!\n");
+        }
+
         context = cl::Context{devices[deviceIndex]};
         commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
@@ -374,7 +384,7 @@ private:
                 getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
                 pvkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
 
-                const cl_mem_properties props[] = {
+                const cl_mem_properties nvprops[] = {
                     CL_DEVICE_HANDLE_LIST_KHR,
                     (cl_mem_properties)context.getInfo<CL_CONTEXT_DEVICES>().front()(),
                     0x2052, //CL_DEVICE_HANDLE_LIST_END_KHR,
@@ -383,6 +393,17 @@ private:
                     0,
                 };
 
+                const cl_mem_properties props[] = {
+                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
+                    (cl_mem_properties)handle,
+                    0,
+                };
+#elif defined(__linux__)
+#else
+                printf("Note: This OS is not currently supported for external memory sharing!\");
+                const cl_mem_properties* nvprops = NULL;
+                const cl_mem_properties* props = NULL;
+#endif
                 cl_image_format format{};
                 format.image_channel_order = CL_RGBA;
                 format.image_channel_data_type = CL_UNORM_INT8;
@@ -391,21 +412,17 @@ private:
                 desc.image_type = CL_MEM_OBJECT_IMAGE2D;
                 desc.image_width = gwx;
                 desc.image_height = gwy;
-                desc.num_mip_levels = 1;    // Workaround
+                desc.num_mip_levels = useNvidiaWorkarounds ? 1 : 0;
 
                 mems[i] = cl::Image2D{
                     clCreateImageWithProperties(
                         context(),
-                        props,
+                        useNvidiaWorkarounds ? nvprops : props,
                         CL_MEM_WRITE_ONLY,
                         &format,
                         &desc,
                         NULL,
                         NULL)};
-#else
-#error Unsupported OS.
-#endif
-
             } else {
                 mems[i] = cl::Image2D{
                     context,
@@ -611,14 +628,16 @@ private:
                 throw std::runtime_error("couldn't get external function pointer for vkGetSemaphoreWin32HandleKHR");
             }
         }
+#elif defined(__linux__)
 #endif
     }
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        createInfo.messageSeverity =  VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        //createInfo.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
         createInfo.pfnUserCallback = debugCallback;
     }
 
@@ -660,6 +679,12 @@ private:
         if (physicalDevice == VK_NULL_HANDLE) {
             throw std::runtime_error("failed to find a suitable GPU!");
         }
+
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+        printf("Running on Vulkan physical device: %s\n", properties.deviceName);
+
     }
 
     void createLogicalDevice() {
@@ -1028,9 +1053,6 @@ private:
     }
 
     void createTextureSampler() {
-        VkPhysicalDeviceProperties properties{};
-        vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-
         VkSamplerCreateInfo samplerInfo{};
         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -1074,6 +1096,7 @@ private:
         VkExternalMemoryImageCreateInfo externalMemCreateInfo{};
         externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
         externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: support KMT handles also?
+#elif defined(__linux__)
 #endif
 
         VkImageCreateInfo imageInfo{};
@@ -1108,6 +1131,7 @@ private:
         VkExportMemoryAllocateInfoKHR exportMemoryAllocInfo{};
         exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR;
         exportMemoryAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;    // TODO: support KMT handles also?
+#elif defined(__linux__)
 #endif
 
         VkMemoryAllocateInfo allocInfo{};
@@ -1134,7 +1158,7 @@ private:
         getWin32HandleInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
         pvkGetSemaphoreWin32HandleKHR(device, &getWin32HandleInfo, &handle);
 
-        const cl_semaphore_properties_khr props[] = {
+        const cl_semaphore_properties_khr nvprops[] = {
             0x2455, //CL_SEMAPHORE_TYPE_KHR
             CL_SEMAPHORE_TYPE_BINARY_KHR,
             CL_DEVICE_HANDLE_LIST_KHR,
@@ -1145,13 +1169,24 @@ private:
             0,
         };
 
+        const cl_semaphore_properties_khr props[] = {
+            CL_SEMAPHORE_TYPE_KHR,
+            CL_SEMAPHORE_TYPE_BINARY_KHR,
+            CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR,
+            (cl_mem_properties)handle,
+            0,
+        };
+#elif defined(__linux__)
+#else
+        printf("Note: This OS is not currently supported for external memory sharing!\");
+        const cl_mem_properties* nvprops = NULL;
+        const cl_mem_properties* props = NULL;
+#endif
+
         semaphore = clCreateSemaphoreWithPropertiesKHR(
             context(),
-            props,
+            useNvidiaWorkarounds ? nvprops : props,
             NULL);
-#else
-#error Unsupported OS.
-#endif
     }
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -1409,6 +1444,7 @@ private:
         VkExportSemaphoreCreateInfo exportSemaphoreCreateInfo{};
         exportSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
         exportSemaphoreCreateInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT; // TODO: support KMT handles also?
+#elif defined(__linux__)
 #endif
 
         VkSemaphoreCreateInfo semaphoreInfo{};
@@ -1483,7 +1519,7 @@ private:
                     0,
                     nullptr,
                     nullptr);
-                commandQueue.flush();   // TODO: needed?
+                commandQueue.flush();
             } else {
                 commandQueue.finish();
             }
@@ -1764,12 +1800,14 @@ private:
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
 #ifdef _WIN32
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
+#elif defined(__linux__)
 #endif
         }
         if (useExternalSemaphore) {
             extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #ifdef _WIN32
             extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
+#elif defined(__linux__)
 #endif
         }
 
