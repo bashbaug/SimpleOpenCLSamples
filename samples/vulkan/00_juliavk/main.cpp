@@ -660,7 +660,7 @@ private:
             }
         }
         if (useExternalSemaphore) {
-            pvkGetSemaphoreFdKHR = (PFN_vkGetSemaphoreFdKHR)vkGetInstanceProcAddr(instance, "pvkGetMemoryFdKHR");
+            pvkGetSemaphoreFdKHR = (PFN_vkGetSemaphoreFdKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreFdKHR");
             if (pvkGetSemaphoreFdKHR == NULL) {
                 throw std::runtime_error("couldn't get external function pointer for vkGetSemaphoreFdKHR");
             }
@@ -1864,6 +1864,7 @@ private:
 #ifdef _WIN32
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
 #elif defined(__linux__)
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
 #endif
         }
         if (useExternalSemaphore) {
@@ -1871,6 +1872,7 @@ private:
 #ifdef _WIN32
             extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
 #elif defined(__linux__)
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
 #endif
         }
 
