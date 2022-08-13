@@ -246,7 +246,6 @@ private:
     cl::Kernel kernel;
 
     std::vector<cl::Image2D> mems;
-    std::vector<cl_semaphore_khr> waitSemaphores;
     std::vector<cl_semaphore_khr> signalSemaphores;
 
     clEnqueueAcquireExternalMemObjectsKHR_fn clEnqueueAcquireExternalMemObjectsKHR = NULL;
