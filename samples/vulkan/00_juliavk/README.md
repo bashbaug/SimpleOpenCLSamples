@@ -19,6 +19,9 @@ Sharing a semaphore object between Vulkan and OpenCL avoids synchronization on t
 For more information about these extensions, please see [this blog post](https://www.khronos.org/blog/khronos-releases-opencl-3.0-extensions-for-neural-network-inferencing-and-opencl-vulkan-interop).
 When the extensions are not supported the sample will still run, although perhaps with lower performance.
 
+Important note: The OpenCL extensions used in this sample are very new!
+If the sample does not run correctly please ensure you are using the latest OpenCL drivers for your device, or use the command line option to force copying on the host.
+
 ## Key APIs and Concepts
 
 This example shows how to share an Vulkan texture and semaphore with OpenCL.
