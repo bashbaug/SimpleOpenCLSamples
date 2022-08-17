@@ -18,24 +18,46 @@
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
 // Supported command buffer capabilites not dependent on kernels:
-// CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR
 // CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR
-const cl_device_command_buffer_capabilities_khr g_CommandBufferCaps = 0;
+const cl_device_command_buffer_capabilities_khr g_CommandBufferCaps =
+    CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR;
 
-namespace CmdBuf {
-
-struct Command
+typedef struct _cl_mutable_command_khr
 {
-    virtual ~Command() = default;
+    static bool isValid( cl_mutable_command_khr command )
+    {
+        return command && command->Magic == cMagic;
+    }
+
+    virtual ~_cl_mutable_command_khr() = default;
     virtual int playback(
         cl_command_queue) const = 0;
-};
+
+    _cl_mutable_command_khr(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
+        cl_command_type type) :
+        Magic(cMagic),
+        Type(type),
+        CmdBuf(cmdbuf),
+        Queue(queue) {}
+
+private:
+    static constexpr cl_uint cMagic = 0x4d434442;   // "MCMD"
+
+    const cl_uint Magic;
+    const cl_command_type Type;
+    cl_command_buffer_khr CmdBuf;
+    cl_command_queue Queue;
+} Command;
 
 struct BarrierWithWaitList : Command
 {
-    static BarrierWithWaitList* create(void)
+    static BarrierWithWaitList* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue)
     {
-        auto ret = new BarrierWithWaitList();
+        auto ret = new BarrierWithWaitList(cmdbuf, queue);
         return ret;
     }
 
@@ -50,19 +72,23 @@ struct BarrierWithWaitList : Command
     }
 
 private:
-    BarrierWithWaitList() = default;
+    BarrierWithWaitList(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_BARRIER) {};
 };
 
 struct CopyBuffer : Command
 {
     static CopyBuffer* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_mem src_buffer,
         cl_mem dst_buffer,
         size_t src_offset,
         size_t dst_offset,
         size_t size)
     {
-        auto ret = new CopyBuffer();
+        auto ret = new CopyBuffer(cmdbuf, queue);
 
         ret->src_buffer = src_buffer;
         ret->dst_buffer = dst_buffer;
@@ -95,12 +121,16 @@ struct CopyBuffer : Command
     size_t size = 0;
 
 private:
-    CopyBuffer() = default;
+    CopyBuffer(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_COPY_BUFFER) {};
 };
 
 struct CopyBufferRect : Command
 {
     static CopyBufferRect* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_mem src_buffer,
         cl_mem dst_buffer,
         const size_t* src_origin,
@@ -111,7 +141,7 @@ struct CopyBufferRect : Command
         size_t dst_row_pitch,
         size_t dst_slice_pitch)
     {
-        auto ret = new CopyBufferRect();
+        auto ret = new CopyBufferRect(cmdbuf, queue);
 
         ret->src_buffer = src_buffer;
         ret->dst_buffer = dst_buffer;
@@ -156,19 +186,23 @@ struct CopyBufferRect : Command
     size_t dst_slice_pitch = 0;
 
 private:
-    CopyBufferRect() = default;
+    CopyBufferRect(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_COPY_BUFFER_RECT) {};
 };
 
 struct CopyBufferToImage : Command
 {
     static CopyBufferToImage* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_mem src_buffer,
         cl_mem dst_image,
         size_t src_offset,
         const size_t* dst_origin,
         const size_t* region)
     {
-        auto ret = new CopyBufferToImage();
+        auto ret = new CopyBufferToImage(cmdbuf, queue);
 
         ret->src_buffer = src_buffer;
         ret->dst_image = dst_image;
@@ -201,19 +235,23 @@ struct CopyBufferToImage : Command
     std::array<size_t, 3> region = {0, 0, 0};
 
 private:
-    CopyBufferToImage() = default;
+    CopyBufferToImage(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_COPY_BUFFER_TO_IMAGE) {};
 };
 
 struct CopyImage : Command
 {
     static CopyImage* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_mem src_image,
         cl_mem dst_image,
         const size_t* src_origin,
         const size_t* dst_origin,
         const size_t* region)
     {
-        auto ret = new CopyImage();
+        auto ret = new CopyImage(cmdbuf, queue);
 
         ret->src_image = src_image;
         ret->dst_image = dst_image;
@@ -241,19 +279,23 @@ struct CopyImage : Command
     std::array<size_t, 3> region = {0, 0, 0};
 
 private:
-    CopyImage() = default;
+    CopyImage(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_COPY_IMAGE) {};
 };
 
 struct CopyImageToBuffer : Command
 {
     static CopyImageToBuffer* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_mem src_image,
         cl_mem dst_buffer,
         const size_t* src_origin,
         const size_t* region,
         size_t dst_offset)
     {
-        auto ret = new CopyImageToBuffer();
+        auto ret = new CopyImageToBuffer(cmdbuf, queue);
 
         ret->src_image = src_image;
         ret->dst_buffer = dst_buffer;
@@ -286,19 +328,23 @@ struct CopyImageToBuffer : Command
     size_t dst_offset = 0;
 
 private:
-    CopyImageToBuffer() = default;
+    CopyImageToBuffer(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_COPY_IMAGE_TO_BUFFER) {};
 };
 
 struct FillBuffer : Command
 {
     static FillBuffer* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_mem buffer,
         const void* pattern,
         size_t pattern_size,
         size_t offset,
         size_t size)
     {
-        auto ret = new FillBuffer();
+        auto ret = new FillBuffer(cmdbuf, queue);
 
         ret->buffer = buffer;
 
@@ -336,18 +382,22 @@ struct FillBuffer : Command
     size_t size = 0;
 
 private:
-    FillBuffer() = default;
+    FillBuffer(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_FILL_BUFFER) {};
 };
 
 struct FillImage : Command
 {
     static FillImage* create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_mem image,
         const void* fill_color,
         const size_t* origin,
         const size_t* region)
     {
-        auto ret = new FillImage();
+        auto ret = new FillImage(cmdbuf, queue);
 
         ret->image = image;
 
@@ -392,51 +442,84 @@ struct FillImage : Command
     std::array<size_t, 3> region = {0, 0, 0};
 
 private:
-    FillImage() = default;
+    FillImage(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_FILL_IMAGE) {};
 };
 
 struct NDRangeKernel : Command
 {
-    static NDRangeKernel* create(
+    static cl_int create(
+        const cl_ndrange_kernel_command_properties_khr* properties,
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
         cl_kernel kernel,
         cl_uint work_dim,
         const size_t* global_work_offset,
         const size_t* global_work_size,
-        const size_t* local_work_size)
+        const size_t* local_work_size,
+        NDRangeKernel*& command)
     {
-        auto ret = new NDRangeKernel();
+        cl_int errorCode = CL_SUCCESS;
 
-        ret->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
-        ret->work_dim = work_dim;
+        ptrdiff_t numProperties = 0;
+
+        if( properties )
+        {
+            const cl_ndrange_kernel_command_properties_khr* check = properties;
+            while( errorCode == CL_SUCCESS && check[0] != 0 )
+            {
+                cl_int  property = (cl_int)check[0];
+                switch( property )
+                {
+                case 0: // silence warning
+                default:
+                    return  CL_INVALID_VALUE;
+                    break;
+                }
+            }
+            numProperties = check - properties + 1;
+        }
+
+        command = new NDRangeKernel(cmdbuf, queue);
+
+        command->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
+        command->work_dim = work_dim;
+
+        command->properties.reserve(numProperties);
+        command->properties.insert(
+            command->properties.begin(),
+            properties,
+            properties + numProperties );
 
         if( global_work_offset )
         {
-            ret->global_work_offset.reserve(work_dim);
-            ret->global_work_offset.insert(
-                ret->global_work_offset.begin(),
+            command->global_work_offset.reserve(work_dim);
+            command->global_work_offset.insert(
+                command->global_work_offset.begin(),
                 global_work_offset,
                 global_work_offset + work_dim);
         }
 
         if( global_work_size )
         {
-            ret->global_work_size.reserve(work_dim);
-            ret->global_work_size.insert(
-                ret->global_work_size.begin(),
+            command->global_work_size.reserve(work_dim);
+            command->global_work_size.insert(
+                command->global_work_size.begin(),
                 global_work_size,
                 global_work_size + work_dim);
         }
 
         if( local_work_size )
         {
-            ret->local_work_size.reserve(work_dim);
-            ret->local_work_size.insert(
-                ret->local_work_size.begin(),
+            command->local_work_size.reserve(work_dim);
+            command->local_work_size.insert(
+                command->local_work_size.begin(),
                 local_work_size,
                 local_work_size + work_dim);
         }
 
-        return ret;
+        return CL_SUCCESS;
     }
 
     int playback(
@@ -456,15 +539,16 @@ struct NDRangeKernel : Command
 
     cl_kernel kernel = nullptr;
     cl_uint work_dim = 0;
+    std::vector<cl_command_buffer_properties_khr> properties;
     std::vector<size_t> global_work_offset;
     std::vector<size_t> global_work_size;
     std::vector<size_t> local_work_size;
 
 private:
-    NDRangeKernel() = default;
+    NDRangeKernel(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_NDRANGE_KERNEL) {};
 };
-
-}; // namespace CmdBuf
 
 typedef struct _cl_command_buffer_khr
 {
@@ -476,21 +560,58 @@ typedef struct _cl_command_buffer_khr
     {
         cl_command_buffer_khr cmdbuf = NULL;
         cl_int errorCode = CL_SUCCESS;
+
+        ptrdiff_t numProperties = 0;
+        cl_command_buffer_flags_khr flags = 0;
+
         if( num_queues != 1 || queues == NULL )
         {
             errorCode = CL_INVALID_VALUE;
+        }
+        if( properties )
+        {
+            const cl_command_buffer_properties_khr* check = properties;
+            bool found_CL_COMMAND_BUFFER_FLAGS_KHR = false;
+            while( errorCode == CL_SUCCESS && check[0] != 0 )
+            {
+                cl_int  property = (cl_int)check[0];
+                switch( property )
+                {
+                case CL_COMMAND_BUFFER_FLAGS_KHR:
+                    if( found_CL_COMMAND_BUFFER_FLAGS_KHR )
+                    {
+                        errorCode = CL_INVALID_VALUE;
+                    }
+                    else
+                    {
+                        found_CL_COMMAND_BUFFER_FLAGS_KHR = true;
+                        flags = ((const cl_command_buffer_flags_khr*)(check + 1))[0];
+                        check += 2;
+                    }
+                    break;
+                default:
+                    errorCode = CL_INVALID_VALUE;
+                    break;
+                }
+            }
+            numProperties = check - properties + 1;
         }
         if( errcode_ret )
         {
             errcode_ret[0] = errorCode;
         }
         if( errorCode == CL_SUCCESS) {
-            cmdbuf = new _cl_command_buffer_khr();
+            cmdbuf = new _cl_command_buffer_khr(flags);
             cmdbuf->Queues.reserve(num_queues);
             cmdbuf->Queues.insert(
                 cmdbuf->Queues.begin(),
                 queues,
                 queues + num_queues );
+            cmdbuf->Properties.reserve(numProperties);
+            cmdbuf->Properties.insert(
+                cmdbuf->Properties.begin(),
+                properties,
+                properties + numProperties );
         }
         return cmdbuf;
     }
@@ -574,10 +695,11 @@ typedef struct _cl_command_buffer_khr
                 auto ptr = (cl_command_buffer_properties_khr*)param_value;
                 return writeVectorToMemory(
                     param_value_size,
-                    {}, // No properties are currently supported.
+                    Properties,
                     param_value_size_ret,
                     ptr );
             }
+            break;
         default:
             break;
         }
@@ -651,14 +773,19 @@ typedef struct _cl_command_buffer_khr
     }
 
     void    addCommand(
-                CmdBuf::Command* command,
-                cl_sync_point_khr* sync_point )
+                Command* command,
+                cl_sync_point_khr* sync_point,
+                cl_mutable_command_khr* mutable_handle )
     {
         Commands.push_back(command);
 
         if( sync_point != nullptr )
         {
             sync_point[0] = NextSyncPoint.fetch_add(1, std::memory_order_relaxed);
+        }
+        if( mutable_handle != nullptr )
+        {
+            mutable_handle[0] = command;
         }
     }
 
@@ -693,15 +820,18 @@ private:
 
     const cl_uint Magic;
     std::vector<cl_command_queue>   Queues;
+    std::vector<cl_command_buffer_properties_khr>   Properties;
     cl_command_buffer_state_khr State;
+    cl_command_buffer_flags_khr Flags;
     std::atomic<uint32_t> RefCount;
 
-    std::vector<CmdBuf::Command*> Commands;
+    std::vector<Command*> Commands;
     std::atomic<uint32_t> NextSyncPoint;
 
-    _cl_command_buffer_khr() :
+    _cl_command_buffer_khr(cl_command_buffer_flags_khr flags) :
         Magic(cMagic),
         State(CL_COMMAND_BUFFER_STATE_RECORDING_KHR),
+        Flags(flags),
         RefCount(1),
         NextSyncPoint(0) {}
 } CommandBuffer;
@@ -847,8 +977,9 @@ cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::BarrierWithWaitList::create(),
-        sync_point);
+        BarrierWithWaitList::create(cmdbuf, command_queue),
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -882,13 +1013,16 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::CopyBuffer::create(
+        CopyBuffer::create(
+            cmdbuf,
+            command_queue,
             src_buffer,
             dst_buffer,
             src_offset,
             dst_offset,
             size),
-        sync_point);
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -926,7 +1060,9 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::CopyBufferRect::create(
+        CopyBufferRect::create(
+            cmdbuf,
+            command_queue,
             src_buffer,
             dst_buffer,
             src_origin,
@@ -936,7 +1072,8 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
             src_slice_pitch,
             dst_row_pitch,
             dst_slice_pitch),
-        sync_point);
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -970,13 +1107,16 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::CopyBufferToImage::create(
+        CopyBufferToImage::create(
+            cmdbuf,
+            command_queue,
             src_buffer,
             dst_image,
             src_offset,
             dst_origin,
             region),
-        sync_point);
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -1010,13 +1150,16 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::CopyImage::create(
+        CopyImage::create(
+            cmdbuf,
+            command_queue,
             src_image,
             dst_image,
             src_origin,
             dst_origin,
             region),
-        sync_point);
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -1050,13 +1193,16 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::CopyImageToBuffer::create(
+        CopyImageToBuffer::create(
+            cmdbuf,
+            command_queue,
             src_image,
             dst_buffer,
             src_origin,
             region,
             dst_offset),
-        sync_point);
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -1090,13 +1236,16 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::FillBuffer::create(
+        FillBuffer::create(
+            cmdbuf,
+            command_queue,
             buffer,
             pattern,
             pattern_size,
             offset,
             size),
-        sync_point);
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -1129,12 +1278,15 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        CmdBuf::FillImage::create(
+        FillImage::create(
+            cmdbuf,
+            command_queue,
             image,
             fill_color,
             origin,
             region),
-        sync_point);
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -1168,14 +1320,25 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
         return errorCode;
     }
 
-    cmdbuf->addCommand(
-        CmdBuf::NDRangeKernel::create(
+    NDRangeKernel* command = NULL;
+    if( cl_int errorCode = NDRangeKernel::create(
+            properties,
+            cmdbuf,
+            command_queue,
             kernel,
             work_dim,
             global_work_offset,
             global_work_size,
-            local_work_size),
-        sync_point);
+            local_work_size,
+            command) )
+    {
+        return errorCode;
+    }
+
+    cmdbuf->addCommand(
+        command,
+        sync_point,
+        mutable_handle);
     return CL_SUCCESS;
 }
 
@@ -1220,20 +1383,40 @@ bool clGetDeviceInfo_override(
                 nullptr,
                 &size );
 
-            std::vector<char> cvec(size);
+            std::vector<char> deviceExtensions(size);
             g_pNextDispatch->clGetDeviceInfo(
                 device,
                 CL_DEVICE_EXTENSIONS,
                 size,
-                cvec.data(),
+                deviceExtensions.data(),
+                nullptr );
+
+            size = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_VERSION,
+                0,
+                nullptr,
+                &size );
+
+            std::vector<char> deviceVersion(size);
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_VERSION,
+                size,
+                deviceVersion.data(),
                 nullptr );
 
             if( checkStringForExtension(
-                    cvec.data(),
-                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false )
+                    deviceExtensions.data(),
+                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
+                getOpenCLVersionFromString(
+                    deviceVersion.data() ) >= 0x00020001)
             {
-                std::string newExtensions(CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
-                std::string oldExtensions(cvec.data());
+                std::string newExtensions;
+                newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
+
+                std::string oldExtensions(deviceExtensions.data());
 
                 // If the old extension string ends with a space ensure the
                 // new extension string does too.
@@ -1265,21 +1448,37 @@ bool clGetDeviceInfo_override(
         break;
     case CL_DEVICE_EXTENSIONS_WITH_VERSION:
         {
-            size_t  sizeInBytes = 0;
+            size_t  size = 0;
             g_pNextDispatch->clGetDeviceInfo(
                 device,
                 CL_DEVICE_EXTENSIONS_WITH_VERSION,
                 0,
                 nullptr,
-                &sizeInBytes );
+                &size );
 
-            size_t  numExtensions = sizeInBytes / sizeof(cl_name_version);
+            size_t  numExtensions = size / sizeof(cl_name_version);
             std::vector<cl_name_version>    extensions(numExtensions);
             g_pNextDispatch->clGetDeviceInfo(
                 device,
                 CL_DEVICE_EXTENSIONS_WITH_VERSION,
-                sizeInBytes,
+                size,
                 extensions.data(),
+                nullptr );
+
+            size = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_VERSION,
+                0,
+                nullptr,
+                &size );
+
+            std::vector<char> deviceVersion(size);
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_VERSION,
+                size,
+                deviceVersion.data(),
                 nullptr );
 
             bool found = false;
@@ -1292,16 +1491,19 @@ bool clGetDeviceInfo_override(
                 }
             }
 
-            if( found == false )
+            if( found == false &&
+                getOpenCLVersionFromString(
+                    deviceVersion.data() ) >= 0x00020001)
             {
-                extensions.emplace_back();
+                {
+                    extensions.emplace_back();
+                    cl_name_version& extension = extensions.back();
 
-                cl_name_version& extension = extensions.back();
+                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
 
-                memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
-
-                extension.version = CL_MAKE_VERSION(0, 9, 0);
+                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                }
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
@@ -1394,20 +1596,40 @@ bool clGetPlatformInfo_override(
                 nullptr,
                 &size );
 
-            std::vector<char> cvec(size);
+            std::vector<char> platformExtensions(size);
             g_pNextDispatch->clGetPlatformInfo(
                 platform,
                 CL_PLATFORM_EXTENSIONS,
                 size,
-                cvec.data(),
+                platformExtensions.data(),
+                nullptr );
+
+            size = 0;
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_VERSION,
+                0,
+                nullptr,
+                &size );
+
+            std::vector<char> platformVersion(size);
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_VERSION,
+                size,
+                platformVersion.data(),
                 nullptr );
 
             if( checkStringForExtension(
-                    cvec.data(),
-                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false )
+                    platformExtensions.data(),
+                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
+                getOpenCLVersionFromString(
+                    platformVersion.data() ) >= 0x00020001)
             {
-                std::string newExtensions(CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
-                std::string oldExtensions(cvec.data());
+                std::string newExtensions;
+                newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
+
+                std::string oldExtensions(platformExtensions.data());
 
                 // If the old extension string ends with a space ensure the
                 // new extension string does too.
@@ -1439,21 +1661,37 @@ bool clGetPlatformInfo_override(
         break;
     case CL_PLATFORM_EXTENSIONS_WITH_VERSION:
         {
-            size_t  sizeInBytes = 0;
+            size_t  size = 0;
             g_pNextDispatch->clGetPlatformInfo(
                 platform,
                 CL_PLATFORM_EXTENSIONS_WITH_VERSION,
                 0,
                 nullptr,
-                &sizeInBytes );
+                &size );
 
-            size_t  numExtensions = sizeInBytes / sizeof(cl_name_version);
+            size_t  numExtensions = size / sizeof(cl_name_version);
             std::vector<cl_name_version>    extensions(numExtensions);
             g_pNextDispatch->clGetPlatformInfo(
                 platform,
                 CL_PLATFORM_EXTENSIONS_WITH_VERSION,
-                sizeInBytes,
+                size,
                 extensions.data(),
+                nullptr );
+
+            size = 0;
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_VERSION,
+                0,
+                nullptr,
+                &size );
+
+            std::vector<char> platformVersion(size);
+            g_pNextDispatch->clGetPlatformInfo(
+                platform,
+                CL_PLATFORM_VERSION,
+                size,
+                platformVersion.data(),
                 nullptr );
 
             bool found = false;
@@ -1466,16 +1704,19 @@ bool clGetPlatformInfo_override(
                 }
             }
 
-            if( found == false )
+            if( found == false &&
+                getOpenCLVersionFromString(
+                    platformVersion.data() ) >= 0x00020001)
             {
-                extensions.emplace_back();
+                {
+                    extensions.emplace_back();
+                    cl_name_version& extension = extensions.back();
 
-                cl_name_version& extension = extensions.back();
+                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
 
-                memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
-
-                extension.version = CL_MAKE_VERSION(0, 9, 0);
+                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                }
 
                 auto*   ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(

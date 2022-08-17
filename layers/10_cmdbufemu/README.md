@@ -12,6 +12,11 @@ The functionality in this emulation layer is sufficient to run the command buffe
 
 Please note that the emulated command buffers are intended to be functional, but unlike a native implementation of `cl_khr_command_buffer`, they may not provide any performance benefit over similar code without using command buffers.
 
+## Layer Requirement
+
+Because this layer calls `clCloneKernel` when recording a command buffer it requires an OpenCL 2.1 or newer device.
+If an older device is detected then the layer will not advertise support for the `cl_khr_command_buffer` extension.
+
 ## Key APIs and Concepts
 
 The most important concepts to understand from this sample are how to intercept `clGetExtensionFunctionAddressForPlatform` to return emulated functions for an extension.
@@ -27,3 +32,4 @@ This section describes some of the limitations of the emulated `cl_khr_command_b
 
 * The event associated with `clEnqueueCommandBufferKHR` will not have the proper event command type `CL_COMMAND_COMMAND_BUFFER_KHR`.
 * Event profiling for `clEnqueueCommandBufferKHR` will not be correct for the `QUEUED`, `SUBMITTED`, and `START` times.
+* Many error conditions are not properly checked for and returned.

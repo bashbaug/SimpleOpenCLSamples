@@ -8,6 +8,7 @@
 #include <CL/cl_layer.h>
 
 #include <cstring>
+#include <cctype>
 #include <vector>
 
 template<class T>
@@ -74,6 +75,37 @@ static inline cl_int writeStringToMemory(
     }
 
     return CL_SUCCESS;
+}
+
+static cl_uint getOpenCLVersionFromString(
+    const char* str)
+{
+    cl_uint major = 0;
+    cl_uint minor = 0;
+
+    // The device version string has the form:
+    //   OpenCL <Major>.<Minor> <Vendor Specific Info>
+    const char* prefix = "OpenCL ";
+    size_t sz = strlen(prefix);
+    if (strlen(str) > sz &&
+        strncmp(str, prefix, sz) == 0) {
+        const char* check = str + sz;
+        while (isdigit(check[0])) {
+            major *= 10;
+            major += check[0] - '0';
+            ++check;
+        }
+        if (check[0] == '.') {
+            ++check;
+        }
+        while (isdigit(check[0])) {
+            minor *= 10;
+            minor += check[0] - '0';
+            ++check;
+        }
+    }
+
+    return (major << 16) | minor;
 }
 
 static inline bool checkStringForExtension(
