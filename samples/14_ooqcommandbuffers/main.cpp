@@ -99,7 +99,7 @@ int main(
     }
 
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue{context, devices[deviceIndex], CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
 
     cl::Program program{ context, kernelString };
     program.build();
