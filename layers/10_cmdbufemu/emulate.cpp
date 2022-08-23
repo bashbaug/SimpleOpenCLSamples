@@ -8,6 +8,7 @@
 #include <CL/cl_ext.h>
 #include <CL/cl_layer.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <string>
@@ -17,11 +18,6 @@
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
-// Supported command buffer capabilites not dependent on kernels:
-// CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR
-const cl_device_command_buffer_capabilities_khr g_CommandBufferCaps =
-    CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR;
-
 typedef struct _cl_mutable_command_khr
 {
     static bool isValid( cl_mutable_command_khr command )
@@ -30,13 +26,44 @@ typedef struct _cl_mutable_command_khr
     }
 
     virtual ~_cl_mutable_command_khr() = default;
+
+    void addDependencies(
+        cl_uint num_sync_points,
+        const cl_sync_point_khr* wait_list,
+        cl_sync_point_khr sync_point)
+    {
+        if (SyncPoint == 0 && WaitList.empty()) {
+            WaitList.assign(wait_list, wait_list + num_sync_points);
+            SyncPoint = sync_point;
+        }
+    }
+
+    std::vector<cl_event> getEventWaitList(
+        const std::vector<cl_event>& deps) const
+    {
+        std::vector<cl_event> eventWaitList(WaitList.size());
+        std::transform(
+            WaitList.cbegin(),
+            WaitList.cend(),
+            eventWaitList.begin(),
+            [&](cl_uint s){ return deps[s]; });
+        return eventWaitList;
+    }
+
+    cl_event* getEventSignalPtr(
+        std::vector<cl_event>& deps) const
+    {
+        return SyncPoint != 0 ? &deps[SyncPoint] : nullptr;
+    }
+
     virtual int playback(
-        cl_command_queue) const = 0;
+        cl_command_queue,
+        std::vector<cl_event>&) const = 0;
 
     _cl_mutable_command_khr(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
-        cl_command_type type) :
+        cl_command_type type ) :
         Magic(cMagic),
         Type(type),
         CmdBuf(cmdbuf),
@@ -49,6 +76,9 @@ private:
     const cl_command_type Type;
     cl_command_buffer_khr CmdBuf;
     cl_command_queue Queue;
+
+    std::vector<cl_sync_point_khr> WaitList;
+    cl_sync_point_khr SyncPoint = 0;
 } Command;
 
 struct BarrierWithWaitList : Command
@@ -62,13 +92,16 @@ struct BarrierWithWaitList : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
 private:
@@ -100,8 +133,11 @@ struct CopyBuffer : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueCopyBuffer(
             queue,
             src_buffer,
@@ -109,9 +145,9 @@ struct CopyBuffer : Command
             src_offset,
             dst_offset,
             size,
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_mem src_buffer = nullptr;
@@ -157,8 +193,11 @@ struct CopyBufferRect : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueCopyBufferRect(
             queue,
             src_buffer,
@@ -170,9 +209,9 @@ struct CopyBufferRect : Command
             src_slice_pitch,
             dst_row_pitch,
             dst_slice_pitch,
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_mem src_buffer = nullptr;
@@ -214,8 +253,11 @@ struct CopyBufferToImage : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueCopyBufferToImage(
             queue,
             src_buffer,
@@ -223,9 +265,9 @@ struct CopyBufferToImage : Command
             src_offset,
             dst_origin.data(),
             region.data(),
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_mem src_buffer = nullptr;
@@ -263,13 +305,16 @@ struct CopyImage : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_mem src_image = nullptr;
@@ -307,8 +352,11 @@ struct CopyImageToBuffer : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueCopyImageToBuffer(
             queue,
             src_image,
@@ -316,9 +364,9 @@ struct CopyImageToBuffer : Command
             src_origin.data(),
             region.data(),
             dst_offset,
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_mem src_image = nullptr;
@@ -362,8 +410,11 @@ struct FillBuffer : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueFillBuffer(
             queue,
             buffer,
@@ -371,9 +422,9 @@ struct FillBuffer : Command
             pattern.size(),
             offset,
             size,
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_mem buffer = nullptr;
@@ -423,17 +474,20 @@ struct FillImage : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueFillImage(
             queue,
             image,
             fill_color.data(),
             origin.data(),
             region.data(),
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_mem image = nullptr;
@@ -523,8 +577,11 @@ struct NDRangeKernel : Command
     }
 
     int playback(
-        cl_command_queue queue) const override
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
     {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
         return g_pNextDispatch->clEnqueueNDRangeKernel(
             queue,
             kernel,
@@ -532,9 +589,9 @@ struct NDRangeKernel : Command
             global_work_offset.size() ? global_work_offset.data() : NULL,
             global_work_size.data(),
             local_work_size.size() ? local_work_size.data() : NULL,
-            0,
-            NULL,
-            0);
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
     }
 
     cl_kernel kernel = nullptr;
@@ -547,7 +604,8 @@ struct NDRangeKernel : Command
 private:
     NDRangeKernel(
         cl_command_buffer_khr cmdbuf,
-        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_NDRANGE_KERNEL) {};
+        cl_command_queue queue)
+        : Command(cmdbuf, queue, CL_COMMAND_NDRANGE_KERNEL) {};
 };
 
 typedef struct _cl_command_buffer_khr
@@ -734,7 +792,7 @@ typedef struct _cl_command_buffer_khr
         uint32_t numSyncPoints = NextSyncPoint.load(std::memory_order_relaxed);
         for( cl_uint i = 0; i < num_sync_points_in_wait_list; i++ )
         {
-            if( sync_point_wait_list[i] >= numSyncPoints )
+            if( sync_point_wait_list[i] == 0 || sync_point_wait_list[i] >= numSyncPoints )
             {
                 return CL_INVALID_SYNC_POINT_WAIT_LIST_KHR;
             }
@@ -774,14 +832,26 @@ typedef struct _cl_command_buffer_khr
 
     void    addCommand(
                 Command* command,
+                cl_uint num_sync_points,
+                const cl_sync_point_khr* wait_list,
                 cl_sync_point_khr* sync_point,
                 cl_mutable_command_khr* mutable_handle )
     {
+        cl_sync_point_khr syncPoint =
+            sync_point != nullptr ?
+            NextSyncPoint.fetch_add(1, std::memory_order_relaxed) :
+            0;
+
+        command->addDependencies(
+            num_sync_points,
+            wait_list,
+            syncPoint);
+
         Commands.push_back(command);
 
         if( sync_point != nullptr )
         {
-            sync_point[0] = NextSyncPoint.fetch_add(1, std::memory_order_relaxed);
+            sync_point[0] = syncPoint;
         }
         if( mutable_handle != nullptr )
         {
@@ -803,16 +873,29 @@ typedef struct _cl_command_buffer_khr
     cl_int  replay(
                 cl_command_queue queue) const
     {
+        cl_int errorCode = CL_SUCCESS;
+
+        const uint32_t numSyncPoints = NextSyncPoint.load(std::memory_order_relaxed);
+        std::vector<cl_event> deps(numSyncPoints, nullptr);
+
         for( auto command : Commands )
         {
-            cl_int  errorCode = command->playback(queue);
+            errorCode = command->playback(queue, deps);
             if( errorCode != CL_SUCCESS )
             {
-                return errorCode;
+                break;
             }
         }
 
-        return CL_SUCCESS;
+        for( auto event : deps )
+        {
+            if (event != nullptr)
+            {
+                g_pNextDispatch->clReleaseEvent(event);
+            }
+        }
+
+        return errorCode;
     }
 
 private:
@@ -833,7 +916,7 @@ private:
         State(CL_COMMAND_BUFFER_STATE_RECORDING_KHR),
         Flags(flags),
         RefCount(1),
-        NextSyncPoint(0) {}
+        NextSyncPoint(1) {}
 } CommandBuffer;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -978,6 +1061,8 @@ cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
 
     cmdbuf->addCommand(
         BarrierWithWaitList::create(cmdbuf, command_queue),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1021,6 +1106,8 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
             src_offset,
             dst_offset,
             size),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1072,6 +1159,8 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
             src_slice_pitch,
             dst_row_pitch,
             dst_slice_pitch),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1115,6 +1204,8 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
             src_offset,
             dst_origin,
             region),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1158,6 +1249,8 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
             src_origin,
             dst_origin,
             region),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1201,6 +1294,8 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
             src_origin,
             region,
             dst_offset),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1244,6 +1339,8 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
             pattern_size,
             offset,
             size),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1285,6 +1382,8 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
             fill_color,
             origin,
             region),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1337,6 +1436,8 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
 
     cmdbuf->addCommand(
         command,
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
         sync_point,
         mutable_handle);
     return CL_SUCCESS;
@@ -1523,8 +1624,8 @@ bool clGetDeviceInfo_override(
     case CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR:
         {
             cl_device_command_buffer_capabilities_khr caps =
-                g_CommandBufferCaps |
-                CL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR;
+                CL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR |
+                CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR;
 
             cl_device_device_enqueue_capabilities dseCaps = 0;
             g_pNextDispatch->clGetDeviceInfo(
@@ -1536,6 +1637,18 @@ bool clGetDeviceInfo_override(
             if( dseCaps != 0 )
             {
                 caps |= CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR;
+            }
+
+            cl_command_queue_properties cqProps = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_QUEUE_PROPERTIES,
+                sizeof(cqProps),
+                &cqProps,
+                nullptr );
+            if( cqProps & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE )
+            {
+                caps |= CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR;
             }
 
             auto ptr = (cl_device_command_buffer_capabilities_khr*)param_value;
