@@ -12,8 +12,6 @@
 
 #include "util.hpp"
 
-const size_t    gwx = 1024*1024;
-
 static const char kernelString[] = R"CLC(
 kernel void SlowFillBuffer( global uint* dst, uint pattern, uint size )
 {
@@ -36,10 +34,18 @@ int main(
     int platformIndex = 0;
     int deviceIndex = 0;
 
+    bool useIOQ = false;
+
+    size_t iterations = 16;
+    size_t gwx = 1024*1024;
+
     {
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Switch>("", "ioq", "Use an In-Order Queue", &useIOQ);
+        op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
+        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Buffer Size", gwx, &gwx);
 
         bool printUsage = false;
         try {
@@ -51,7 +57,7 @@ int main(
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: copybufferkernel [options]\n"
+                "Usage: ooqcommandbuffers [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }
@@ -98,8 +104,14 @@ int main(
         return -1;
     }
 
+    printf("\n");
+    printf("Using an %s queue.\n", useIOQ ? "in-order" : "out-of-order");
+    printf("Executing the command buffer %zu times.\n", iterations);
+    printf("Buffer Size is %zu.\n", gwx);
+
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue{context, devices[deviceIndex], CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
+    cl::CommandQueue commandQueue{context, devices[deviceIndex],
+        useIOQ ? (cl_command_queue_properties)0 : CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
 
     cl::Program program{ context, kernelString };
     program.build();
@@ -184,18 +196,31 @@ int main(
         nullptr);
     cmdbuf.finalize();
 
-    clEnqueueCommandBufferKHR(
-        0,
-        nullptr,
-        cmdbuf(),
-        0,
-        nullptr,
-        nullptr);
+    // Ensure the queue is empty and no processing is happening
+    // on the device before starting the timer.
+    commandQueue.finish();
+
+    auto start = std::chrono::system_clock::now();
+    for( size_t i = 0; i < iterations; i++ )
+    {
+        clEnqueueCommandBufferKHR(
+            0,
+            nullptr,
+            cmdbuf(),
+            0,
+            nullptr,
+            nullptr);
+    }
+
+    // Ensure all processing is complete before stopping the timer.
+    commandQueue.finish();
+
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<float> elapsed_seconds = end - start;
+    printf("Finished in %f seconds\n", elapsed_seconds.count());
 
     // verification
     {
-        commandQueue.finish();
-
         const cl_uint*  pDst = (const cl_uint*)commandQueue.enqueueMapBuffer(
             deviceMemDst,
             CL_TRUE,
