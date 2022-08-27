@@ -45,7 +45,7 @@ int main(
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "ioq", "Use an In-Order Queue", &useIOQ);
         op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
-        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Buffer Size", gwx, &gwx);
+        op.add<popl::Value<size_t>>("e", "elements", "Number of Elements AKA Buffer Size", gwx, &gwx);
 
         bool printUsage = false;
         try {
@@ -107,7 +107,7 @@ int main(
     printf("\n");
     printf("Using an %s queue.\n", useIOQ ? "in-order" : "out-of-order");
     printf("Executing the command buffer %zu times.\n", iterations);
-    printf("Buffer Size is %zu.\n", gwx);
+    printf("Buffer Size is %zu 32-bit integers.\n", gwx);
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue{context, devices[deviceIndex],
@@ -210,6 +210,12 @@ int main(
             0,
             nullptr,
             nullptr);
+
+        // Because the command buffer is executing in an out-of-
+        // order queue we need a command queue barrier to ensure
+        // this iteration is complete before beginning the next
+        // iteration.
+        commandQueue.enqueueBarrierWithWaitList();
     }
 
     // Ensure all processing is complete before stopping the timer.
