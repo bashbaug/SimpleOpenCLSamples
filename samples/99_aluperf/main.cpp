@@ -10,7 +10,7 @@
 
 #include <algorithm>
 #include <cinttypes>
-#include <strstream>
+#include <sstream>
 #include <vector>
 
 int main(
@@ -26,8 +26,8 @@ int main(
     size_t ops = 1024;
     uint32_t seed = 0;
 
-    std::string datatype;
-    std::string operation;
+    std::string datatype("float");
+    std::string operation("z = z + x");
     std::string buildOptions;
 
     {
@@ -144,13 +144,14 @@ int main(
         maxTime = std::max(time, maxTime);
     }
 
-    double rate = (double)gws * ops / (minTime * 1024 * 1024 * 1024);
+    //double rate = (double)gws * ops / (minTime * 1024 * 1024 * 1024);
+    double rate = (double)gws * ops / (minTime * 1e9);
 
     std::stringstream fnty;
     fnty << operation << " (" << datatype << ")";
 
     printf("\n");
-    printf("%32s %10s %10s %12s\n", "Function", "Min Time", "Max Time", "Max Ops/s");
+    printf("%32s %10s %10s %12s\n", "Function", "Min Time", "Max Time", "Max GOps/s");
     printf("%32s %10f %10f %12f\n", fnty.str().c_str(), minTime, maxTime, rate);
 
     return 0;
