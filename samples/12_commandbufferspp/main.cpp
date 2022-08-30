@@ -10,6 +10,8 @@
 
 #include <cinttypes>
 
+#include "util.hpp"
+
 const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
@@ -102,6 +104,15 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     // device queries:
+
+    bool has_cl_khr_command_buffer =
+        checkDeviceForExtension(devices[deviceIndex], CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
+    if (has_cl_khr_command_buffer) {
+        printf("Device supports " CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ".\n");
+    } else {
+        printf("Device does not support " CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ", exiting.\n");
+        return -1;
+    }
 
     printf("\tCommand Buffer Capabilities:\n");
     PrintCommandBufferCapabilities(
