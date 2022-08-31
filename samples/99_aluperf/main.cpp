@@ -85,7 +85,7 @@ int main(
     if (datatype.rfind("half", 0) == 0) {
         ss << "#pragma OPENCL EXTENSION cl_khr_fp16 : enable" << std::endl;
     }
-    else if (datatype.rfind("doubld", 0) == 0) {
+    else if (datatype.rfind("double", 0) == 0) {
         ss << "#pragma OPENCL EXTENSION cl_khr_fp64 : enable" << std::endl;
     }
 
