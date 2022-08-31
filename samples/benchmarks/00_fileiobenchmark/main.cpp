@@ -42,6 +42,8 @@
 #else
 
 #include <pthread.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define GET_PROCESS_ID()    getpid()
 #define GET_THREAD_ID()     pthread_self()
