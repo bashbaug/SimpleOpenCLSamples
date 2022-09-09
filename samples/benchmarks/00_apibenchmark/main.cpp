@@ -198,7 +198,7 @@ BENCHMARK_DEFINE_F(Context, clCreateBuffer_ForceHostMem)(benchmark::State& state
     for(auto _ : state) {
         buffers[count++] = clCreateBuffer(
             context(),
-            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR | CL_MEM_FORCE_HOST_MEMORY_INTEL,
             data.size(),
             data.data(),
             nullptr);
