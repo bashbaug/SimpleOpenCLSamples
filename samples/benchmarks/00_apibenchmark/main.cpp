@@ -93,7 +93,7 @@ struct Platform : public benchmark::Fixture
 
 BENCHMARK_DEFINE_F(Platform, clGetDeviceIDs)(benchmark::State& state)
 {
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         cl_uint numDevices = 0;
         clGetDeviceIDs(
             platform(),
@@ -119,7 +119,7 @@ struct Device : public benchmark::Fixture
 
 BENCHMARK_DEFINE_F(Device, clGetDeviceInfo)(benchmark::State& state)
 {
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         cl_device_type type = 0;
         clGetDeviceInfo(
             device(),
@@ -130,6 +130,92 @@ BENCHMARK_DEFINE_F(Device, clGetDeviceInfo)(benchmark::State& state)
     }
 }
 BENCHMARK_REGISTER_F(Device, clGetDeviceInfo);
+
+struct Context : public benchmark::Fixture
+{
+    cl::Context context;
+
+    virtual void SetUp(benchmark::State& state) override {
+        context = env.context;
+    }
+    virtual void TearDown(benchmark::State& state) override {
+        context = NULL;
+    }
+};
+
+BENCHMARK_DEFINE_F(Context, clCreateBuffer)(benchmark::State& state)
+{
+    const size_t bufferSize = state.range(0);
+    std::vector<cl_uchar> data(bufferSize, 0);
+
+    const size_t maxNumBuffers = 128;
+    std::array<cl_mem, maxNumBuffers> buffers;
+
+    size_t count = 0;
+    for(auto _ : state) {
+        buffers[count++] = clCreateBuffer(
+            context(),
+            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            data.size(),
+            data.data(),
+            nullptr);
+
+        if (count >= maxNumBuffers) {
+            for(size_t i = 0; i < count; i++) {
+                clReleaseMemObject(buffers[i]);
+            }
+            count = 0;
+        }
+    }
+
+    for(size_t i = 0; i < count; i++) {
+        clReleaseMemObject(buffers[i]);
+    }
+}
+BENCHMARK_REGISTER_F(Context, clCreateBuffer)->Arg(64);
+
+BENCHMARK_DEFINE_F(Context, clCreateBuffer_ForceHostMem)(benchmark::State& state)
+{
+    const size_t bufferSize = state.range(0);
+    std::vector<cl_uchar> data(bufferSize, 0);
+
+    const size_t maxNumBuffers = 128;
+    std::array<cl_mem, maxNumBuffers> buffers;
+
+    cl_mem test = clCreateBuffer(
+        context(),
+        CL_MEM_FORCE_HOST_MEMORY_INTEL,
+        bufferSize,
+        nullptr,
+        nullptr);
+    if (test) {
+        clReleaseMemObject(test);
+    } else {
+        state.SkipWithError("Couldn't create buffer with CL_MEM_FORCE_HOST_MEMORY_INTEL");
+    }
+
+    size_t count = 0;
+    for(auto _ : state) {
+        buffers[count++] = clCreateBuffer(
+            context(),
+            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            data.size(),
+            data.data(),
+            nullptr);
+
+        if (count >= maxNumBuffers) {
+            for(size_t i = 0; i < count; i++) {
+                clReleaseMemObject(buffers[i]);
+            }
+            count = 0;
+        }
+    }
+
+    for(size_t i = 0; i < count; i++) {
+        clReleaseMemObject(buffers[i]);
+    }
+}
+BENCHMARK_REGISTER_F(Context, clCreateBuffer_ForceHostMem)->Arg(64);
 
 struct Kernel : public benchmark::Fixture
 {
@@ -157,7 +243,7 @@ struct Kernel : public benchmark::Fixture
 
 BENCHMARK_DEFINE_F(Kernel, clSetKernelArg)(benchmark::State& state)
 {
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         int x = 0;
         clSetKernelArg(
             kernel(),
@@ -174,7 +260,7 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_NullQueueError)(benchmark::Sta
     const size_t global_work_size[work_dim] = { 1 };
     const size_t local_work_size[work_dim] = { 1 };
     const size_t global_work_offset[work_dim] = { 0 };
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         clEnqueueNDRangeKernel(
             NULL,
             kernel(),
@@ -195,7 +281,7 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_NullKernelError)(benchmark::St
     const size_t global_work_size[work_dim] = { 1 };
     const size_t local_work_size[work_dim] = { 1 };
     const size_t global_work_offset[work_dim] = { 0 };
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         clEnqueueNDRangeKernel(
             queue(),
             NULL,
@@ -221,7 +307,7 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_1x1_NoEvent)(benchmark::State&
 
     size_t count = 0;
 
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         clEnqueueNDRangeKernel(
             queue(),
             kernel(),
@@ -252,7 +338,7 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_1x1_Event)(benchmark::State& s
 
     size_t count = 0;
 
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         cl_event event = NULL;
         clEnqueueNDRangeKernel(
             queue(),
@@ -307,7 +393,7 @@ BENCHMARK_DEFINE_F(SVMKernel, clSetKernelArgSVMPointer)(benchmark::State& state)
 {
     const int mask = (int)state.range(0) - 1;
     int i = 0;
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         clSetKernelArgSVMPointer(
             kernel(),
             0,
@@ -356,7 +442,7 @@ BENCHMARK_DEFINE_F(USMMemCpy, clEnqueueMemcpyINTEL_device_blocking)(benchmark::S
     if (dptrs[0] == NULL || dptrs[1] == NULL) {
         state.SkipWithError("unsupported");
     }
-    while(state.KeepRunning()) {
+    for(auto _ : state) {
         clEnqueueMemcpyINTEL(
             queue(),
             CL_TRUE,
