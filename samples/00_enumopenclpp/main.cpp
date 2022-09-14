@@ -52,10 +52,9 @@ static void PrintDeviceType(
 static cl_int PrintDeviceInfoSummary(
     const std::vector<cl::Device> devices )
 {
-    size_t  i = 0;
-    for( i = 0; i < devices.size(); i++ )
+    for( size_t i = 0; i < devices.size(); i++ )
     {
-        printf("Device[%d]:\n", (int)i );
+        printf("Device[%zu]:\n", i );
 
         cl_device_type  deviceType = devices[i].getInfo<CL_DEVICE_TYPE>();
         PrintDeviceType("\tType:           ", deviceType);
@@ -95,13 +94,13 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
-    for( auto& platform : platforms )
+    for( size_t i = 0; i < platforms.size(); i++ )
     {
-        printf( "Platform:\n" );
-        PrintPlatformInfoSummary( platform );
+        printf( "Platform[%zu]:\n", i );
+        PrintPlatformInfoSummary( platforms[i] );
 
         std::vector<cl::Device> devices;
-        platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
         PrintDeviceInfoSummary( devices );
         printf( "\n" );

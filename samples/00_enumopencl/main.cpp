@@ -194,7 +194,7 @@ static void PrintDeviceType(
 
 static cl_int PrintDeviceInfoSummary(
     cl_device_id* devices,
-    size_t numDevices )
+    cl_uint numDevices )
 {
     cl_int  errorCode = CL_SUCCESS;
 
@@ -204,8 +204,7 @@ static cl_int PrintDeviceInfoSummary(
     char*           deviceVersion = NULL;
     char*           driverVersion = NULL;
 
-    size_t  i = 0;
-    for( i = 0; i < numDevices; i++ )
+    for( cl_uint i = 0; i < numDevices; i++ )
     {
         errorCode |= clGetDeviceInfo(
             devices[i],
@@ -232,7 +231,7 @@ static cl_int PrintDeviceInfoSummary(
 
         if( errorCode == CL_SUCCESS )
         {
-            printf("Device[%d]:\n", (int)i );
+            printf("Device[%u]:\n", i );
 
             PrintDeviceType("\tType:           ", deviceType);
 
@@ -243,7 +242,7 @@ static cl_int PrintDeviceInfoSummary(
         }
         else
         {
-            fprintf(stderr, "Error getting device info for device %d.\n", (int)i );
+            fprintf(stderr, "Error getting device info for device %u.\n", i );
         }
 
         delete [] deviceName;
@@ -291,17 +290,17 @@ int main(
     platforms.resize( numPlatforms );
     clGetPlatformIDs( numPlatforms, platforms.data(), NULL );
 
-    for( auto& platform : platforms )
+    for( cl_uint i = 0; i < numPlatforms; i++ )
     {
-        printf( "Platform:\n" );
-        PrintPlatformInfoSummary( platform );
+        printf( "Platform[%u]:\n", i );
+        PrintPlatformInfoSummary( platforms[i] );
 
         cl_uint numDevices = 0;
-        clGetDeviceIDs( platform, CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices );
+        clGetDeviceIDs( platforms[i], CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices );
 
         std::vector<cl_device_id> devices;
         devices.resize( numDevices );
-        clGetDeviceIDs( platform, CL_DEVICE_TYPE_ALL, numDevices, devices.data(), NULL );
+        clGetDeviceIDs( platforms[i], CL_DEVICE_TYPE_ALL, numDevices, devices.data(), NULL );
 
         PrintDeviceInfoSummary( devices.data(), numDevices );
         printf( "\n" );
