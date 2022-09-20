@@ -1208,10 +1208,10 @@ private:
         getFdInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
         vkGetSemaphoreFdKHR(device, &getFdInfo, &fd);
 
-        const cl_mem_properties props[] = {
+        const cl_semaphore_properties_khr props[] = {
             CL_SEMAPHORE_TYPE_KHR,
             CL_SEMAPHORE_TYPE_BINARY_KHR,
-            CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR,
+            CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR,
             (cl_semaphore_properties_khr)fd,
             0,
         };
