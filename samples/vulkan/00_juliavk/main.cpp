@@ -177,6 +177,7 @@ private:
     float cr = -0.123f;
     float ci =  0.745f;
 
+    bool vsync = true;
     size_t startFrame = 0;
     size_t frame = 0;
     std::chrono::system_clock::time_point start =
@@ -258,6 +259,7 @@ private:
     void commandLine(int argc, char** argv) {
         bool hostCopy = false;
         bool hostSync = false;
+        bool immediate = false;
 
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
@@ -268,6 +270,7 @@ private:
         op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
         op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
         op.add<popl::Value<size_t>>("", "lwy", "Local Work Size Y", lwy, &lwy);
+        op.add<popl::Switch>("", "immediate", "Prefer VK_PRESENT_MODE_IMMEDIATE_KHR (no vsync)", &immediate);
 
         bool printUsage = false;
         try {
@@ -286,6 +289,7 @@ private:
 
         useExternalMemory = !hostCopy;
         useExternalSemaphore = !hostSync;
+        vsync = !immediate;
     }
 
     void initWindow() {
@@ -1694,8 +1698,14 @@ private:
 
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
         for (const auto& availablePresentMode : availablePresentModes) {
-            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-                return availablePresentMode;
+            if (vsync) {
+                if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+                    return availablePresentMode;
+                }
+            } else {
+                if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+                    return availablePresentMode;
+                }
             }
         }
 

@@ -49,6 +49,7 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 | `--gwy <number>` | 512 | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
 | `--lwx <number>` | 0 | Specify the local work size in the X direction.  If either local works size dimension is zero a `NULL` local work size is used.
 | `--lwy <number>` | 0 | Specify the local work size in the Y direction.  If either local works size dimension is zero a `NULL` local work size is used.
+| `--immediate` | n/a | Prefer `VK_PRESENT_MODE_IMMEDIATE_KHR` (no vsync).  May result in faster framerates at the cost of visible tearing.
 
 ## Controls While Running
 
