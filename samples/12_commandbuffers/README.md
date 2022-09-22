@@ -14,7 +14,7 @@ This sample requires the OpenCL Extension Loader to get the extension APIs for c
 
 This sample demonstrates how to query the command buffer properties supported by a device, and the properties of a command buffer.
 
-This sample also demostrates how to create, finalize, and execute a command buffer.
+This sample also demonstrates how to create, finalize, and execute a command buffer.
 
 ```c
 clCreateCommandBufferKHR

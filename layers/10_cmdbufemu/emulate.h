@@ -156,6 +156,21 @@ cl_int CL_API_CALL clGetCommandBufferInfoKHR_EMU(
     void* param_value,
     size_t* param_value_size_ret);
 
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+
+cl_int CL_API_CALL clUpdateMutableCommandsKHR_EMU(
+    cl_command_buffer_khr command_buffer,
+    const cl_mutable_base_config_khr* mutable_config);
+
+cl_int CL_API_CALL clGetMutableCommandInfoKHR_EMU(
+    cl_mutable_command_khr command,
+    cl_mutable_command_info_khr param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret);
+
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
 ///////////////////////////////////////////////////////////////////////////////
 // Override Functions
 

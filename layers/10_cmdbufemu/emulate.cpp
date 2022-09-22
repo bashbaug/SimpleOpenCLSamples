@@ -18,6 +18,19 @@
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+
+// Supported mutable dispatch capabilities.
+// Right now, all capabilities are supported.
+const cl_mutable_dispatch_fields_khr g_MutableDispatchCaps =
+    CL_MUTABLE_DISPATCH_GLOBAL_OFFSET_KHR |
+    CL_MUTABLE_DISPATCH_GLOBAL_SIZE_KHR |
+    CL_MUTABLE_DISPATCH_LOCAL_SIZE_KHR |
+    CL_MUTABLE_DISPATCH_ARGUMENTS_KHR |
+    CL_MUTABLE_DISPATCH_EXEC_INFO_KHR;
+
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
 typedef struct _cl_mutable_command_khr
 {
     static bool isValid( cl_mutable_command_khr command )
@@ -25,7 +38,109 @@ typedef struct _cl_mutable_command_khr
         return command && command->Magic == cMagic;
     }
 
-    virtual ~_cl_mutable_command_khr() = default;
+    cl_command_buffer_khr   getCmdBuf() const
+    {
+        return CmdBuf;
+    }
+
+    cl_command_type getType() const
+    {
+        return Type;
+    }
+
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    virtual cl_int  getInfo(
+        cl_mutable_command_info_khr param_name,
+        size_t param_value_size,
+        void* param_value,
+        size_t* param_value_size_ret)
+    {
+        switch( param_name )
+        {
+        case CL_MUTABLE_COMMAND_COMMAND_QUEUE_KHR:
+            {
+                // TODO: Should this return NULL if the passed-in command
+                // queue is NULL?  Or the queue associated with the command
+                // buffer?
+                auto ptr = (cl_command_queue*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    Queue,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_COMMAND_COMMAND_BUFFER_KHR:
+            {
+                auto ptr = (cl_command_buffer_khr*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    CmdBuf,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_COMMAND_COMMAND_TYPE_KHR:
+            {
+                auto ptr = (cl_command_type*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    Type,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        // These are only valid for clCommandNDRangeKernel, but the spec says
+        // they should return size = 0 rather than an error.
+        case CL_MUTABLE_DISPATCH_PROPERTIES_ARRAY_KHR:
+            {
+                auto ptr = (cl_ndrange_kernel_command_properties_khr*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    {}, // No properties are currently supported.
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_DISPATCH_KERNEL_KHR:
+            {
+                auto ptr = (cl_kernel*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    {},
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_DISPATCH_DIMENSIONS_KHR:
+            {
+                auto ptr = (cl_uint*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    {},
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_DISPATCH_GLOBAL_WORK_OFFSET_KHR:
+        case CL_MUTABLE_DISPATCH_GLOBAL_WORK_SIZE_KHR:
+        case CL_MUTABLE_DISPATCH_LOCAL_WORK_SIZE_KHR:
+            {
+                auto ptr = (size_t*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    {},
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        default:
+            break;
+        }
+
+        return CL_INVALID_VALUE;
+    }
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     void addDependencies(
         cl_uint num_sync_points,
@@ -55,6 +170,8 @@ typedef struct _cl_mutable_command_khr
     {
         return SyncPoint != 0 ? &deps[SyncPoint] : nullptr;
     }
+
+    virtual ~_cl_mutable_command_khr() = default;
 
     virtual int playback(
         cl_command_queue,
@@ -517,16 +634,33 @@ struct NDRangeKernel : Command
         cl_int errorCode = CL_SUCCESS;
 
         ptrdiff_t numProperties = 0;
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+        cl_mutable_dispatch_fields_khr mutableFields = g_MutableDispatchCaps;
+#endif
 
         if( properties )
         {
             const cl_ndrange_kernel_command_properties_khr* check = properties;
+            bool found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR = false;
             while( errorCode == CL_SUCCESS && check[0] != 0 )
             {
                 cl_int  property = (cl_int)check[0];
                 switch( property )
                 {
-                case 0: // silence warning
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+                case CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR:
+                    if( found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR )
+                    {
+                        return CL_INVALID_VALUE;
+                    }
+                    else
+                    {
+                        found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR = true;
+                        mutableFields = ((const cl_mutable_dispatch_fields_khr*)(check + 1))[0];
+                        check += 2;
+                    }
+                    break;
+#endif
                 default:
                     return  CL_INVALID_VALUE;
                     break;
@@ -539,6 +673,10 @@ struct NDRangeKernel : Command
 
         command->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
         command->work_dim = work_dim;
+
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+        command->mutableFields = mutableFields;
+#endif
 
         command->properties.reserve(numProperties);
         command->properties.insert(
@@ -576,6 +714,223 @@ struct NDRangeKernel : Command
         return CL_SUCCESS;
     }
 
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    virtual cl_int  getInfo(
+        cl_mutable_command_info_khr param_name,
+        size_t param_value_size,
+        void* param_value,
+        size_t* param_value_size_ret)
+    {
+        switch( param_name )
+        {
+        case CL_MUTABLE_DISPATCH_PROPERTIES_ARRAY_KHR:
+            {
+                auto ptr = (cl_ndrange_kernel_command_properties_khr*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    properties,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_DISPATCH_KERNEL_KHR:
+            {
+                auto ptr = (cl_kernel*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    kernel,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_DISPATCH_DIMENSIONS_KHR:
+            {
+                auto ptr = (cl_uint*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    work_dim,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+        case CL_MUTABLE_DISPATCH_GLOBAL_WORK_OFFSET_KHR:
+            {
+                auto ptr = (size_t*)param_value;
+                if( global_work_offset.size() )
+                {
+                    return writeVectorToMemory(
+                        param_value_size,
+                        global_work_offset,
+                        param_value_size_ret,
+                        ptr );
+                }
+                else
+                {
+                    // TODO: Should it be valid to return a size of zero in
+                    // this case instead?
+                    std::vector<size_t> temp_global_work_offset(work_dim, 0);
+                    return writeVectorToMemory(
+                        param_value_size,
+                        temp_global_work_offset,
+                        param_value_size_ret,
+                        ptr );
+                }
+            }
+            break;
+        case CL_MUTABLE_DISPATCH_GLOBAL_WORK_SIZE_KHR:
+            {
+                auto ptr = (size_t*)param_value;
+                return writeVectorToMemory(
+                    param_value_size,
+                    global_work_size,
+                    param_value_size_ret,
+                    ptr );
+            }
+        case CL_MUTABLE_DISPATCH_LOCAL_WORK_SIZE_KHR:
+            {
+                auto ptr = (size_t*)param_value;
+                if( local_work_size.size() )
+                {
+                    return writeVectorToMemory(
+                        param_value_size,
+                        local_work_size,
+                        param_value_size_ret,
+                        ptr );
+                }
+                else
+                {
+                    // TODO: Should it be valid to return a size of zero in
+                    // this case instead?
+                    std::vector<size_t> temp_local_work_size(work_dim, 0);
+                    return writeVectorToMemory(
+                        param_value_size,
+                        temp_local_work_size,
+                        param_value_size_ret,
+                        ptr );
+                }
+            }
+            break;
+        default:
+            return Command::getInfo(
+                param_name,
+                param_value_size,
+                param_value,
+                param_value_size_ret);
+        }
+
+        return CL_INVALID_VALUE;
+    }
+
+    int mutate( const cl_mutable_dispatch_config_khr* dispatchConfig )
+    {
+        //CL_INVALID_OPERATION if values of local_work_size and/or global_work_size result in an increase to the number of work-groups in the ND-range.
+        //CL_INVALID_OPERATION if the values of local_work_size and/or global_work_size result in a change to work-group uniformity.
+        if( dispatchConfig->work_dim != 0 && dispatchConfig->work_dim != work_dim )
+        {
+            return CL_INVALID_VALUE;
+        }
+        if( !(mutableFields & CL_MUTABLE_DISPATCH_GLOBAL_OFFSET_KHR) &&
+            dispatchConfig->global_work_offset != nullptr )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( !(mutableFields & CL_MUTABLE_DISPATCH_GLOBAL_SIZE_KHR) &&
+            dispatchConfig->global_work_size != nullptr )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( !(mutableFields & CL_MUTABLE_DISPATCH_LOCAL_SIZE_KHR) &&
+            dispatchConfig->local_work_size != nullptr )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( !(mutableFields & CL_MUTABLE_DISPATCH_ARGUMENTS_KHR) &&
+            (dispatchConfig->num_args != 0 || dispatchConfig->num_svm_args != 0) )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( !(mutableFields & CL_MUTABLE_DISPATCH_EXEC_INFO_KHR) &&
+            dispatchConfig->num_exec_infos != 0 )
+        {
+            return CL_INVALID_OPERATION;
+        }
+
+        if( ( dispatchConfig->num_args > 0 && dispatchConfig->arg_list == nullptr ) ||
+            ( dispatchConfig->num_args == 0 && dispatchConfig->arg_list != nullptr ) )
+        {
+            return CL_INVALID_VALUE;
+        }
+        if( ( dispatchConfig->num_svm_args > 0 && dispatchConfig->arg_svm_list == nullptr ) ||
+            ( dispatchConfig->num_svm_args == 0 && dispatchConfig->arg_svm_list != nullptr ) )
+        {
+            return CL_INVALID_VALUE;
+        }
+        if( ( dispatchConfig->num_exec_infos > 0 && dispatchConfig->exec_info_list == nullptr ) ||
+            ( dispatchConfig->num_exec_infos == 0 && dispatchConfig->exec_info_list != nullptr ) )
+        {
+            return CL_INVALID_VALUE;
+        }
+
+        for( cl_uint i = 0; i < dispatchConfig->num_args; i++ )
+        {
+            if( cl_int errorCode = g_pNextDispatch->clSetKernelArg(
+                    kernel,
+                    dispatchConfig->arg_list[i].arg_index,
+                    dispatchConfig->arg_list[i].arg_size,
+                    dispatchConfig->arg_list[i].arg_value ) )
+            {
+                return errorCode;
+            }
+        }
+
+        for( cl_uint i = 0; i < dispatchConfig->num_svm_args; i++ )
+        {
+            if( cl_int errorCode = g_pNextDispatch->clSetKernelArgSVMPointer(
+                    kernel,
+                    dispatchConfig->arg_svm_list[i].arg_index,
+                    dispatchConfig->arg_svm_list[i].arg_value ) )
+            {
+                return errorCode;
+            }
+        }
+
+        for( cl_uint i = 0; i < dispatchConfig->num_exec_infos; i++ )
+        {
+            if( cl_int errorCode = g_pNextDispatch->clSetKernelExecInfo(
+                    kernel,
+                    dispatchConfig->exec_info_list[i].param_name,
+                    dispatchConfig->exec_info_list[i].param_value_size,
+                    dispatchConfig->exec_info_list[i].param_value ) )
+            {
+                return errorCode;
+            }
+        }
+
+        if( dispatchConfig->global_work_offset )
+        {
+            global_work_offset.assign(
+                dispatchConfig->global_work_offset,
+                dispatchConfig->global_work_offset + work_dim );
+        }
+
+        if( dispatchConfig->global_work_size )
+        {
+            global_work_size.assign(
+                dispatchConfig->global_work_size,
+                dispatchConfig->global_work_size + work_dim );
+        }
+
+        if( dispatchConfig->local_work_size )
+        {
+            local_work_size.assign(
+                dispatchConfig->local_work_size,
+                dispatchConfig->local_work_size + work_dim );
+        }
+
+        return CL_SUCCESS;
+    }
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
     int playback(
         cl_command_queue queue,
         std::vector<cl_event>& deps) const override
@@ -596,6 +951,9 @@ struct NDRangeKernel : Command
 
     cl_kernel kernel = nullptr;
     cl_uint work_dim = 0;
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    cl_mutable_dispatch_fields_khr mutableFields = 0;
+#endif
     std::vector<cl_command_buffer_properties_khr> properties;
     std::vector<size_t> global_work_offset;
     std::vector<size_t> global_work_size;
@@ -779,10 +1137,13 @@ typedef struct _cl_command_buffer_khr
         {
             return CL_INVALID_COMMAND_QUEUE;
         }
+// TODO: Change this to a runtime check?
+#if !defined(cl_khr_command_buffer_mutable_dispatch)
         if( mutable_handle != NULL )
         {
             return CL_INVALID_VALUE;
         }
+#endif // !defined(cl_khr_command_buffer_mutable_dispatch)
         if( ( sync_point_wait_list == NULL && num_sync_points_in_wait_list > 0 ) ||
             ( sync_point_wait_list != NULL && num_sync_points_in_wait_list == 0 ) )
         {
@@ -897,6 +1258,73 @@ typedef struct _cl_command_buffer_khr
 
         return errorCode;
     }
+
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    cl_int  mutate( const cl_mutable_base_config_khr* mutable_config )
+    {
+        if( State != CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( !(Flags & CL_COMMAND_BUFFER_MUTABLE_KHR) )
+        {
+            return CL_INVALID_OPERATION;
+        }
+
+        if( mutable_config == nullptr )
+        {
+            return CL_INVALID_VALUE;
+        }
+        if( mutable_config->type != CL_STRUCTURE_TYPE_MUTABLE_BASE_CONFIG_KHR )
+        {
+            return CL_INVALID_VALUE;
+        }
+        if( mutable_config->next == nullptr && mutable_config->mutable_dispatch_list == nullptr )
+        {
+            return CL_INVALID_VALUE;
+        }
+        if( ( mutable_config->num_mutable_dispatch > 0 && mutable_config->mutable_dispatch_list == nullptr ) ||
+            ( mutable_config->num_mutable_dispatch == 0 && mutable_config->mutable_dispatch_list != nullptr ) )
+        {
+            return CL_INVALID_VALUE;
+        }
+        // No "next" extensions are currently supported.
+        if( mutable_config->next != nullptr )
+        {
+            return CL_INVALID_VALUE;
+        }
+
+        for( cl_uint i = 0; i < mutable_config->num_mutable_dispatch; i++ )
+        {
+            const cl_mutable_dispatch_config_khr* dispatchConfig =
+                &mutable_config->mutable_dispatch_list[i];
+            if( !Command::isValid(dispatchConfig->command) ||
+                dispatchConfig->command->getCmdBuf() != this )
+            {
+                return CL_INVALID_MUTABLE_COMMAND_KHR;
+            }
+            if( dispatchConfig->type == CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR )
+            {
+                if( dispatchConfig->command->getType() != CL_COMMAND_NDRANGE_KERNEL )
+                {
+                    return CL_INVALID_MUTABLE_COMMAND_KHR;
+                }
+                
+                if( cl_int errorCode = ((NDRangeKernel*)dispatchConfig->command)->mutate(
+                        dispatchConfig ) )
+                {
+                    return errorCode;
+                }
+            }
+            else
+            {
+                return CL_INVALID_VALUE;
+            }
+        }
+
+        return CL_SUCCESS;
+    }
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
 private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
@@ -1465,6 +1893,52 @@ cl_int CL_API_CALL clGetCommandBufferInfoKHR_EMU(
         param_value_size_ret);
 }
 
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// cl_khr_command_buffer_mutable_dispatch
+cl_int CL_API_CALL clUpdateMutableCommandsKHR_EMU(
+    cl_command_buffer_khr cmdbuf,
+    const cl_mutable_base_config_khr* mutable_config)
+{
+    if( !CommandBuffer::isValid(cmdbuf) )
+    {
+        return CL_INVALID_COMMAND_BUFFER_KHR;
+    }
+    if( cl_int errorCode = cmdbuf->mutate(
+            mutable_config ) )
+    {
+        return errorCode;
+    }
+
+    return CL_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// cl_khr_command_buffer_mutable_dispatch
+cl_int CL_API_CALL clGetMutableCommandInfoKHR_EMU(
+    cl_mutable_command_khr command,
+    cl_mutable_command_info_khr param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret)
+{
+    if( !Command::isValid(command) )
+    {
+        return CL_INVALID_MUTABLE_COMMAND_KHR;
+    }
+
+    return command->getInfo(
+        param_name,
+        param_value_size,
+        param_value,
+        param_value_size_ret);
+}
+
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
 bool clGetDeviceInfo_override(
     cl_device_id device,
     cl_device_info param_name,
@@ -1516,6 +1990,10 @@ bool clGetDeviceInfo_override(
             {
                 std::string newExtensions;
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+                newExtensions += ' ';
+                newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
+#endif
 
                 std::string oldExtensions(deviceExtensions.data());
 
@@ -1605,6 +2083,17 @@ bool clGetDeviceInfo_override(
 
                     extension.version = CL_MAKE_VERSION(0, 9, 0);
                 }
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+                {
+                    extensions.emplace_back();
+                    cl_name_version& extension = extensions.back();
+
+                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
+
+                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                }
+#endif
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
@@ -1684,6 +2173,26 @@ bool clGetDeviceInfo_override(
             return true;
         }
         break;
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    case CL_DEVICE_MUTABLE_DISPATCH_CAPABILITIES_KHR:
+        {
+            cl_mutable_dispatch_fields_khr caps =
+                g_MutableDispatchCaps;
+
+            auto ptr = (cl_mutable_dispatch_fields_khr*)param_value;
+            cl_int errorCode = writeParamToMemory(
+                param_value_size,
+                caps,
+                param_value_size_ret,
+                ptr );
+
+            if( errcode_ret )
+            {
+                errcode_ret[0] = errorCode;
+            }
+            return true;
+        }
+#endif
     default: break;
     }
 
@@ -1741,6 +2250,10 @@ bool clGetPlatformInfo_override(
             {
                 std::string newExtensions;
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+                newExtensions += ' ';
+                newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
+#endif
 
                 std::string oldExtensions(platformExtensions.data());
 
@@ -1830,6 +2343,17 @@ bool clGetPlatformInfo_override(
 
                     extension.version = CL_MAKE_VERSION(0, 9, 0);
                 }
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+                {
+                    extensions.emplace_back();
+                    cl_name_version& extension = extensions.back();
+
+                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
+
+                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                }
+#endif
 
                 auto*   ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
