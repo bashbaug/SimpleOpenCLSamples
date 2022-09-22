@@ -2089,7 +2089,7 @@ bool clGetDeviceInfo_override(
                     cl_name_version& extension = extensions.back();
 
                     memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
+                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
 
                     extension.version = CL_MAKE_VERSION(0, 9, 0);
                 }
@@ -2348,8 +2348,8 @@ bool clGetPlatformInfo_override(
                     extensions.emplace_back();
                     cl_name_version& extension = extensions.back();
 
-                        memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                        strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
+                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
 
                     extension.version = CL_MAKE_VERSION(0, 9, 0);
                 }

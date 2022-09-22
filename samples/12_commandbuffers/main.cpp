@@ -85,7 +85,7 @@ int main(
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: copybufferkernel [options]\n"
+                "Usage: commandbuffers [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }

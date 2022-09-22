@@ -1,37 +1,25 @@
-# commandbuffers
+# mutablecommandbuffers
 
 ## Sample Purpose
 
-This is a modified version of the copybufferkernel sample that demonstrates how to use the OpenCL extension [cl_khr_command_buffer](https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_command_buffer).
-As of this writing, `cl_khr_command_buffer` is a provisional extension.
+This is an intermediate-level sample that demonstrates how to use the OpenCL extension [cl_khr_command_buffer_mutable_dispatch](https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_command_buffer_mutable_dispatch) to modify a command buffer after it has been finalized.
+As of this writing, `cl_khr_command_buffer_mutable_dispatch` is a provisional extension.
 This sample uses the functionality described in v0.9.0 of the extension.
 
-This is an optional extension and some devices may not support `cl_khr_command_buffer`, but the sample may still run using the [cl_khr_command_buffer emulation layer](../../layers/10_cmdbufemu).
+This is an optional extension and some devices may not support `cl_khr_command_buffer_mutable_dispatch`, but the sample may still run using the [cl_khr_command_buffer emulation layer](../../layers/10_cmdbufemu).
 
 This sample requires the OpenCL Extension Loader to get the extension APIs for command buffers.
 
 ## Key APIs and Concepts
 
-This sample demonstrates how to query the command buffer properties supported by a device, and the properties of a command buffer.
+This sample demonstrates how to query the mutable dispatch capabilities supported by a device, how to create a mutable command buffer, and how to query the properties of a mutable command.
 
-This sample also demostrates how to create, finalize, and execute a command buffer.
+This sample also demonstrates how to mutate (modify) a command buffer after it has been finalized.
 
 ```c
-clCreateCommandBufferKHR
-clGetCommandBufferInfoKHR
-clCommandNDRangeKernelKHR
-clFinalizeCommandBufferKHR
-clEnqueueCommandBufferKHR
+clGetMutableCommandInfoKHR
+clUpdateMutableCommandsKHR
 ```
-
-## Things to Try
-
-Here are some suggested ways to modify this sample to learn more:
-
-1. Change the kernel arguments after recording the ND-range kernel command command into the command buffer.
-Does this affect the command in the command buffer?
-2. Try timing the same commands with and without a command buffer.
-Is it faster or slower to execute commands from a command buffer?
 
 ## Command Line Options
 

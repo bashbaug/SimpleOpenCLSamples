@@ -317,7 +317,7 @@ int main(
             sizeof(testQueue),
             &testQueue,
             NULL );
-        printf("\t\tCL_MUTABLE_COMMAND_COMMAND_BUFFER_KHR: %p\n", testQueue );
+        printf("\t\tCL_MUTABLE_COMMAND_COMMAND_QUEUE_KHR: %p\n", testQueue );
 
         cl_command_type type = 0;
         clGetMutableCommandInfoKHR(
