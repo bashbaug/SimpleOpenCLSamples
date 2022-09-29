@@ -378,7 +378,7 @@ private:
                 VkMemoryGetFdInfoKHR getFdInfo{};
                 getFdInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
                 getFdInfo.memory = textureImageMemories[i];
-                getFdInfo.handleType = 
+                getFdInfo.handleType =
                     externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
                     VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
                     VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
@@ -1097,7 +1097,7 @@ private:
 #ifdef _WIN32
         externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
 #elif defined(__linux__)
-        externalMemCreateInfo.handleTypes = 
+        externalMemCreateInfo.handleTypes =
             externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
             VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
             VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
