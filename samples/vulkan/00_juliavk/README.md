@@ -11,10 +11,27 @@ In order to share the Vulkan texture with OpenCL, the OpenCL device must support
 Additionally, the Vulkan device must support exporting the Vulkan texture as an OS-specific external memory handle, and the OpenCL device must support importing external memory handles of that type.
 Creating the OpenCL image directly from the Vulkan texture avoids a memory copy and can improve performance.
 
+For Windows, the external memory handle types that are currently supported are:
+
+* `CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR`
+
+For Linux, the external memory handle types that are currently supported are:
+
+* `CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR`
+* `CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR`
+
 This sample can also share semaphores between Vulkan and OpenCL when supported.
 In order to share a Vulkan semaphore with OpenCL, the OpenCL device must support [cl_khr_external_semaphore](https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#cl_khr_external_semaphore).
 Additionally, the Vulkan device must support exporting the Vulkan semaphore as an OS-specific external semaphore handle, and the OpenCL device must support importing external semaphore handles of that type.
 Sharing a semaphore object between Vulkan and OpenCL avoids synchronization on the host and can also improve performance.
+
+For Windows, the external semaphore handle types that are currently supported are:
+
+* `CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR`
+
+For Linux, the external semaphore handle types that are currently supported are:
+
+* `CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR`
 
 For more information about these extensions, please see [this blog post](https://www.khronos.org/blog/khronos-releases-opencl-3.0-extensions-for-neural-network-inferencing-and-opencl-vulkan-interop).
 When the extensions are not supported the sample will still run, although perhaps with lower performance.

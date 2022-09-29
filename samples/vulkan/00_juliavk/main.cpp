@@ -242,6 +242,8 @@ private:
     bool useExternalMemory = true;
     bool useExternalSemaphore = true;
 
+    cl_external_memory_handle_type_khr externalMemType = 0;
+
     cl::Context context;
     cl::CommandQueue commandQueue;
     cl::Kernel kernel;
@@ -317,52 +319,8 @@ private:
         printf("Running on device: %s\n",
             devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-        if (checkDeviceForExtension(devices[deviceIndex], "cl_khr_external_memory")) {
-            printf("Device supports cl_khr_external_memory.\n");
-            printf("Supported external memory handle types:\n");
-            std::vector<cl_external_memory_handle_type_khr> types =
-                devices[deviceIndex].getInfo<CL_DEVICE_EXTERNAL_MEMORY_IMPORT_HANDLE_TYPES_KHR>();
-            for (auto type : types) {
-                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
-                switch(type) {
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KMT_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KMT_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_HEAP_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_RESOURCE_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR);
-                default: printf("Unknown cl_external_memory_handle_type_khr %04X\n", type);
-                }
-                #undef CASE_TO_STRING
-            }
-        } else {
-            printf("Device does not support cl_khr_external_memory.\n");
-            useExternalMemory = false;
-        }
-
-        if (checkDeviceForExtension(devices[deviceIndex], "cl_khr_external_semaphore")) {
-            printf("Device supports cl_khr_external_semaphore.\n");
-            printf("Supported external semaphore import handle types:\n");
-            std::vector<cl_external_semaphore_handle_type_khr> types =
-                devices[deviceIndex].getInfo<CL_DEVICE_SEMAPHORE_IMPORT_HANDLE_TYPES_KHR>();
-            for (auto type : types) {
-                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
-                switch(type) {
-                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR);
-                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR);
-                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_SYNC_FD_KHR);
-                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR);
-                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KMT_KHR);
-                default: printf("Unknown cl_external_semaphore_handle_type_khr %04X\n", type);
-                }
-                #undef CASE_TO_STRING
-            }
-        } else {
-            printf("Device does not support cl_khr_external_semaphore.\n");
-            useExternalSemaphore = false;
-        }
+        checkOpenCLExternalMemorySupport(devices[deviceIndex]);
+        checkOpenCLExternalSemaphoreSupport(devices[deviceIndex]);
 
         if (useExternalMemory) {
             clEnqueueAcquireExternalMemObjectsKHR = (clEnqueueAcquireExternalMemObjectsKHR_fn)
@@ -411,7 +369,7 @@ private:
                 vkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
 
                 const cl_mem_properties props[] = {
-                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR,
+                    externalMemType,
                     (cl_mem_properties)handle,
                     0,
                 };
@@ -420,11 +378,14 @@ private:
                 VkMemoryGetFdInfoKHR getFdInfo{};
                 getFdInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
                 getFdInfo.memory = textureImageMemories[i];
-                getFdInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+                getFdInfo.handleType = 
+                    externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
+                    VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
+                    VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
                 vkGetMemoryFdKHR(device, &getFdInfo, &fd);
 
                 const cl_mem_properties props[] = {
-                    CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR,
+                    externalMemType,
                     (cl_mem_properties)fd,
                     0,
                 };
@@ -1136,7 +1097,10 @@ private:
 #ifdef _WIN32
         externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
 #elif defined(__linux__)
-        externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+        externalMemCreateInfo.handleTypes = 
+            externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
 #endif
 
         VkImageCreateInfo imageInfo{};
@@ -1166,12 +1130,7 @@ private:
 
         VkExportMemoryAllocateInfoKHR exportMemoryAllocInfo{};
         exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR;
-
-#ifdef _WIN32
-        exportMemoryAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-#elif defined(__linux__)
-        exportMemoryAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-#endif
+        exportMemoryAllocInfo.handleTypes = externalMemCreateInfo.handleTypes;
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1672,6 +1631,86 @@ private:
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
+    void checkOpenCLExternalMemorySupport(cl::Device& device) {
+        if (checkDeviceForExtension(device, "cl_khr_external_memory")) {
+            printf("Device supports cl_khr_external_memory.\n");
+            printf("Supported external memory handle types:\n");
+            std::vector<cl_external_memory_handle_type_khr> types =
+                device.getInfo<CL_DEVICE_EXTERNAL_MEMORY_IMPORT_HANDLE_TYPES_KHR>();
+            for (auto type : types) {
+                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
+                switch(type) {
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KMT_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KMT_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_HEAP_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_RESOURCE_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR);
+                default: printf("Unknown cl_external_memory_handle_type_khr %04X\n", type);
+                }
+                #undef CASE_TO_STRING
+            }
+#ifdef _WIN32
+            if (std::find(types.begin(), types.end(), CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR) != types.end()) {
+                externalMemType = CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR;
+            } else {
+                printf("Couldn't find a compatible external memory type (sample supports OPAQUE_WIN32).\n");
+                useExternalMemory = false;
+            }
+#elif defined(__linux__)
+            if (std::find(types.begin(), types.end(), CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR) != types.end()) {
+                externalMemType = CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR;
+            } else if (std::find(types.begin(), types.end(), CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR) != types.end()) {
+                externalMemType = CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR;
+            } else {
+                printf("Couldn't find a compatible external memory type (sample supports DMA_BUF or OPAQUE_FD).\n");
+                useExternalMemory = false;
+            }
+#endif
+        } else {
+            printf("Device does not support cl_khr_external_memory.\n");
+            useExternalMemory = false;
+        }
+    }
+
+    void checkOpenCLExternalSemaphoreSupport(cl::Device& device) {
+        if (checkDeviceForExtension(device, "cl_khr_external_semaphore")) {
+            printf("Device supports cl_khr_external_semaphore.\n");
+            printf("Supported external semaphore import handle types:\n");
+            std::vector<cl_external_semaphore_handle_type_khr> types =
+                device.getInfo<CL_DEVICE_SEMAPHORE_IMPORT_HANDLE_TYPES_KHR>();
+            for (auto type : types) {
+                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
+                switch(type) {
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_SYNC_FD_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KMT_KHR);
+                default: printf("Unknown cl_external_semaphore_handle_type_khr %04X\n", type);
+                }
+                #undef CASE_TO_STRING
+            }
+#ifdef _WIN32
+            if (std::find(types.begin(), types.end(), CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR) == types.end()) {
+                printf("Couldn't find a compatible external semaphore type (sample supports OPAQUE_WIN32).\n");
+                useExternalSemaphore = false;
+            }
+#elif defined(__linux__)
+            if (std::find(types.begin(), types.end(), CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR) == types.end()) {
+                printf("Couldn't find a compatible external semaphore type (sample supports OPAQUE_FD).\n");
+                useExternalSemaphore = false;
+            }
+#endif
+        } else {
+            printf("Device does not support cl_khr_external_semaphore.\n");
+            useExternalSemaphore = false;
+        }
+
+    }
+
     VkShaderModule createShaderModule(const std::vector<char>& code) {
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1830,6 +1869,9 @@ private:
         }
         if (useExternalMemory) {
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+        }
+        if (useExternalMemory && externalMemType == CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR) {
+            extensions.push_back(VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME);
         }
         if (useExternalSemaphore) {
             extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
