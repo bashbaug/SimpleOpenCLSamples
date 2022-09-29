@@ -405,8 +405,6 @@ BENCHMARK_REGISTER_F(SVMKernel, clSetKernelArgSVMPointer)->Arg(1)->Arg(2)->Arg(4
 
 struct USMMemCpy : public benchmark::Fixture
 {
-    bool    hasSupport = false;
-
     cl::CommandQueue queue;
 
     std::vector<void*>  dptrs;
@@ -455,6 +453,155 @@ BENCHMARK_DEFINE_F(USMMemCpy, clEnqueueMemcpyINTEL_device_blocking)(benchmark::S
     }
 }
 BENCHMARK_REGISTER_F(USMMemCpy, clEnqueueMemcpyINTEL_device_blocking);
+
+struct USMMemFill : public benchmark::Fixture
+{
+    const size_t sz = 1 * 1024 * 1024;
+
+    cl::CommandQueue queue;
+
+    void* dptr = NULL;
+    void* hptr = NULL;
+    void* sptr = NULL;
+
+    virtual void SetUp(benchmark::State& state) override {
+        queue = env.ioq;
+
+        dptr = clDeviceMemAllocINTEL(env.context(), env.device(), NULL, sz, 0, NULL);
+        hptr = clHostMemAllocINTEL(env.context(), NULL, sz, 0, NULL);
+        sptr = clSharedMemAllocINTEL(env.context(), env.device(), NULL, sz, 0, NULL);
+    }
+    virtual void TearDown(benchmark::State& state) override {
+        queue = NULL;
+
+        clMemBlockingFreeINTEL(env.context(), dptr);
+        clMemBlockingFreeINTEL(env.context(), hptr);
+        clMemBlockingFreeINTEL(env.context(), sptr);
+    }
+};
+
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL_dptr)(benchmark::State& state)
+{
+    if (dptr == NULL) {
+        state.SkipWithError("unsupported");
+    }
+    for(auto _ : state) {
+        clEnqueueMemsetINTEL(
+            queue(),
+            dptr,
+            0,
+            sz,
+            0,
+            NULL,
+            NULL);
+        queue.finish();
+    }
+}
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemsetINTEL_dptr);
+
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL_hptr)(benchmark::State& state)
+{
+    if (hptr == NULL) {
+        state.SkipWithError("unsupported");
+    }
+    for(auto _ : state) {
+        clEnqueueMemsetINTEL(
+            queue(),
+            hptr,
+            0,
+            sz,
+            0,
+            NULL,
+            NULL);
+        queue.finish();
+    }
+}
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemsetINTEL_hptr);
+
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL_sptr)(benchmark::State& state)
+{
+    if (sptr == NULL) {
+        state.SkipWithError("unsupported");
+    }
+    for(auto _ : state) {
+        clEnqueueMemsetINTEL(
+            queue(),
+            sptr,
+            0,
+            sz,
+            0,
+            NULL,
+            NULL);
+        queue.finish();
+    }
+}
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemsetINTEL_sptr);
+
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL_dptr)(benchmark::State& state)
+{
+    if (dptr == NULL) {
+        state.SkipWithError("unsupported");
+    }
+    const cl_ulong pattern = 0;
+    const size_t patternSize = state.range(0);
+    for(auto _ : state) {
+        clEnqueueMemFillINTEL(
+            queue(),
+            dptr,
+            &pattern,
+            patternSize,
+            sz,
+            0,
+            NULL,
+            NULL);
+        queue.finish();
+    }
+}
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemFillINTEL_dptr)->Arg(1)->Arg(4)->Arg(8);
+
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL_hptr)(benchmark::State& state)
+{
+    if (hptr == NULL) {
+        state.SkipWithError("unsupported");
+    }
+    const cl_ulong pattern = 0;
+    const size_t patternSize = state.range(0);
+    for(auto _ : state) {
+        clEnqueueMemFillINTEL(
+            queue(),
+            hptr,
+            &pattern,
+            patternSize,
+            sz,
+            0,
+            NULL,
+            NULL);
+        queue.finish();
+    }
+}
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemFillINTEL_hptr)->Arg(1)->Arg(4)->Arg(8);
+
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL_sptr)(benchmark::State& state)
+{
+    if (sptr == NULL) {
+        state.SkipWithError("unsupported");
+    }
+    const cl_ulong pattern = 0;
+    const size_t patternSize = state.range(0);
+    for(auto _ : state) {
+        clEnqueueMemFillINTEL(
+            queue(),
+            sptr,
+            &pattern,
+            patternSize,
+            sz,
+            0,
+            NULL,
+            NULL);
+        queue.finish();
+    }
+}
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemFillINTEL_sptr)->Arg(1)->Arg(4)->Arg(8);
 
 int main(int argc, char** argv)
 {
