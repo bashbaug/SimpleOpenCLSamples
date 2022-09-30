@@ -48,6 +48,7 @@ struct OpenCLBenchmarkEnvironment
         }
         if (printUsage || printHelp) {
             fprintf(stderr, "%s", op.help().c_str());
+            fprintf(stderr, "Pass '--help' to view Google Benchmark options.\n");
         }
 
         std::vector<cl::Platform> platforms;
@@ -360,6 +361,40 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_1x1_Event)(benchmark::State& s
 }
 BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_1x1_Event)->Arg(1)->Arg(32)->Arg(512)->Arg(2048);
 
+BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_overhead)(benchmark::State& state)
+{
+    size_t maxWGS = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(env.device);
+    if (maxWGS < 256) {
+        state.SkipWithError("kernel work-group size is too small");
+    }
+
+    const bool npot = state.range(0) == 0;
+    const int nwgs = (int)state.range(1);
+
+    const size_t lwx = npot ? 7 : 8;
+    const size_t lwy = npot ? 7 : 8;
+    const size_t lwz = npot ? 5 : 4;
+
+    const size_t work_dim = 3;
+    const size_t global_work_size[work_dim] = { nwgs * lwx, lwy, lwz };
+    const size_t local_work_size[work_dim] = { lwx, lwy, lwz };
+
+    for(auto _ : state) {
+        clEnqueueNDRangeKernel(
+            queue(),
+            kernel(),
+            work_dim,
+            NULL,
+            global_work_size,
+            local_work_size,
+            0,
+            NULL,
+            NULL );
+        clFinish(queue());
+    }
+}
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_overhead)->ArgsProduct({{0, 1}, {1, 1024, 32*1024*1024}});
+
 struct SVMKernel : public benchmark::Fixture
 {
     cl::Program program;
@@ -480,15 +515,23 @@ struct USMMemFill : public benchmark::Fixture
     }
 };
 
-BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL_dptr)(benchmark::State& state)
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL)(benchmark::State& state)
 {
-    if (dptr == NULL) {
-        state.SkipWithError("unsupported");
+    void* dst = nullptr;
+
+    switch (state.range(0)) {
+    case 0: dst = dptr; break;
+    case 1: dst = hptr; break;
+    case 2: dst = sptr; break;
+    default: state.SkipWithError("unknown mem type");
+    }
+    if (dst == nullptr) {
+        state.SkipWithError("unsupported mem type");
     }
     for(auto _ : state) {
         clEnqueueMemsetINTEL(
             queue(),
-            dptr,
+            dst,
             0,
             sz,
             0,
@@ -497,51 +540,21 @@ BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL_dptr)(benchmark::State& stat
         queue.finish();
     }
 }
-BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemsetINTEL_dptr);
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemsetINTEL)->ArgsProduct({{0, 1, 2}});
 
-BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL_hptr)(benchmark::State& state)
+BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL)(benchmark::State& state)
 {
-    if (hptr == NULL) {
-        state.SkipWithError("unsupported");
+    void* dst = nullptr;
+    switch (state.range(1)) {
+    case 0: dst = dptr; break;
+    case 1: dst = hptr; break;
+    case 2: dst = sptr; break;
+    default: state.SkipWithError("unknown mem type"); break;
     }
-    for(auto _ : state) {
-        clEnqueueMemsetINTEL(
-            queue(),
-            hptr,
-            0,
-            sz,
-            0,
-            NULL,
-            NULL);
-        queue.finish();
+    if (dst == nullptr) {
+        state.SkipWithError("unsupported mem type");
     }
-}
-BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemsetINTEL_hptr);
 
-BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemsetINTEL_sptr)(benchmark::State& state)
-{
-    if (sptr == NULL) {
-        state.SkipWithError("unsupported");
-    }
-    for(auto _ : state) {
-        clEnqueueMemsetINTEL(
-            queue(),
-            sptr,
-            0,
-            sz,
-            0,
-            NULL,
-            NULL);
-        queue.finish();
-    }
-}
-BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemsetINTEL_sptr);
-
-BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL_dptr)(benchmark::State& state)
-{
-    if (dptr == NULL) {
-        state.SkipWithError("unsupported");
-    }
     const cl_ulong pattern = 0;
     const size_t patternSize = state.range(0);
     for(auto _ : state) {
@@ -557,51 +570,7 @@ BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL_dptr)(benchmark::State& sta
         queue.finish();
     }
 }
-BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemFillINTEL_dptr)->Arg(1)->Arg(4)->Arg(8);
-
-BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL_hptr)(benchmark::State& state)
-{
-    if (hptr == NULL) {
-        state.SkipWithError("unsupported");
-    }
-    const cl_ulong pattern = 0;
-    const size_t patternSize = state.range(0);
-    for(auto _ : state) {
-        clEnqueueMemFillINTEL(
-            queue(),
-            hptr,
-            &pattern,
-            patternSize,
-            sz,
-            0,
-            NULL,
-            NULL);
-        queue.finish();
-    }
-}
-BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemFillINTEL_hptr)->Arg(1)->Arg(4)->Arg(8);
-
-BENCHMARK_DEFINE_F(USMMemFill, clEnqueueMemFillINTEL_sptr)(benchmark::State& state)
-{
-    if (sptr == NULL) {
-        state.SkipWithError("unsupported");
-    }
-    const cl_ulong pattern = 0;
-    const size_t patternSize = state.range(0);
-    for(auto _ : state) {
-        clEnqueueMemFillINTEL(
-            queue(),
-            sptr,
-            &pattern,
-            patternSize,
-            sz,
-            0,
-            NULL,
-            NULL);
-        queue.finish();
-    }
-}
-BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemFillINTEL_sptr)->Arg(1)->Arg(4)->Arg(8);
+BENCHMARK_REGISTER_F(USMMemFill, clEnqueueMemFillINTEL)->ArgsProduct({{1, 4, 8, 16}, {0, 1, 2}});
 
 int main(int argc, char** argv)
 {
