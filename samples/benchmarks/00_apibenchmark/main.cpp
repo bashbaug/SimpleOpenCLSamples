@@ -227,14 +227,20 @@ struct Kernel : public benchmark::Fixture
     virtual void SetUp(benchmark::State& state) override {
         queue = env.ioq;
 
-        static const char kernelString[] = R"CLC( kernel void Empty(int a) {} )CLC";
+        static const char kernelString[] = R"CLC(
+            kernel void Silly(global int* dst) {
+                size_t sum = get_local_id(0) + get_local_id(1) + get_local_id(2);
+                if (sum > 99999) {
+                    dst[0] = 0;
+                }
+            } )CLC";
 
         program = cl::Program{env.context, kernelString};
 
         program.build();
-        kernel = cl::Kernel{program, "Empty"};
+        kernel = cl::Kernel{program, "Silly"};
 
-        kernel.setArg(0, 0);
+        kernel.setArg(0, nullptr);
     }
     virtual void TearDown(benchmark::State& state) override {
         program = NULL;
@@ -393,7 +399,7 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_overhead)(benchmark::State& st
         clFinish(queue());
     }
 }
-BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_overhead)->ArgsProduct({{0, 1}, {1, 1024, 32*1024*1024}});
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_overhead)->ArgsProduct({{0, 1}, {1, 32*1024*1024}});
 
 struct SVMKernel : public benchmark::Fixture
 {
