@@ -715,11 +715,11 @@ struct NDRangeKernel : Command
     }
 
 #if defined(cl_khr_command_buffer_mutable_dispatch)
-    virtual cl_int  getInfo(
+    cl_int  getInfo(
         cl_mutable_command_info_khr param_name,
         size_t param_value_size,
         void* param_value,
-        size_t* param_value_size_ret)
+        size_t* param_value_size_ret) override
     {
         switch( param_name )
         {
@@ -821,7 +821,7 @@ struct NDRangeKernel : Command
         return CL_INVALID_VALUE;
     }
 
-    int mutate( const cl_mutable_dispatch_config_khr* dispatchConfig )
+    cl_int  mutate( const cl_mutable_dispatch_config_khr* dispatchConfig )
     {
         //CL_INVALID_OPERATION if values of local_work_size and/or global_work_size result in an increase to the number of work-groups in the ND-range.
         //CL_INVALID_OPERATION if the values of local_work_size and/or global_work_size result in a change to work-group uniformity.
