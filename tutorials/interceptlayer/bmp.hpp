@@ -87,8 +87,8 @@ static bool save_image(
     info_header.bi_size_image_ = static_cast<uint32_t>(rowLength * height);
     os.write(reinterpret_cast<const char*>(&info_header), sizeof(info_header));
 
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
+    for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < width; x++) {
             const uint32_t* ppix = ptr + (height - 1 - y) * width + x;
             os.write(reinterpret_cast<const char*>(ppix), 4);
         }
@@ -128,8 +128,8 @@ static bool save_image(
     info_header.bi_size_image_ = static_cast<uint32_t>(rowLength * height);
     os.write(reinterpret_cast<const char*>(&info_header), sizeof(info_header));
 
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
+    for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < width; x++) {
             const uint8_t* ppix = ptr + (height - 1 - y) * width + x;
             os.write(reinterpret_cast<const char*>(ppix), 1);
             os.write(reinterpret_cast<const char*>(ppix), 1);
