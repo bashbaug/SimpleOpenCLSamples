@@ -26,7 +26,7 @@ std::vector<unsigned char> load_file(const std::string& file)
 }
 
 int main()
-{  
+{
     std::vector<unsigned char> data = load_file("window_level.spv");
 
     cl_device_id device_id[256];
@@ -42,7 +42,7 @@ int main()
         return 0;
     }
 
-    for (unsigned int i=0; i<ret_num_platforms; i++) 
+    for (unsigned int i=0; i<ret_num_platforms; i++)
     {
         ret = clGetPlatformInfo(platform_id[i], CL_PLATFORM_NAME, sizeof(buf), buf, NULL);
         if (ret != CL_SUCCESS) {
@@ -71,11 +71,11 @@ int main()
         }
         std::cout << std::endl;
     }
- 
+
     cl_context context = clCreateContext( NULL, 1, &device_id[0], NULL, NULL, &ret);
- 
+
     cl_int err = 0;
-    cl_program program = clCreateProgramWithIL((cl_context)context, data.data(), data.size(), &err); 
+    cl_program program = clCreateProgramWithIL((cl_context)context, data.data(), data.size(), &err);
     if(err != CL_SUCCESS){
         std::cout << "failed to create opencl program with IL " << std::endl;
         return 1;
@@ -89,7 +89,7 @@ int main()
     if(build_status != CL_SUCCESS){
         size_t ret_val_size;
         err = clGetProgramBuildInfo(program, device_id[0], CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
-                 
+
         std::vector<char> build_log(ret_val_size+1,0);
         err = clGetProgramBuildInfo(program, device_id[0], CL_PROGRAM_BUILD_LOG, ret_val_size, build_log.data(), NULL);
 
@@ -100,7 +100,7 @@ int main()
 
     size_t ret_val_size = 0;
     err = clGetProgramInfo(program, CL_PROGRAM_KERNEL_NAMES, 0, NULL, &ret_val_size);
-                 
+
     std::vector<char> kernel_names(ret_val_size+1,0);
     err = clGetProgramInfo(program, CL_PROGRAM_KERNEL_NAMES, ret_val_size, kernel_names.data(), NULL);
 
