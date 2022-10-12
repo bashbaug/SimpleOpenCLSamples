@@ -401,6 +401,28 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_overhead)(benchmark::State& st
 }
 BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_overhead)->ArgsProduct({{0, 1}, {1, 32*1024*1024}});
 
+BENCHMARK_DEFINE_F(Kernel, clSetKernelArgSVMPointer_null)(benchmark::State& state)
+{
+    for(auto _ : state) {
+        clSetKernelArgSVMPointer(
+            kernel(),
+            0,
+            nullptr);
+    }
+}
+BENCHMARK_REGISTER_F(Kernel, clSetKernelArgSVMPointer_null);
+
+BENCHMARK_DEFINE_F(Kernel, clSetKernelArgMemPointerINTEL_null)(benchmark::State& state)
+{
+    for(auto _ : state) {
+        clSetKernelArgMemPointerINTEL(
+            kernel(),
+            0,
+            nullptr);
+    }
+}
+BENCHMARK_REGISTER_F(Kernel, clSetKernelArgMemPointerINTEL_null);
+
 struct SVMKernel : public benchmark::Fixture
 {
     cl::Program program;
