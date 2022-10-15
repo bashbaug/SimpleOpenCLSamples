@@ -31,7 +31,7 @@
 
 #if defined(_WIN32)
 
-#include <Windows.h>
+#include <windows.h>
 
 #define GET_PROCESS_ID()    GetCurrentProcessId()
 #define GET_THREAD_ID()     GetCurrentThreadId()
