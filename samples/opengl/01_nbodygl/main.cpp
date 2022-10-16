@@ -36,17 +36,12 @@
 #error Unknown OS!
 #endif
 #include <GLFW/glfw3native.h>
-#include <GL/GLU.h> // fixme
 
 #include "util.hpp"
 
 #include <chrono>
 #include <random>
 #include <math.h>
-
-#if !defined(GL_CLAMP_TO_EDGE)
-#define GL_CLAMP_TO_EDGE                  0x812F
-#endif
 
 GLFWwindow* pWindow = NULL;
 
@@ -56,8 +51,8 @@ bool animate = false;
 bool redraw = false;
 bool vsync = true;
 
-size_t width = 1600;
-size_t height = 900;
+size_t width = 1024;
+size_t height = 1024;
 
 size_t numBodies = 1024;
 size_t groupSize = 0;
@@ -78,57 +73,39 @@ __kernel void nbody_step(
     __global float4* newVelocity)
 {
     const uint numBodies = get_global_size(0);
+    const float G = 1.0f / numBodies;
+    const float dampen = 0.90f;
     const float deltaTime = 0.005f;
-    const float epsSqr = 50.0f;
+    const float epsilon = 1e-3;
 
-    float4 myPos = pos[ get_global_id(0) ];
-    float4 myVel = vel[ get_global_id(0) ];
-    float4 myAcc = (float4)(0.0f);
+    float3 myPos = pos[get_global_id(0)].xyz;
+    float myMass = pos[get_global_id(0)].w;
 
-    for(uint j = 0; j < numBodies; )
+    float3 myAcc = 0.0f;
+
+    for(uint j = 0; j < numBodies; j++)
     {
-        float4  otherPos = pos[j++];
-        float4  r = 0;
-        
-        r.x = otherPos.x - myPos.x;
-        r.y = otherPos.y - myPos.y;
-        r.z = otherPos.z - myPos.z;
-        
-        float   s = mad( r.x, r.x, epsSqr );
-        s = mad( r.y, r.y, s );
-        s = mad( r.z, r.z, s );
-        s = native_rsqrt( s );
+        float3 otherPos = pos[j].xyz;
+        float otherMass = pos[j].w;
 
-        float   t = s * s;
-        t = t * s;
-        t = t * otherPos.w;
+        float3 deltaPos = otherPos - myPos;
+        float r = fast_length(deltaPos) + epsilon;
+        float a = G * otherMass / (r * r);
 
-        myAcc.x = mad( r.x, t, myAcc.x );
-        myAcc.y = mad( r.y, t, myAcc.y );
-        myAcc.z = mad( r.z, t, myAcc.z );
+        myAcc += a * deltaPos / r;
     }
 
-    float   a = 0.5f * deltaTime * deltaTime;
+    float3 myVel = vel[ get_global_id(0) ].xyz;
 
-    float4  newPos = 0;
-    
-    newPos.x = mad( myVel.x, deltaTime, myPos.x );
-    newPos.y = mad( myVel.y, deltaTime, myPos.y );
-    newPos.z = mad( myVel.z, deltaTime, myPos.z );
+    float4 newPos;
+    newPos.xyz = myPos + myVel * deltaTime;
+    newPos.w = myMass;
 
-    newPos.x = mad( myAcc.x, a, newPos.x );
-    newPos.y = mad( myAcc.y, a, newPos.y );
-    newPos.z = mad( myAcc.z, a, newPos.z );
-
-    newPos.w = myPos.w;
-
-    float4 newVel = 0;
-    
-    newVel.x = mad( myAcc.x, deltaTime, myVel.x );
-    newVel.y = mad( myAcc.y, deltaTime, myVel.y );
-    newVel.z = mad( myAcc.z, deltaTime, myVel.z );
-
+    float4 newVel;
+    newVel.xyz = myVel + myAcc * deltaTime;
     newVel.w = 0;
+
+    newVel *= dampen;
 
     newPosition[ get_global_id(0) ] = newPos;
     newVelocity[ get_global_id(0) ] = newVel;
@@ -303,8 +280,8 @@ cl::Image2D createImage(const cl::Context& context)
 static void init()
 {
     std::mt19937 gen;
-    std::uniform_real_distribution<float> rand_pos(3.0f, 50.0f);
-    std::uniform_real_distribution<float> rand_mass(1.0f, 1000.0f);
+    std::uniform_real_distribution<float> rand_pos(-0.01f, 0.01f);
+    std::uniform_real_distribution<float> rand_mass(0.1f, 1.0f);
 
     std::vector<cl_float4> init_pos(numBodies);
     std::vector<cl_float4> init_vel(numBodies);
@@ -335,10 +312,6 @@ static void init()
 static void resize(GLFWwindow* pWindow, int width, int height)
 {
     glViewport(0, 0, width, height);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluPerspective(45.0f, (double)width/height, 1.0f, 1000.0f);
-    gluLookAt(0.0, 0.0, -2.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0);
 }
 
 static void display(void)
@@ -448,9 +421,8 @@ static void display(void)
 #endif
 
     glClearColor(0.0, 0.0, 0.0, 0.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    glPointSize(1.0);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     glEnable(GL_BLEND);
     glDepthMask(GL_FALSE);
@@ -459,11 +431,10 @@ static void display(void)
 
     const cl_float4* p = (const cl_float4*)commandQueue.enqueueMapBuffer(current_pos, CL_TRUE, CL_MAP_READ, 0, numBodies * sizeof(cl_float4));
 
-    glBegin(GL_POINTS);
-    for (size_t i = 0; i < numBodies; i++) {
-        glVertex3d(p[i].s[0] / 300.0f, p[i].s[1] / 300.0f, p[i].s[2] / 300.0f);
-    }
-    glEnd();
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, sizeof(cl_float4), p);
+    glDrawArrays(GL_POINTS, 0, (GLsizei)numBodies);
+    glDisableClientState(GL_VERTEX_ARRAY);
 
     commandQueue.enqueueUnmapMemObject(current_pos, (void*)p);
 
@@ -481,8 +452,6 @@ static void display(void)
 static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int mods)
 {
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        redraw = true;
-
         switch (key) {
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(pWindow, GLFW_TRUE);
@@ -492,6 +461,10 @@ static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int
             printf("animation is %s\n", animate ? "ON" : "OFF");
             break;
 
+        case GLFW_KEY_S:
+            printf("stepping...\n");
+            redraw = true;
+            break;
         case GLFW_KEY_R:
             printf("reinitializing...\n");
             init();
