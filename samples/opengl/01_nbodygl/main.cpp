@@ -45,8 +45,6 @@
 
 GLFWwindow* pWindow = NULL;
 
-bool use_cl_khr_gl_sharing = true;
-bool use_cl_khr_gl_event = true;
 bool animate = false;
 bool redraw = false;
 bool vsync = true;
@@ -57,20 +55,19 @@ size_t height = 1024;
 size_t numBodies = 1024;
 size_t groupSize = 0;
 
+size_t currentPos = 0;
+
 cl::Context context;
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
-cl::Buffer current_pos;
-cl::Buffer current_vel;
-cl::Buffer next_pos;
-cl::Buffer next_vel;
+cl::Buffer pos[2];
+cl::Buffer vel;
 
 static const char kernelString[] = R"CLC(
 __kernel void nbody_step(
     const __global float4* pos,
-    const __global float4* vel,
-    __global float4* newPosition,
-    __global float4* newVelocity)
+    __global float4* nextPos,
+    __global float4* vel)
 {
     const uint numBodies = get_global_size(0);
     const float G = 1.0f / numBodies;
@@ -97,185 +94,18 @@ __kernel void nbody_step(
 
     float3 myVel = vel[ get_global_id(0) ].xyz;
 
-    float4 newPos;
+    float4 newPos = 0;
     newPos.xyz = myPos + myVel * deltaTime;
     newPos.w = myMass;
 
-    float4 newVel;
+    float4 newVel = 0;
     newVel.xyz = myVel + myAcc * deltaTime;
-    newVel.w = 0;
-
     newVel *= dampen;
 
-    newPosition[ get_global_id(0) ] = newPos;
-    newVelocity[ get_global_id(0) ] = newVel;
+    nextPos[ get_global_id(0) ] = newPos;
+    vel[ get_global_id(0) ] = newVel;
 }
 )CLC";
-
-// This function determines if the platform and device support CL-GL sharing
-// extensions, and if so, create a context supporting sharing.  This requires
-// three steps:
-//      1. Querying the device to ensure the extensions are supported.
-//      2. Querying devices that can interoperate with the OpenGL context.
-//      3. If both queries are successful, creating an OpenCL context with the
-//         OpenGL context.
-// If any of these steps fail or if sharing is disabled then an OpenCL context
-// is created that does not support sharing.
-cl::Context createContext(const cl::Platform& platform, const cl::Device& device)
-{
-    const cl_context_properties props[] = {
-        CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
-#if defined(WIN32)
-        CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetWGLContext(pWindow),
-        CL_WGL_HDC_KHR, (cl_context_properties)GetDC(glfwGetWin32Window(pWindow)),
-#elif defined(__linux__)
-        CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetGLXContext(pWindow),
-        CL_GLX_DISPLAY_KHR, (cl_context_properties)glfwGetX11Display(),
-#else
-#error Unknown OS!
-#endif
-        0
-    };
-
-    if (checkDeviceForExtension(device, "cl_khr_gl_sharing")) {
-        printf("Device supports cl_khr_gl_sharing.\n");
-    } else {
-        printf("Device does not support cl_khr_gl_sharing.\n");
-        use_cl_khr_gl_sharing = false;
-        use_cl_khr_gl_event = false;
-    }
-
-    if (checkDeviceForExtension(device, "cl_khr_gl_event")) {
-        printf("Device supports cl_khr_gl_event.\n");
-    } else {
-        printf("Device does not support cl_khr_gl_event.\n");
-        use_cl_khr_gl_event = false;
-    }
-
-    if (use_cl_khr_gl_sharing) {
-        bool found = false;
-
-        auto clGetGLContextInfoKHR =
-            (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(
-                platform(),
-                "clGetGLContextInfoKHR");
-        if (clGetGLContextInfoKHR) {
-            size_t sz = 0;
-
-            clGetGLContextInfoKHR(
-                props,
-                CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
-                0,
-                NULL,
-                &sz);
-            if (sz) {
-                std::vector<cl_device_id> devices(sz / sizeof(cl_device_id));
-                clGetGLContextInfoKHR(
-                    props,
-                    CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
-                    sz,
-                    devices.data(),
-                    NULL);
-                printf("\nOpenCL Devices currently associated with the OpenGL Context:\n");
-                for (auto& check : devices) {
-                    found |= check == device();
-                    printf("  %s\n", cl::Device(check).getInfo<CL_DEVICE_NAME>().c_str());
-                }
-            }
-
-            clGetGLContextInfoKHR(
-                props,
-                CL_DEVICES_FOR_GL_CONTEXT_KHR,
-                0,
-                NULL,
-                &sz);
-            if (sz) {
-                std::vector<cl_device_id> devices(sz / sizeof(cl_device_id));
-                clGetGLContextInfoKHR(
-                    props,
-                    CL_DEVICES_FOR_GL_CONTEXT_KHR,
-                    sz,
-                    devices.data(),
-                    NULL);
-                printf("\nOpenCL Devices which may be associated with the OpenGL Context:\n");
-                for (auto& check : devices) {
-                    found |= check == device();
-                    printf("  %s\n", cl::Device(check).getInfo<CL_DEVICE_NAME>().c_str());
-                }
-            }
-        }
-
-        if (found) {
-            printf("Requested OpenCL device can share with the OpenGL context.\n");
-        } else {
-            printf("Requested OpenCL device cannot share with the OpenGL context.\n");
-            use_cl_khr_gl_sharing = false;
-        }
-    }
-
-    if (use_cl_khr_gl_sharing) {
-        printf("Creating a context with GL sharing.\n");
-        return cl::Context(device, props);
-    }
-
-    printf("Creating a context without GL sharing.\n");
-    return cl::Context(device);
-}
-
-#if 0
-// This function sets up an OpenGL texture with the requested dimensions.  If
-// CL-GL sharing is supported and enabled, an OpenCL image is created from the
-// OpenGL texture.  Otherwise, a standard OpenCL image is created, and the
-// contents of the image will need to be copied to the OpenGL texture.
-cl::Image2D createImage(const cl::Context& context)
-{
-    GLuint texname = 0;
-    glGenTextures(1, &texname);
-    glBindTexture(GL_TEXTURE_2D, texname);
-
-    glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA,
-        (GLsizei)gwx, (GLsizei)gwy,
-        0,
-        GL_RGBA,
-        GL_FLOAT,
-        NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glEnable( GL_TEXTURE_2D );
-
-    GLenum  gl_error = glGetError();
-    if (glGetError() != GL_NO_ERROR) {
-        fprintf(stderr, "Error: OpenGL generated %x!\n", gl_error);
-    }
-
-    if (use_cl_khr_gl_sharing) {
-        // Note: clCreateFromGLTexture2D is an extension API, but it is
-        // exported directly from the ICD loader.
-        return cl::Image2D{
-            clCreateFromGLTexture2D(
-                context(),
-                CL_MEM_WRITE_ONLY,
-                GL_TEXTURE_2D,
-                0,
-                texname,
-                NULL)};
-    }
-
-    return cl::Image2D{
-        context,
-        CL_MEM_WRITE_ONLY,
-        cl::ImageFormat{CL_RGBA, CL_FLOAT},
-        gwx, gwy };
-}
-#endif
 
 static void init()
 {
@@ -302,11 +132,10 @@ static void init()
         init_vel[i].s[3] = 0.0f;
     }
 
-    current_pos = cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_COPY_HOST_PTR, numBodies * sizeof(cl_float4), init_pos.data());
-    current_vel = cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_COPY_HOST_PTR, numBodies * sizeof(cl_float4), init_vel.data());
+    pos[0] = cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_COPY_HOST_PTR, numBodies * sizeof(cl_float4), init_pos.data());
+    pos[1] = cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, numBodies * sizeof(cl_float4));
 
-    next_pos = cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, numBodies * sizeof(cl_float4));
-    next_vel = cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, numBodies * sizeof(cl_float4));
+    vel = cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_COPY_HOST_PTR, numBodies * sizeof(cl_float4), init_vel.data());
 }
 
 static void resize(GLFWwindow* pWindow, int width, int height)
@@ -316,6 +145,8 @@ static void resize(GLFWwindow* pWindow, int width, int height)
 
 static void display(void)
 {
+    size_t nextPos = 1 - currentPos;
+
     if (animate) {
         static size_t startFrame = 0;
         static size_t frame = 0;
@@ -337,32 +168,9 @@ static void display(void)
         redraw = false;
     }
 
-#if 0
-    // If we support interop we need to acquire the OpenCL image object we
-    // created from the OpenGL texture.  If we do not support interop then we
-    // will compute into the OpenCL image object then manually transfer its
-    // contents to OpenGL.
-    if (use_cl_khr_gl_sharing) {
-        // If we do not support cl_khr_gl_event then we need to synchronize
-        // OpenGL and OpenCL.  If we do support cl_khr_gl_event, then acquiring
-        // the object performs an implicit synchronization.
-        if (use_cl_khr_gl_event == false) {
-            glFinish();
-        }
-        clEnqueueAcquireGLObjects(
-            commandQueue(),
-            1,
-            &mem(),
-            0,
-            NULL,
-            NULL);
-    }
-#endif
-
-    kernel.setArg(0, current_pos);
-    kernel.setArg(1, current_vel);
-    kernel.setArg(2, next_pos);
-    kernel.setArg(3, next_vel);
+    kernel.setArg(0, pos[currentPos]);
+    kernel.setArg(1, pos[nextPos]);
+    kernel.setArg(2, vel);
 
     cl::NDRange lws;    // NullRange by default.
     if( groupSize > 0 )
@@ -376,50 +184,6 @@ static void display(void)
         cl::NDRange{numBodies},
         lws);
 
-    // After executing the OpenCL kernel, we need to release the OpenCL image
-    // object back to OpenGL, or manually copy from OpenCL to OpenGL.
-#if 0
-    if (use_cl_khr_gl_sharing) {
-        // As before, synchronize if we do not support cl_khr_gl_event.
-        if (use_cl_khr_gl_event == false) {
-            commandQueue.finish();
-        }
-        clEnqueueReleaseGLObjects(
-            commandQueue(),
-            1,
-            &mem(),
-            0,
-            NULL,
-            NULL);
-    } else {
-        // For the manual copy, we will map the OpenCL image object, transfer
-        // its contents to OpenGL, then unmap the OpenCL image object.
-        size_t rowPitch = 0;
-        void* pixels = commandQueue.enqueueMapImage(
-            mem,
-            CL_TRUE,
-            CL_MAP_READ,
-            {0, 0, 0},
-            {gwx, gwy, 1},
-            &rowPitch,
-            nullptr);
-
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGBA,
-            (GLsizei)gwx, (GLsizei)gwy,
-            0,
-            GL_RGBA,
-            GL_FLOAT,
-            pixels);
-
-        commandQueue.enqueueUnmapMemObject(
-            mem,
-            pixels);
-    }
-#endif
-
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -429,23 +193,21 @@ static void display(void)
 
     glColor3f(1.0f, 0.6f, 0.0f);
 
-    const cl_float4* p = (const cl_float4*)commandQueue.enqueueMapBuffer(current_pos, CL_TRUE, CL_MAP_READ, 0, numBodies * sizeof(cl_float4));
+    const cl_float4* p = (const cl_float4*)commandQueue.enqueueMapBuffer(pos[currentPos], CL_TRUE, CL_MAP_READ, 0, numBodies * sizeof(cl_float4));
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(3, GL_FLOAT, sizeof(cl_float4), p);
     glDrawArrays(GL_POINTS, 0, (GLsizei)numBodies);
     glDisableClientState(GL_VERTEX_ARRAY);
 
-    commandQueue.enqueueUnmapMemObject(current_pos, (void*)p);
-
-    std::swap(current_pos, next_pos);
-    std::swap(current_vel, next_vel);
+    commandQueue.enqueueUnmapMemObject(pos[currentPos], (void*)p);
 
     GLenum  gl_error = glGetError();
     if (glGetError() != GL_NO_ERROR) {
         fprintf(stderr, "Error: OpenGL generated %x!\n", gl_error);
     }
 
+    currentPos = nextPos;
     glfwSwapBuffers(pWindow);
 }
 
@@ -491,14 +253,9 @@ int main(
     int deviceIndex = 0;
 
     {
-        bool hostCopy = false;
-        bool hostSync = false;
-
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
-        op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_gl_sharing", &hostCopy);
-        op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_gl_event", &hostSync);
         op.add<popl::Value<size_t>>("n", "numbodies", "Number of Bodies", numBodies, &numBodies);
         op.add<popl::Value<size_t>>("g", "groupsize", "Group Size", groupSize, &groupSize);
         op.add<popl::Value<size_t>>("w", "width", "Render Width", width, &width);
@@ -518,9 +275,6 @@ int main(
                 "%s", op.help().c_str());
             return -1;
         }
-
-        use_cl_khr_gl_sharing = !hostCopy;
-        use_cl_khr_gl_event = !hostSync;
     }
 
     if (!glfwInit()) {
@@ -546,7 +300,7 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    context = createContext(platforms[platformIndex], devices[deviceIndex]);
+    context = cl::Context(devices[deviceIndex]);
     commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };

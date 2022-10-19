@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021 Ben Ashbaugh
+# Copyright (c) 2021 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,20 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-find_package(Vulkan)
-find_package(glfw3 HINTS "../../external")
-
-set(BUILD_VULKAN_SAMPLES TRUE)
-if(NOT VULKAN_FOUND)
-    message(STATUS "Skipping Vulkan Samples - Vulkan is not found.")
-    set(BUILD_VULKAN_SAMPLES FALSE)
-endif()
-if(NOT glfw3_FOUND)
-    message(STATUS "Skipping Vulkan Samples - GLFW is not found.")
-    set(BUILD_VULKAN_SAMPLES FALSE)
-endif()
-
-if(BUILD_VULKAN_SAMPLES)
-    add_subdirectory( 00_juliavk )
-    add_subdirectory( 01_nbodyvk )
-endif()
+add_opencl_sample(
+    NUMBER 00
+    TARGET nbodyvk
+    VERSION 120
+    CATEGORY vulkan
+    SOURCES main.cpp
+    KERNELS nbodyvk.vert.spv nbodyvk.frag.spv
+    INCLUDES ${Vulkan_INCLUDE_DIR}
+    LIBS ${Vulkan_LIBRARY} glfw)
