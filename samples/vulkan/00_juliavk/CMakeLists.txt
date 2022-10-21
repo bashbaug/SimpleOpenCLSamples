@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Ben Ashbaugh
+# Copyright (c) 2021-2022 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
 add_opencl_sample(
     NUMBER 00
     TARGET juliavk
-    VERSION 120
+    VERSION 300 # clCreateImageWithProperties
     CATEGORY vulkan
     SOURCES main.cpp
     KERNELS juliavk.vert.spv juliavk.frag.spv
