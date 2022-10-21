@@ -208,6 +208,9 @@ private:
     cl::CommandQueue commandQueue;
     cl::Kernel kernel;
 
+    std::vector<cl::Buffer> pos;
+    cl::Buffer vel;
+
     void commandLine(int argc, char** argv) {
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
@@ -774,35 +777,37 @@ private:
     }
 
     void createVertexBuffer() {
-        vertexBuffers.resize(1);    // for now
-        vertexBufferMemories.resize(1); // for now
+        vertexBuffers.resize(swapChainImages.size());
+        vertexBufferMemories.resize(swapChainImages.size());
 
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = sizeof(cl_float4) * numBodies;
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        for (size_t i = 0; i < swapChainImages.size(); i++) {
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size = sizeof(cl_float4) * numBodies;
+            bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffers[0]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create vertex buffer!");
+            if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffers[i]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create vertex buffer!");
+            }
+
+            VkMemoryRequirements memRequirements;
+            vkGetBufferMemoryRequirements(device, vertexBuffers[i], &memRequirements);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+            allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+            if (vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemories[i]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate vertex buffer memory!");
+            }
+
+            vkBindBufferMemory(device, vertexBuffers[i], vertexBufferMemories[i], 0);
         }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, vertexBuffers[0], &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        if (vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemories[0]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate vertex buffer memory!");
-        }
-
-        vkBindBufferMemory(device, vertexBuffers[0], vertexBufferMemories[0], 0);
 
         void* data;
-        vkMapMemory(device, vertexBufferMemories[0], 0, bufferInfo.size, 0, &data);
+        vkMapMemory(device, vertexBufferMemories[0], 0, sizeof(cl_float4) * numBodies, 0, &data);
         {
             std::mt19937 gen;
             std::uniform_real_distribution<float> rand_pos(-0.01f, 0.01f);
@@ -931,7 +936,7 @@ private:
                 vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
                 VkDeviceSize offsets[] = {0};
-                vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[0], offsets);
+                vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[i], offsets);
 
                 vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(numBodies), 1, 0, 0);
 
