@@ -210,6 +210,7 @@ private:
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
+    bool deviceLocalImages = true;
     std::vector<VkImage> textureImages;
     std::vector<VkDeviceMemory> textureImageMemories;
     std::vector<VkImageView> textureImageViews;
@@ -261,6 +262,7 @@ private:
     void commandLine(int argc, char** argv) {
         bool hostCopy = false;
         bool hostSync = false;
+        bool noDeviceLocal = false;
         bool immediate = false;
 
         popl::OptionParser op("Supported Options");
@@ -268,6 +270,7 @@ private:
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
         op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
+        op.add<popl::Switch>("", "nodevicelocal", "Do not use device local images", &noDeviceLocal);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
         op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
         op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
@@ -289,6 +292,7 @@ private:
             throw std::runtime_error("exiting.");
         }
 
+        deviceLocalImages = !noDeviceLocal;
         useExternalMemory = !hostCopy;
         useExternalSemaphore = !hostSync;
         vsync = !immediate;
@@ -1034,7 +1038,7 @@ private:
                 VK_FORMAT_R8G8B8A8_UNORM,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                deviceLocalImages ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : 0,
                 textureImages[i],
                 textureImageMemories[i]);
             if (useExternalMemory) {
