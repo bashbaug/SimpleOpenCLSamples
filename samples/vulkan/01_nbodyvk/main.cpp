@@ -28,9 +28,21 @@
 #include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
+#if !defined(cl_khr_external_memory)
+#error cl_khr_external_memory not found, please update your OpenCL headers!
+#endif
+#if !defined(cl_khr_external_semaphore)
+#error cl_khr_external_semaphore not found, please update your OpenCL headers!
+#endif
+
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#include "util.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -163,6 +175,7 @@ private:
     size_t numBodies = 1024;
     size_t groupSize = 0;
 
+    bool vsync = true;
     size_t startFrame = 0;
     size_t frame = 0;
     std::chrono::system_clock::time_point start =
@@ -202,9 +215,21 @@ private:
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
+#ifdef _WIN32
+    PFN_vkGetMemoryWin32HandleKHR vkGetMemoryWin32HandleKHR = NULL;
+    PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR = NULL;
+#elif defined(__linux__)
+    PFN_vkGetMemoryFdKHR vkGetMemoryFdKHR = NULL;
+    PFN_vkGetSemaphoreFdKHR vkGetSemaphoreFdKHR = NULL;
+#endif
+
     int platformIndex = 0;
     int deviceIndex = 0;
 
+    bool useExternalMemory = true;
+    bool useExternalSemaphore = true;
+
+    cl_external_memory_handle_type_khr externalMemType = 0;
     cl::Context context;
     cl::CommandQueue commandQueue;
     cl::Kernel kernel;
@@ -212,14 +237,28 @@ private:
     std::vector<cl::Buffer> pos;
     cl::Buffer vel;
 
+    clEnqueueAcquireExternalMemObjectsKHR_fn clEnqueueAcquireExternalMemObjectsKHR = NULL;
+    clEnqueueReleaseExternalMemObjectsKHR_fn clEnqueueReleaseExternalMemObjectsKHR = NULL;
+
+    clCreateSemaphoreWithPropertiesKHR_fn clCreateSemaphoreWithPropertiesKHR = NULL;
+    clEnqueueSignalSemaphoresKHR_fn clEnqueueSignalSemaphoresKHR = NULL;
+    clReleaseSemaphoreKHR_fn clReleaseSemaphoreKHR = NULL;
+
     void commandLine(int argc, char** argv) {
+        bool hostCopy = false;
+        bool hostSync = false;
+        bool immediate = false;
+
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
+        op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
         op.add<popl::Value<size_t>>("n", "numbodies", "Number of Bodies", numBodies, &numBodies);
         op.add<popl::Value<size_t>>("g", "groupsize", "Group Size", groupSize, &groupSize);
         op.add<popl::Value<size_t>>("w", "width", "Render Width", width, &width);
         op.add<popl::Value<size_t>>("h", "height", "Render Height", height, &height);
+        op.add<popl::Switch>("", "immediate", "Prefer VK_PRESENT_MODE_IMMEDIATE_KHR (no vsync)", &immediate);
 
         bool printUsage = false;
         try {
@@ -235,6 +274,10 @@ private:
                 "%s", op.help().c_str());
             throw std::runtime_error("exiting.");
         }
+
+        useExternalMemory = !hostCopy;
+        useExternalSemaphore = !hostSync;
+        vsync = !immediate;
     }
 
     void initWindow() {
@@ -262,6 +305,34 @@ private:
         printf("Running on device: %s\n",
             devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
+        checkOpenCLExternalMemorySupport(devices[deviceIndex]);
+        checkOpenCLExternalSemaphoreSupport(devices[deviceIndex]);
+
+        if (useExternalMemory) {
+            clEnqueueAcquireExternalMemObjectsKHR = (clEnqueueAcquireExternalMemObjectsKHR_fn)
+                clGetExtensionFunctionAddressForPlatform( platforms[platformIndex](), "clEnqueueAcquireExternalMemObjectsKHR");
+            clEnqueueReleaseExternalMemObjectsKHR = (clEnqueueReleaseExternalMemObjectsKHR_fn)
+                clGetExtensionFunctionAddressForPlatform( platforms[platformIndex](), "clEnqueueReleaseExternalMemObjectsKHR");
+            if (clEnqueueAcquireExternalMemObjectsKHR == NULL ||
+                clEnqueueReleaseExternalMemObjectsKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointers for cl_khr_external_memory");
+            }
+        }
+
+        if (useExternalSemaphore) {
+            clCreateSemaphoreWithPropertiesKHR = (clCreateSemaphoreWithPropertiesKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clCreateSemaphoreWithPropertiesKHR");
+            clEnqueueSignalSemaphoresKHR = (clEnqueueSignalSemaphoresKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clEnqueueSignalSemaphoresKHR");
+            clReleaseSemaphoreKHR = (clReleaseSemaphoreKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clReleaseSemaphoreKHR");
+            if (clCreateSemaphoreWithPropertiesKHR == NULL ||
+                clEnqueueSignalSemaphoresKHR == NULL ||
+                clReleaseSemaphoreKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointers for cl_khr_external_semaphore");
+            }
+        }
+
         context = cl::Context{devices[deviceIndex]};
         commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
@@ -276,8 +347,6 @@ private:
         std::uniform_real_distribution<float> rand_mass(0.1f, 1.0f);
 
         std::vector<cl_float4> init_pos(numBodies);
-        std::vector<cl_float4> init_vel(numBodies);
-
         for (size_t i = 0; i < numBodies; i++) {
             // X, Y, and Z position:
             init_pos[i].s[0] = rand_pos(gen);
@@ -286,28 +355,61 @@ private:
 
             // Mass:
             init_pos[i].s[3] = rand_mass(gen);
-
-            // Initial velocity is zero:
-            init_vel[i].s[0] = 0.0f;
-            init_vel[i].s[1] = 0.0f;
-            init_vel[i].s[2] = 0.0f;
-            init_vel[i].s[3] = 0.0f;
         }
 
         pos.resize(swapChainImages.size());
         for (size_t i = 0; i < swapChainImages.size(); i++) {
-            pos[i] = cl::Buffer{
-                context,
-                CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-                sizeof(cl_float4) * numBodies,
-                init_pos.data()};
+            if (useExternalMemory) {
+#ifdef _WIN32
+                HANDLE handle = NULL;
+                VkMemoryGetWin32HandleInfoKHR getWin32HandleInfo{};
+                getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
+                getWin32HandleInfo.memory = vertexBufferMemories[i];
+                getWin32HandleInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+                vkGetMemoryWin32HandleKHR(device, &getWin32HandleInfo, &handle);
+
+                const cl_mem_properties props[] = {
+                    externalMemType,
+                    (cl_mem_properties)handle,
+                    0,
+                };
+#elif defined(__linux__)
+                int fd = 0;
+                VkMemoryGetFdInfoKHR getFdInfo{};
+                getFdInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
+                getFdInfo.memory = vertexBufferMemories[i];
+                getFdInfo.handleType =
+                    externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
+                    VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
+                    VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+                vkGetMemoryFdKHR(device, &getFdInfo, &fd);
+
+                const cl_mem_properties props[] = {
+                    externalMemType,
+                    (cl_mem_properties)fd,
+                    0,
+                };
+#else
+                const cl_mem_properties* props = NULL;
+#endif
+                pos[i] = cl::Buffer{
+                    clCreateBufferWithProperties(
+                        context(),
+                        props,
+                        CL_MEM_READ_WRITE,
+                        sizeof(cl_float4) * numBodies,
+                        NULL,
+                        NULL)};
+            } else {
+                pos[i] = cl::Buffer{context, CL_MEM_READ_WRITE, sizeof(cl_float4) * numBodies};
+            }
+
+            commandQueue.enqueueWriteBuffer(pos[i], CL_TRUE, 0, sizeof(cl_float4) * numBodies, init_pos.data());
         }
 
-        vel = cl::Buffer{
-            context,
-            CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-            sizeof(cl_float4) * numBodies,
-            init_vel.data()};
+        vel = cl::Buffer{context, CL_MEM_READ_WRITE, sizeof(cl_float4) * numBodies};
+        commandQueue.enqueueFillBuffer(vel, 0.0f, 0, sizeof(cl_float4) * numBodies);
+        commandQueue.finish();
     }
 
     void initVulkan() {
@@ -418,7 +520,11 @@ private:
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "No Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
+        if (useExternalMemory || useExternalSemaphore) {
+            appInfo.apiVersion = VK_API_VERSION_1_1;
+        } else {
+            appInfo.apiVersion = VK_API_VERSION_1_0;
+        }
 
         VkInstanceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -444,6 +550,34 @@ private:
         if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
             throw std::runtime_error("failed to create instance!");
         }
+
+#ifdef _WIN32
+        if (useExternalMemory) {
+            vkGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryWin32HandleKHR");
+            if (vkGetMemoryWin32HandleKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetMemoryWin32HandleKHR");
+            }
+        }
+        if (useExternalSemaphore) {
+            vkGetSemaphoreWin32HandleKHR = (PFN_vkGetSemaphoreWin32HandleKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreWin32HandleKHR");
+            if (vkGetSemaphoreWin32HandleKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetSemaphoreWin32HandleKHR");
+            }
+        }
+#elif defined(__linux__)
+        if (useExternalMemory) {
+            vkGetMemoryFdKHR = (PFN_vkGetMemoryFdKHR)vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR");
+            if (vkGetMemoryFdKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetMemoryFdKHR");
+            }
+        }
+        if (useExternalSemaphore) {
+            vkGetSemaphoreFdKHR = (PFN_vkGetSemaphoreFdKHR)vkGetInstanceProcAddr(instance, "vkGetSemaphoreFdKHR");
+            if (vkGetSemaphoreFdKHR == NULL) {
+                throw std::runtime_error("couldn't get function pointer for vkGetSemaphoreFdKHR");
+            }
+        }
+#endif
     }
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
@@ -520,8 +654,9 @@ private:
 
         createInfo.pEnabledFeatures = &deviceFeatures;
 
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-        createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+        auto extensions = getRequiredDeviceExtensions();
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+        createInfo.ppEnabledExtensionNames = extensions.data();
 
         if (enableValidationLayers) {
             createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -822,8 +957,23 @@ private:
         vertexBufferMemories.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
+            VkExternalMemoryBufferCreateInfo externalMemCreateInfo{};
+            externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
+
+#ifdef _WIN32
+            externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#elif defined(__linux__)
+            externalMemCreateInfo.handleTypes =
+                externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
+                VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
+                VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+#endif
+
             VkBufferCreateInfo bufferInfo{};
             bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            if (useExternalMemory) {
+                bufferInfo.pNext = &externalMemCreateInfo;
+            }
             bufferInfo.size = sizeof(cl_float4) * numBodies;
             bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
             bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -835,8 +985,15 @@ private:
             VkMemoryRequirements memRequirements;
             vkGetBufferMemoryRequirements(device, vertexBuffers[i], &memRequirements);
 
+            VkExportMemoryAllocateInfo exportMemoryAllocInfo{};
+            exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
+            exportMemoryAllocInfo.handleTypes = externalMemCreateInfo.handleTypes;
+
             VkMemoryAllocateInfo allocInfo{};
             allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            if (useExternalMemory) {
+                allocInfo.pNext = &exportMemoryAllocInfo;
+            }
             allocInfo.allocationSize = memRequirements.size;
             allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -992,6 +1149,20 @@ private:
     }
 
     void updateVertexBuffer(uint32_t lastImage, uint32_t currentImage) {
+        if (useExternalMemory) {
+            cl_mem acquireMems[2] = {
+                pos[lastImage](),
+                pos[currentImage](),
+            };
+            clEnqueueAcquireExternalMemObjectsKHR(
+                commandQueue(),
+                2,
+                acquireMems,
+                0,
+                NULL,
+                NULL);
+        }
+
         if (lastImage != currentImage) {
             kernel.setArg(0, pos[lastImage]);
             kernel.setArg(1, pos[currentImage]);
@@ -1009,15 +1180,35 @@ private:
                 lws);
         }
 
-        void* srcData = commandQueue.enqueueMapBuffer(pos[currentImage], CL_TRUE, CL_MAP_READ, 0, sizeof(cl_float4) * numBodies);
+        if (useExternalMemory) {
+            cl_mem releaseMems[2] = {
+                pos[lastImage](),
+                pos[currentImage](),
+            };
+            clEnqueueReleaseExternalMemObjectsKHR(
+                commandQueue(),
+                2,
+                releaseMems,
+                0,
+                NULL,
+                NULL);
+            commandQueue.finish();
+        } else {
+            void* srcData = commandQueue.enqueueMapBuffer(
+                pos[currentImage],
+                CL_TRUE,
+                CL_MAP_READ,
+                0,
+                sizeof(cl_float4) * numBodies);
 
-        void* dstData;
-        vkMapMemory(device, vertexBufferMemories[currentImage], 0, sizeof(cl_float4) * numBodies, 0, &dstData);
-            memcpy(dstData, srcData, sizeof(cl_float4) * numBodies);
-        vkUnmapMemory(device, vertexBufferMemories[currentImage]);
+            void* dstData;
+            vkMapMemory(device, vertexBufferMemories[currentImage], 0, sizeof(cl_float4) * numBodies, 0, &dstData);
+                memcpy(dstData, srcData, sizeof(cl_float4) * numBodies);
+            vkUnmapMemory(device, vertexBufferMemories[currentImage]);
 
-        commandQueue.enqueueUnmapMemObject(pos[currentImage], srcData);
-        commandQueue.flush();
+            commandQueue.enqueueUnmapMemObject(pos[currentImage], srcData);
+            commandQueue.flush();
+        }
     }
 
     void drawFrame() {
@@ -1089,6 +1280,85 @@ private:
         lastImage = imageIndex;
     }
 
+    void checkOpenCLExternalMemorySupport(cl::Device& device) {
+        if (checkDeviceForExtension(device, "cl_khr_external_memory")) {
+            printf("Device supports cl_khr_external_memory.\n");
+            printf("Supported external memory handle types:\n");
+            std::vector<cl_external_memory_handle_type_khr> types =
+                device.getInfo<CL_DEVICE_EXTERNAL_MEMORY_IMPORT_HANDLE_TYPES_KHR>();
+            for (auto type : types) {
+                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
+                switch(type) {
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KMT_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KMT_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_HEAP_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_RESOURCE_KHR);
+                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR);
+                default: printf("Unknown cl_external_memory_handle_type_khr %04X\n", type);
+                }
+                #undef CASE_TO_STRING
+            }
+#ifdef _WIN32
+            if (std::find(types.begin(), types.end(), CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR) != types.end()) {
+                externalMemType = CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR;
+            } else {
+                printf("Couldn't find a compatible external memory type (sample supports OPAQUE_WIN32).\n");
+                useExternalMemory = false;
+            }
+#elif defined(__linux__)
+            if (std::find(types.begin(), types.end(), CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR) != types.end()) {
+                externalMemType = CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR;
+            } else if (std::find(types.begin(), types.end(), CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR) != types.end()) {
+                externalMemType = CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR;
+            } else {
+                printf("Couldn't find a compatible external memory type (sample supports DMA_BUF or OPAQUE_FD).\n");
+                useExternalMemory = false;
+            }
+#endif
+        } else {
+            printf("Device does not support cl_khr_external_memory.\n");
+            useExternalMemory = false;
+        }
+    }
+
+    void checkOpenCLExternalSemaphoreSupport(cl::Device& device) {
+        if (checkDeviceForExtension(device, "cl_khr_external_semaphore")) {
+            printf("Device supports cl_khr_external_semaphore.\n");
+            printf("Supported external semaphore import handle types:\n");
+            std::vector<cl_external_semaphore_handle_type_khr> types =
+                device.getInfo<CL_DEVICE_SEMAPHORE_IMPORT_HANDLE_TYPES_KHR>();
+            for (auto type : types) {
+                #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
+                switch(type) {
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_SYNC_FD_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR);
+                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KMT_KHR);
+                default: printf("Unknown cl_external_semaphore_handle_type_khr %04X\n", type);
+                }
+                #undef CASE_TO_STRING
+            }
+#ifdef _WIN32
+            if (std::find(types.begin(), types.end(), CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR) == types.end()) {
+                printf("Couldn't find a compatible external semaphore type (sample supports OPAQUE_WIN32).\n");
+                useExternalSemaphore = false;
+            }
+#elif defined(__linux__)
+            if (std::find(types.begin(), types.end(), CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR) == types.end()) {
+                printf("Couldn't find a compatible external semaphore type (sample supports OPAQUE_FD).\n");
+                useExternalSemaphore = false;
+            }
+#endif
+        } else {
+            printf("Device does not support cl_khr_external_semaphore.\n");
+            useExternalSemaphore = false;
+        }
+    }
+
     VkShaderModule createShaderModule(const std::vector<char>& code) {
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1115,8 +1385,14 @@ private:
 
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
         for (const auto& availablePresentMode : availablePresentModes) {
-            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-                return availablePresentMode;
+            if (vsync) {
+                if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+                    return availablePresentMode;
+                }
+            } else {
+                if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+                    return availablePresentMode;
+                }
             }
         }
 
@@ -1187,7 +1463,8 @@ private:
         std::vector<VkExtensionProperties> availableExtensions(extensionCount);
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-        std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+        auto extensions = getRequiredDeviceExtensions();
+        std::set<std::string> requiredExtensions(extensions.begin(), extensions.end());
 
         for (const auto& extension : availableExtensions) {
             requiredExtensions.erase(extension.extensionName);
@@ -1235,8 +1512,43 @@ private:
 
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
+        if (useExternalMemory || useExternalSemaphore) {
+            extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        }
+        if (useExternalMemory) {
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+        }
+        if (useExternalMemory && externalMemType == CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR) {
+            extensions.push_back(VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME);
+        }
+        if (useExternalSemaphore) {
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+        }
         if (enableValidationLayers) {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
+
+        return extensions;
+    }
+
+    std::vector<const char*> getRequiredDeviceExtensions() {
+        std::vector<const char*> extensions(deviceExtensions);
+
+        if (useExternalMemory) {
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
+#ifdef _WIN32
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
+#elif defined(__linux__)
+            extensions.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
+#endif
+        }
+        if (useExternalSemaphore) {
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+#ifdef _WIN32
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
+#elif defined(__linux__)
+            extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
+#endif
         }
 
         return extensions;

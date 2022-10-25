@@ -1132,8 +1132,8 @@ private:
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements(device, image, &memRequirements);
 
-        VkExportMemoryAllocateInfoKHR exportMemoryAllocInfo{};
-        exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR;
+        VkExportMemoryAllocateInfo exportMemoryAllocInfo{};
+        exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
         exportMemoryAllocInfo.handleTypes = externalMemCreateInfo.handleTypes;
 
         VkMemoryAllocateInfo allocInfo{};
@@ -1712,7 +1712,6 @@ private:
             printf("Device does not support cl_khr_external_semaphore.\n");
             useExternalSemaphore = false;
         }
-
     }
 
     VkShaderModule createShaderModule(const std::vector<char>& code) {

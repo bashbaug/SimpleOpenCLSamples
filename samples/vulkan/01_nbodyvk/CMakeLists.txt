@@ -21,7 +21,7 @@
 add_opencl_sample(
     NUMBER 00
     TARGET nbodyvk
-    VERSION 120
+    VERSION 300 # clCreateBufferWithProperties
     CATEGORY vulkan
     SOURCES main.cpp
     KERNELS nbodyvk.vert.spv nbodyvk.frag.spv
