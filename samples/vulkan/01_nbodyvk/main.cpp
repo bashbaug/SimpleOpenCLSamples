@@ -144,6 +144,7 @@ public:
         initWindow();
         initOpenCL();
         initVulkan();
+        initOpenCLMems();
         mainLoop();
         cleanup();
     }
@@ -154,13 +155,13 @@ private:
     bool animate = false;
     bool redraw = false;
 
+    uint32_t lastImage = 0;
+
     size_t width = 1024;
     size_t height = 1024;
 
     size_t numBodies = 1024;
     size_t groupSize = 0;
-
-    size_t currentPos = 0;
 
     size_t startFrame = 0;
     size_t frame = 0;
@@ -269,6 +270,46 @@ private:
         kernel = cl::Kernel{ program, "nbody_step" };
     }
 
+    void initOpenCLMems() {
+        std::mt19937 gen;
+        std::uniform_real_distribution<float> rand_pos(-0.01f, 0.01f);
+        std::uniform_real_distribution<float> rand_mass(0.1f, 1.0f);
+
+        std::vector<cl_float4> init_pos(numBodies);
+        std::vector<cl_float4> init_vel(numBodies);
+
+        for (size_t i = 0; i < numBodies; i++) {
+            // X, Y, and Z position:
+            init_pos[i].s[0] = rand_pos(gen);
+            init_pos[i].s[1] = rand_pos(gen);
+            init_pos[i].s[2] = rand_pos(gen);
+
+            // Mass:
+            init_pos[i].s[3] = rand_mass(gen);
+
+            // Initial velocity is zero:
+            init_vel[i].s[0] = 0.0f;
+            init_vel[i].s[1] = 0.0f;
+            init_vel[i].s[2] = 0.0f;
+            init_vel[i].s[3] = 0.0f;
+        }
+
+        pos.resize(swapChainImages.size());
+        for (size_t i = 0; i < swapChainImages.size(); i++) {
+            pos[i] = cl::Buffer{
+                context,
+                CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                sizeof(cl_float4) * numBodies,
+                init_pos.data()};
+        }
+
+        vel = cl::Buffer{
+            context,
+            CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+            sizeof(cl_float4) * numBodies,
+            init_vel.data()};
+    }
+
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
@@ -373,7 +414,7 @@ private:
 
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Hello Triangle";
+        appInfo.pApplicationName = "NBody OpenCL+Vulkan Sample";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "No Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -805,26 +846,6 @@ private:
 
             vkBindBufferMemory(device, vertexBuffers[i], vertexBufferMemories[i], 0);
         }
-
-        void* data;
-        vkMapMemory(device, vertexBufferMemories[0], 0, sizeof(cl_float4) * numBodies, 0, &data);
-        {
-            std::mt19937 gen;
-            std::uniform_real_distribution<float> rand_pos(-0.01f, 0.01f);
-            std::uniform_real_distribution<float> rand_mass(0.1f, 1.0f);
-
-            cl_float4* init_pos = static_cast<cl_float4*>(data);
-            for (size_t i = 0; i < numBodies; i++) {
-                // X, Y, and Z position:
-                init_pos[i].s[0] = rand_pos(gen);
-                init_pos[i].s[1] = rand_pos(gen);
-                init_pos[i].s[2] = rand_pos(gen);
-
-                // Mass:
-                init_pos[i].s[3] = 1.0f; // rand_mass(gen);
-            }
-        }
-        vkUnmapMemory(device, vertexBufferMemories[0]);
     }
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
@@ -970,50 +991,33 @@ private:
         }
     }
 
-    void updateVertexBuffer(uint32_t currentImage) {
-#if 0
-        kernel.setArg(0, mem);
-        kernel.setArg(1, cr);
-        kernel.setArg(2, ci);
+    void updateVertexBuffer(uint32_t lastImage, uint32_t currentImage) {
+        if (lastImage != currentImage) {
+            kernel.setArg(0, pos[lastImage]);
+            kernel.setArg(1, pos[currentImage]);
+            kernel.setArg(2, vel);
 
-        cl::NDRange lws;    // NullRange by default.
-        if( lwx > 0 && lwy > 0 )
-        {
-            lws = cl::NDRange{lwx, lwy};
+            cl::NDRange lws;    // NullRange by default.
+            if (groupSize > 0) {
+                lws = cl::NDRange{groupSize};
+            }
+
+            commandQueue.enqueueNDRangeKernel(
+                kernel,
+                cl::NullRange,
+                cl::NDRange{numBodies},
+                lws);
         }
 
-        commandQueue.enqueueNDRangeKernel(
-            kernel,
-            cl::NullRange,
-            cl::NDRange{gwx, gwy},
-            lws);
+        void* srcData = commandQueue.enqueueMapBuffer(pos[currentImage], CL_TRUE, CL_MAP_READ, 0, sizeof(cl_float4) * numBodies);
 
-        size_t rowPitch = 0;
-        void* pixels = commandQueue.enqueueMapImage(
-            mem,
-            CL_TRUE,
-            CL_MAP_READ,
-            {0, 0, 0},
-            {gwx, gwy, 1},
-            &rowPitch,
-            nullptr);
+        void* dstData;
+        vkMapMemory(device, vertexBufferMemories[currentImage], 0, sizeof(cl_float4) * numBodies, 0, &dstData);
+            memcpy(dstData, srcData, sizeof(cl_float4) * numBodies);
+        vkUnmapMemory(device, vertexBufferMemories[currentImage]);
 
-        VkDeviceSize imageSize = gwx * gwy * 4;
-
-        void* data;
-        vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-            memcpy(data, pixels, static_cast<size_t>(imageSize));
-        vkUnmapMemory(device, stagingBufferMemory);
-
-        commandQueue.enqueueUnmapMemObject(
-            mem,
-            pixels);
+        commandQueue.enqueueUnmapMemObject(pos[currentImage], srcData);
         commandQueue.flush();
-
-        transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            copyBufferToImage(stagingBuffer, textureImages[currentImage], static_cast<uint32_t>(gwx), static_cast<uint32_t>(gwy));
-        transitionImageLayout(textureImages[currentImage], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-#endif
     }
 
     void drawFrame() {
@@ -1038,7 +1042,7 @@ private:
         uint32_t imageIndex;
         vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-        updateVertexBuffer(imageIndex);
+        updateVertexBuffer(lastImage, imageIndex);
 
         if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
             vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
@@ -1082,6 +1086,7 @@ private:
         vkQueuePresentKHR(presentQueue, &presentInfo);
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+        lastImage = imageIndex;
     }
 
     VkShaderModule createShaderModule(const std::vector<char>& code) {
