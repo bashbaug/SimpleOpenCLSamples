@@ -25,4 +25,4 @@ add_opencl_sample(
     CATEGORY opengl
     SOURCES main.cpp
     INCLUDES ${OPENGL_INCLUDE_DIRS}
-    LIBS ${OPENGL_LIBRARIES} OpenGL::GLU glfw)
+    LIBS ${OPENGL_LIBRARIES} glfw)
