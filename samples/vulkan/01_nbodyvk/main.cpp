@@ -157,6 +157,7 @@ public:
         initOpenCL();
         initVulkan();
         initOpenCLMems();
+        initOpenCLSemaphores();
         mainLoop();
         cleanup();
     }
@@ -204,6 +205,7 @@ private:
 
     VkCommandPool commandPool;
 
+    bool deviceLocalBuffers = true;
     std::vector<VkBuffer> vertexBuffers;
     std::vector<VkDeviceMemory> vertexBufferMemories;
 
@@ -211,6 +213,7 @@ private:
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkSemaphore> openclFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
@@ -236,6 +239,7 @@ private:
 
     std::vector<cl::Buffer> pos;
     cl::Buffer vel;
+    std::vector<cl_semaphore_khr> signalSemaphores;
 
     clEnqueueAcquireExternalMemObjectsKHR_fn clEnqueueAcquireExternalMemObjectsKHR = NULL;
     clEnqueueReleaseExternalMemObjectsKHR_fn clEnqueueReleaseExternalMemObjectsKHR = NULL;
@@ -247,6 +251,7 @@ private:
     void commandLine(int argc, char** argv) {
         bool hostCopy = false;
         bool hostSync = false;
+        bool noDeviceLocal = false;
         bool immediate = false;
 
         popl::OptionParser op("Supported Options");
@@ -254,6 +259,7 @@ private:
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
         op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
+        op.add<popl::Switch>("", "nodevicelocal", "Do not use device local buffers", &noDeviceLocal);
         op.add<popl::Value<size_t>>("n", "numbodies", "Number of Bodies", numBodies, &numBodies);
         op.add<popl::Value<size_t>>("g", "groupsize", "Group Size", groupSize, &groupSize);
         op.add<popl::Value<size_t>>("w", "width", "Render Width", width, &width);
@@ -275,6 +281,7 @@ private:
             throw std::runtime_error("exiting.");
         }
 
+        deviceLocalBuffers = !noDeviceLocal;
         useExternalMemory = !hostCopy;
         useExternalSemaphore = !hostSync;
         vsync = !immediate;
@@ -412,6 +419,16 @@ private:
         commandQueue.finish();
     }
 
+    void initOpenCLSemaphores() {
+        if (useExternalSemaphore) {
+            signalSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+
+            for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                createOpenCLSemaphoreFromVulkanSemaphore(openclFinishedSemaphores[i], signalSemaphores[i]);
+            }
+        }
+    }
+
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
@@ -424,7 +441,7 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
-        createVertexBuffer();
+        createVertexBuffers();
         createCommandBuffers();
         createSyncObjects();
     }
@@ -490,6 +507,9 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+            if (useExternalSemaphore) {
+                vkDestroySemaphore(device, openclFinishedSemaphores[i], nullptr);
+            }
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
 
@@ -873,7 +893,13 @@ private:
 
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
+        colorBlendAttachment.blendEnable = VK_TRUE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
         VkPipelineColorBlendStateCreateInfo colorBlending{};
         colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -952,83 +978,113 @@ private:
         }
     }
 
-    void createVertexBuffer() {
+    void createVertexBuffers() {
+        VkMemoryPropertyFlags properties =
+            deviceLocalBuffers && useExternalMemory ?
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT :
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
         vertexBuffers.resize(swapChainImages.size());
         vertexBufferMemories.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
-            VkExternalMemoryBufferCreateInfo externalMemCreateInfo{};
-            externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
-
-#ifdef _WIN32
-            externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-#elif defined(__linux__)
-            externalMemCreateInfo.handleTypes =
-                externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
-                VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
-                VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
-#endif
-
-            VkBufferCreateInfo bufferInfo{};
-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            if (useExternalMemory) {
-                bufferInfo.pNext = &externalMemCreateInfo;
-            }
-            bufferInfo.size = sizeof(cl_float4) * numBodies;
-            bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-            if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffers[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create vertex buffer!");
-            }
-
-            VkMemoryRequirements memRequirements;
-            vkGetBufferMemoryRequirements(device, vertexBuffers[i], &memRequirements);
-
-            VkExportMemoryAllocateInfo exportMemoryAllocInfo{};
-            exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
-            exportMemoryAllocInfo.handleTypes = externalMemCreateInfo.handleTypes;
-
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            if (useExternalMemory) {
-                allocInfo.pNext = &exportMemoryAllocInfo;
-            }
-            allocInfo.allocationSize = memRequirements.size;
-            allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-            if (vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemories[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to allocate vertex buffer memory!");
-            }
-
-            vkBindBufferMemory(device, vertexBuffers[i], vertexBufferMemories[i], 0);
+            createShareableBuffer(
+                sizeof(cl_float4) * numBodies,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                properties,
+                vertexBuffers[i],
+                vertexBufferMemories[i]);
         }
     }
 
-    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+    void createShareableBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+    {
+        VkExternalMemoryBufferCreateInfo externalMemCreateInfo{};
+        externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
+
+#ifdef _WIN32
+        externalMemCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#elif defined(__linux__)
+        externalMemCreateInfo.handleTypes =
+            externalMemType == CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR ?
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT :
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+#endif
+
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
+        if (useExternalMemory) {
+            bufferInfo.pNext = &externalMemCreateInfo;
+        }
+        bufferInfo.size = static_cast<VkDeviceSize>(size);
         bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create buffer!");
+            throw std::runtime_error("failed to create vertex buffer!");
         }
 
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
 
+        VkExportMemoryAllocateInfo exportMemoryAllocInfo{};
+        exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
+        exportMemoryAllocInfo.handleTypes = externalMemCreateInfo.handleTypes;
+
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        if (useExternalMemory) {
+            allocInfo.pNext = &exportMemoryAllocInfo;
+        }
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
         if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate buffer memory!");
+            throw std::runtime_error("failed to allocate vertex buffer memory!");
         }
 
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
+    }
+
+    void createOpenCLSemaphoreFromVulkanSemaphore(VkSemaphore srcSemaphore, cl_semaphore_khr& semaphore) {
+#ifdef _WIN32
+        HANDLE handle = NULL;
+        VkSemaphoreGetWin32HandleInfoKHR getWin32HandleInfo{};
+        getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR;
+        getWin32HandleInfo.semaphore = srcSemaphore;
+        getWin32HandleInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+        vkGetSemaphoreWin32HandleKHR(device, &getWin32HandleInfo, &handle);
+
+        const cl_semaphore_properties_khr props[] = {
+            CL_SEMAPHORE_TYPE_KHR,
+            CL_SEMAPHORE_TYPE_BINARY_KHR,
+            CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR,
+            (cl_semaphore_properties_khr)handle,
+            0,
+        };
+#elif defined(__linux__)
+        int fd = 0;
+        VkSemaphoreGetFdInfoKHR getFdInfo{};
+        getFdInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR;
+        getFdInfo.semaphore = srcSemaphore;
+        getFdInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+        vkGetSemaphoreFdKHR(device, &getFdInfo, &fd);
+
+        const cl_semaphore_properties_khr props[] = {
+            CL_SEMAPHORE_TYPE_KHR,
+            CL_SEMAPHORE_TYPE_BINARY_KHR,
+            CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR,
+            (cl_semaphore_properties_khr)fd,
+            0,
+        };
+#else
+        const cl_mem_properties* props = NULL;
+#endif
+
+        semaphore = clCreateSemaphoreWithPropertiesKHR(
+            context(),
+            props,
+            NULL);
     }
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -1132,6 +1188,15 @@ private:
         inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
         imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
 
+        VkExportSemaphoreCreateInfo exportSemaphoreCreateInfo{};
+        exportSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
+
+#ifdef _WIN32
+        exportSemaphoreCreateInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#elif defined(__linux__)
+        exportSemaphoreCreateInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+#endif
+
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -1144,6 +1209,18 @@ private:
                 vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
                 vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create synchronization objects for a frame!");
+            }
+        }
+
+        if (useExternalSemaphore) {
+            openclFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+
+            semaphoreInfo.pNext = &exportSemaphoreCreateInfo;
+
+            for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &openclFinishedSemaphores[i]) != VK_SUCCESS) {
+                    throw std::runtime_error("failed to create synchronization objects for interop!");
+                }
             }
         }
     }
@@ -1192,7 +1269,19 @@ private:
                 0,
                 NULL,
                 NULL);
-            commandQueue.finish();
+            if (useExternalSemaphore) {
+                clEnqueueSignalSemaphoresKHR(
+                    commandQueue(),
+                    1,
+                    &signalSemaphores[currentFrame],
+                    nullptr,
+                    0,
+                    nullptr,
+                    nullptr);
+                commandQueue.flush();
+            } else {
+                commandQueue.finish();
+            }
         } else {
             void* srcData = commandQueue.enqueueMapBuffer(
                 pos[currentImage],
@@ -1243,11 +1332,17 @@ private:
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
-        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
+        std::vector<VkSemaphore> waitSemaphores;
+        std::vector<VkPipelineStageFlags> waitStages;
+        waitSemaphores.push_back(imageAvailableSemaphores[currentFrame]);
+        waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        if (useExternalMemory && useExternalSemaphore) {
+            waitSemaphores.push_back(openclFinishedSemaphores[currentFrame]);
+            waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        }
+        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
+        submitInfo.pWaitSemaphores = waitSemaphores.data();
+        submitInfo.pWaitDstStageMask = waitStages.data();
 
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[imageIndex];

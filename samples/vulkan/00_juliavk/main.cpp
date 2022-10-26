@@ -447,8 +447,8 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
-        createTextureImage();
-        createTextureImageView();
+        createTextureImages();
+        createTextureImageViews();
         createTextureSampler();
         createDescriptorPool();
         createDescriptorSets();
@@ -1021,7 +1021,12 @@ private:
         }
     }
 
-    void createTextureImage() {
+    void createTextureImages() {
+        VkMemoryPropertyFlags properties =
+            deviceLocalImages ?
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT :
+            0;
+
         uint32_t texWidth = static_cast<uint32_t>(gwx);
         uint32_t texHeight = static_cast<uint32_t>(gwy);
 
@@ -1032,13 +1037,13 @@ private:
         textureImageMemories.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
-            createImage(
+            createShareableImage(
                 texWidth,
                 texHeight,
                 VK_FORMAT_R8G8B8A8_UNORM,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                deviceLocalImages ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : 0,
+                properties,
                 textureImages[i],
                 textureImageMemories[i]);
             if (useExternalMemory) {
@@ -1047,7 +1052,7 @@ private:
         }
     }
 
-    void createTextureImageView() {
+    void createTextureImageViews() {
         textureImageViews.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -1094,7 +1099,7 @@ private:
         return imageView;
     }
 
-    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
+    void createShareableImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
         VkExternalMemoryImageCreateInfo externalMemCreateInfo{};
         externalMemCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
 
