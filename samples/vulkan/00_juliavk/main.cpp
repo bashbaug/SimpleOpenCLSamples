@@ -1878,9 +1878,6 @@ private:
         if (useExternalMemory) {
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
         }
-        if (useExternalMemory && externalMemType == CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR) {
-            extensions.push_back(VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME);
-        }
         if (useExternalSemaphore) {
             extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
         }
@@ -1900,6 +1897,9 @@ private:
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
 #elif defined(__linux__)
             extensions.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
+            if (externalMemType == CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR) {
+                extensions.push_back(VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME);
+            }
 #endif
         }
         if (useExternalSemaphore) {
