@@ -210,6 +210,7 @@ private:
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
+    bool linearImages = false;
     bool deviceLocalImages = true;
     std::vector<VkImage> textureImages;
     std::vector<VkDeviceMemory> textureImageMemories;
@@ -270,6 +271,7 @@ private:
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
         op.add<popl::Switch>("", "hostsync", "Do not use cl_khr_external_semaphore", &hostSync);
+        op.add<popl::Switch>("", "linear", "Use linearly tiled images", &linearImages);
         op.add<popl::Switch>("", "nodevicelocal", "Do not use device local images", &noDeviceLocal);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
         op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
@@ -1022,6 +1024,10 @@ private:
     }
 
     void createTextureImages() {
+        VkImageTiling tiling =
+            linearImages ?
+            VK_IMAGE_TILING_LINEAR :
+            VK_IMAGE_TILING_OPTIMAL;
         VkMemoryPropertyFlags properties =
             deviceLocalImages ?
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT :
@@ -1041,7 +1047,7 @@ private:
                 texWidth,
                 texHeight,
                 VK_FORMAT_R8G8B8A8_UNORM,
-                VK_IMAGE_TILING_OPTIMAL,
+                tiling,
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 properties,
                 textureImages[i],

@@ -62,6 +62,7 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
 | `--hostcopy` | n/a | Do not use the `cl_khr_external_memory` extension and unconditionally copy on the host.
 | `--hostsync` | n/a | Do not use the `cl_khr_external_semaphore` extension and exclusively synchronize on the host.
+| `--linear` | n/a | Use linear images (`VK_IMAGE_TILING_LINEAR`).  May be useful for debugging.
 | `--nodevicelocal` | n/a | Do not use device local images (`VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT`).  May be useful for debugging.
 | `--gwx <number>` | 512 | Specify the global work size to execute, in the X direction.  This also determines the width of the generated image.
 | `--gwy <number>` | 512 | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
