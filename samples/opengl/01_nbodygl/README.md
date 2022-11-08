@@ -2,33 +2,25 @@
 
 ## Sample Purpose
 
-Write me!
+This sample uses OpenCL to compute an [N-body simulation](https://en.wikipedia.org/wiki/N-body_simulation), which is then rendered with OpenGL.
+
+This sample currently does not share the OpenCL buffer with OpenGL and will unconditionally copy from OpenCL to OpenGL on the host.
+It is most useful as a reference for the similar Vulkan sample.
 
 ## Key APIs and Concepts
 
-This example shows how to share an OpenGL buffer with OpenCL.
-
-```c
-clGetGLContextInfoKHR
-clCreateFromGLBuffer
-clEnqueueAcquireGLObjects
-clEnqueueReleaseGLObjects
-```
+This example shows how to copy from an OpenCL buffer to OpenGL.
 
 ## Command Line Options
-
-Note: Many of these command line arguments are identical to the earlier Julia set sample.
 
 | Option | Default Value | Description |
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
-| `--hostcopy` | n/a | Do not use the `cl_khr_gl_sharing` extension and unconditionally copy on the host.
-| `--hostsync` | n/a | Do not use the `cl_khr_gl_event` extension and exclusively synchronize on the host.
 | `-n` | 1024 | Specify the number of bodies to simulate.
 | `-g` | 0| Specify the local work size.  If the local works size is zero a `NULL` local work size is used.
-| `-w` | 1600 | Specify the render width in pixels.
-| `-h` | 900 | Specify the render height in pixels.
+| `-w` | 1024 | Specify the render width in pixels.
+| `-h` | 1024 | Specify the render height in pixels.
 
 ## Controls While Running
 

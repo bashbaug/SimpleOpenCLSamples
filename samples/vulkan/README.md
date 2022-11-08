@@ -66,4 +66,5 @@ After installing, GLFW should be found by the OpenCL samples.
 
 ## Summary of Vulkan Samples
 
-* [juliavk](./00_juliavk): Demonstrates sharing an Vulkan texture with OpenCL.
+* [juliavk](./00_juliavk): Demonstrates sharing a Vulkan texture with OpenCL.
+* [nbodyvk](./01_nbodyvk): Demonstrates sharing a Vulkan buffer with OpenCL.
