@@ -18,6 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+if(NOT DEFINED OpenGL_GL_PREFERENCE)
+    set(OpenGL_GL_PREFERENCE "LEGACY")
+endif()
+
 find_package(OpenGL)
 find_package(glfw3 HINTS "../../external")
 
