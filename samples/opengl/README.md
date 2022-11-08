@@ -61,3 +61,4 @@ After installing, GLFW should be found by the OpenCL samples.
 ## Summary of OpenGL Samples
 
 * [juliagl](./00_juliagl): Demonstrates sharing an OpenGL texture with OpenCL.
+* [nbodygl](./01_nbodygl): Demonstrates rendering an OpenCL vertex buffer with OpenGL.

@@ -15,7 +15,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Check Tabs
       run: |
@@ -36,7 +36,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Get Ubuntu OpenGL Dependencies
       if: matrix.os == 'ubuntu-latest'
@@ -45,20 +45,20 @@ jobs:
         sudo apt-get install -y libglfw3-dev
 
     - name: Get OpenCL Headers
-      uses: actions/checkout@main
+      uses: actions/checkout@v3
       with:
         repository: KhronosGroup/OpenCL-Headers
         path: external/OpenCL-Headers
 
     - name: Get OpenCL ICD Loader
-      uses: actions/checkout@main
+      uses: actions/checkout@v3
       with:
         repository: KhronosGroup/OpenCL-ICD-Loader
         path: external/opencl-icd-loader
 
     - name: Get OpenCL Extension Loader
       if: matrix.ext == 'YES'
-      uses: actions/checkout@master
+      uses: actions/checkout@v3
       with:
         repository: bashbaug/opencl-extension-loader
         path: external/opencl-extension-loader
