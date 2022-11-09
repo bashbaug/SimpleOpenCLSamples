@@ -30,6 +30,4 @@ clInitLayer
 
 This section describes some of the limitations of the emulated `cl_khr_command_buffer` functionality:
 
-* The event associated with `clEnqueueCommandBufferKHR` will not have the proper event command type `CL_COMMAND_COMMAND_BUFFER_KHR`.
-* Event profiling for `clEnqueueCommandBufferKHR` will not be correct for the `QUEUED`, `SUBMITTED`, and `START` times.
 * Many error conditions are not properly checked for and returned.
