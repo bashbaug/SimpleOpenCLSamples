@@ -577,11 +577,11 @@ private:
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "No Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        if (useExternalMemory || useExternalSemaphore) {
+        //if (useExternalMemory || useExternalSemaphore) {
             appInfo.apiVersion = VK_API_VERSION_1_1;
-        } else {
-            appInfo.apiVersion = VK_API_VERSION_1_0;
-        }
+        //} else {
+        //    appInfo.apiVersion = VK_API_VERSION_1_0;
+        //}
 
         VkInstanceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -1140,8 +1140,22 @@ private:
             throw std::runtime_error("failed to create image!");
         }
 
-        VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(device, image, &memRequirements);
+        VkImageMemoryRequirementsInfo2 imageRequirementsInfo{};
+        imageRequirementsInfo.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2;
+        imageRequirementsInfo.image = image;
+
+        VkMemoryDedicatedRequirements dedicatedRequirements{};
+        dedicatedRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
+
+        VkMemoryRequirements2 memRequirements{};
+        memRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+        memRequirements.pNext = &dedicatedRequirements;
+
+        vkGetImageMemoryRequirements2(device, &imageRequirementsInfo, &memRequirements);
+
+        printf("prefersDedicatedAllocation = %u, requiresDedicatedAllocation = %u\n",
+            dedicatedRequirements.prefersDedicatedAllocation,
+            dedicatedRequirements.requiresDedicatedAllocation);
 
         VkExportMemoryAllocateInfo exportMemoryAllocInfo{};
         exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
@@ -1152,8 +1166,8 @@ private:
         if (useExternalMemory) {
             allocInfo.pNext = &exportMemoryAllocInfo;
         }
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+        allocInfo.allocationSize = memRequirements.memoryRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryRequirements.memoryTypeBits, properties);
 
         if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate image memory!");
