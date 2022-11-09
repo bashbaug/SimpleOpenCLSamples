@@ -16,7 +16,7 @@
 
 #include "layer_util.hpp"
 
-extern const struct _cl_icd_dispatch* g_pNextDispatch;
+#include "emulate.h"
 
 #if defined(cl_khr_command_buffer_mutable_dispatch)
 
@@ -1436,14 +1436,15 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
     }
 
     cl_int errorCode = CL_SUCCESS;
+    cl_event startEvent = nullptr;
 
-    if( errorCode == CL_SUCCESS && num_events_in_wait_list )
+    if( num_events_in_wait_list || event )
     {
         errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
             num_events_in_wait_list,
             event_wait_list,
-            NULL );
+            event ? &startEvent : nullptr);
     }
 
     if( errorCode == CL_SUCCESS )
@@ -1458,6 +1459,18 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
             0,
             NULL,
             event );
+    }
+
+    if( event )
+    {
+        if( errorCode == CL_SUCCESS )
+        {
+            g_pLayerContext->EventMap[event[0]] = startEvent;
+        }
+        else
+        {
+            g_pNextDispatch->clReleaseEvent(startEvent);
+        }
     }
 
     return errorCode;
@@ -2192,7 +2205,77 @@ bool clGetDeviceInfo_override(
             }
             return true;
         }
+        break;
 #endif
+    default: break;
+    }
+
+    return false;
+}
+
+bool clGetEventInfo_override(
+    cl_event event,
+    cl_event_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret,
+    cl_int* errcode_ret)
+{
+    switch(param_name) {
+    case CL_EVENT_COMMAND_TYPE:
+        {
+            auto it = g_pLayerContext->EventMap.find(event);
+            if (it != g_pLayerContext->EventMap.end()) {
+                cl_command_type type = CL_COMMAND_COMMAND_BUFFER_KHR;
+                auto ptr = (cl_command_type*)param_value;
+                cl_int errorCode = writeParamToMemory(
+                    param_value_size,
+                    type,
+                    param_value_size_ret,
+                    ptr );
+                if( errcode_ret )
+                {
+                    errcode_ret[0] = errorCode;
+                }
+                return true;
+            }
+        }
+        break;
+    default: break;
+    }
+
+    return false;
+}
+
+bool clGetEventProfilingInfo_override(
+    cl_event event,
+    cl_profiling_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret,
+    cl_int* errcode_ret)
+{
+    switch(param_name) {
+    case CL_PROFILING_COMMAND_QUEUED:
+    case CL_PROFILING_COMMAND_SUBMIT:
+    case CL_PROFILING_COMMAND_START:
+        {
+            auto it = g_pLayerContext->EventMap.find(event);
+            if (it != g_pLayerContext->EventMap.end()) {
+                cl_int errorCode = g_pNextDispatch->clGetEventProfilingInfo(
+                    it->second,
+                    param_name,
+                    param_value_size,
+                    param_value,
+                    param_value_size_ret);
+                if( errcode_ret )
+                {
+                    errcode_ret[0] = errorCode;
+                }
+                return true;
+            }
+        }
+        break;
     default: break;
     }
 
