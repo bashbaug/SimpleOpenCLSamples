@@ -102,7 +102,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation",
-    //"VK_LAYER_LUNARG_api_dump", // useful for debugging but adds a LOT of output!
+    "VK_LAYER_LUNARG_api_dump", // useful for debugging but adds a LOT of output!
 };
 
 const std::vector<const char*> deviceExtensions = {
@@ -1156,15 +1156,27 @@ private:
         printf("prefersDedicatedAllocation = %u, requiresDedicatedAllocation = %u\n",
             dedicatedRequirements.prefersDedicatedAllocation,
             dedicatedRequirements.requiresDedicatedAllocation);
+        bool useDedicatedAllocation =
+            true ||
+            dedicatedRequirements.prefersDedicatedAllocation || dedicatedRequirements.requiresDedicatedAllocation;
 
         VkExportMemoryAllocateInfo exportMemoryAllocInfo{};
         exportMemoryAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
         exportMemoryAllocInfo.handleTypes = externalMemCreateInfo.handleTypes;
 
+        VkMemoryDedicatedAllocateInfo dedicatedAllocInfo{};
+        dedicatedAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR;
+        dedicatedAllocInfo.image = image;
+
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         if (useExternalMemory) {
+            exportMemoryAllocInfo.pNext = allocInfo.pNext;
             allocInfo.pNext = &exportMemoryAllocInfo;
+        }
+        if (useDedicatedAllocation) {
+            dedicatedAllocInfo.pNext = allocInfo.pNext;
+            allocInfo.pNext = &dedicatedAllocInfo;
         }
         allocInfo.allocationSize = memRequirements.memoryRequirements.size;
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryRequirements.memoryTypeBits, properties);
