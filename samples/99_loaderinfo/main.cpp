@@ -26,12 +26,12 @@
 
 #include <CL/cl.h>
 
-typedef enum {
-  CL_ICDL_OCL_VERSION=1,
-  CL_ICDL_VERSION=2,
-  CL_ICDL_NAME=3,
-  CL_ICDL_VENDOR=4,
-} cl_icdl_info;
+typedef cl_uint cl_icdl_info;
+
+#define CL_ICDL_OCL_VERSION 1
+#define CL_ICDL_VERSION     2
+#define CL_ICDL_NAME        3
+#define CL_ICDL_VENDOR      4
 
 typedef cl_int (*pfn_clGetICDLoaderInfoOCLICD)(cl_icdl_info, size_t, void*, size_t*);
 pfn_clGetICDLoaderInfoOCLICD clGetICDLoaderInfoOCLICD = NULL;
@@ -76,7 +76,9 @@ int main(
 
     if (clGetICDLoaderInfoOCLICD == NULL) {
         printf("Couldn't get function pointer to clGetICDLoaderInfoOCLICD!\n");
-        return -1;
+        printf("This is normal and some ICD loaders do not support this functionality.\n");
+        printf("Exiting...\n");
+        return 0;
     }
 
     #define QUERY_AND_PRINT_LOADER_INFO(_info)  \
