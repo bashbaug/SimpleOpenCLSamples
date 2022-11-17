@@ -65,13 +65,14 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 | `-g` | 0| Specify the local work size.  If the local work size is zero a `NULL` local work size is used.
 | `-w` | 1024 | Specify the render width in pixels.
 | `-h` | 1024 | Specify the render height in pixels.
+| `--paused` | n/a | Start with the animation paused.
 
 ## Controls While Running
 
 | Control | Description |
 |:--|:--|
 | `Escape` | Exits from the sample.
-| `Space` | Toggle animation (default: `false`).
+| `Space` | Toggle animation.
 | `S` | Single-step the simulation.
 
 ## How to Generate Vulkan SPIR-V Files

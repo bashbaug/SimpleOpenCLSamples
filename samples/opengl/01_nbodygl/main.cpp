@@ -253,6 +253,8 @@ int main(
     int deviceIndex = 0;
 
     {
+        bool paused = false;
+
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
@@ -260,6 +262,7 @@ int main(
         op.add<popl::Value<size_t>>("g", "groupsize", "Group Size", groupSize, &groupSize);
         op.add<popl::Value<size_t>>("w", "width", "Render Width", width, &width);
         op.add<popl::Value<size_t>>("h", "height", "Render Height", height, &height);
+        op.add<popl::Switch>("", "paused", "Start with Animation Paused", &paused);
 
         bool printUsage = false;
         try {
@@ -275,6 +278,8 @@ int main(
                 "%s", op.help().c_str());
             return -1;
         }
+
+        animate = !paused;
     }
 
     if (!glfwInit()) {

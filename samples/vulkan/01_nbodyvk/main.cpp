@@ -253,6 +253,7 @@ private:
         bool hostSync = false;
         bool noDeviceLocal = false;
         bool immediate = false;
+        bool paused = false;
 
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
@@ -265,6 +266,7 @@ private:
         op.add<popl::Value<size_t>>("w", "width", "Render Width", width, &width);
         op.add<popl::Value<size_t>>("h", "height", "Render Height", height, &height);
         op.add<popl::Switch>("", "immediate", "Prefer VK_PRESENT_MODE_IMMEDIATE_KHR (no vsync)", &immediate);
+        op.add<popl::Switch>("", "paused", "Start with Animation Paused", &paused);
 
         bool printUsage = false;
         try {
@@ -285,6 +287,7 @@ private:
         useExternalMemory = !hostCopy;
         useExternalSemaphore = !hostSync;
         vsync = !immediate;
+        animate = !paused;
     }
 
     void initWindow() {
