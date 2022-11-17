@@ -462,6 +462,7 @@ int main(
     {
         bool hostCopy = false;
         bool hostSync = false;
+        bool paused = false;
 
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
@@ -472,6 +473,7 @@ int main(
         op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
         op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
         op.add<popl::Value<size_t>>("", "lwy", "Local Work Size Y", lwy, &lwy);
+        op.add<popl::Switch>("", "paused", "Start with Animation Paused", &paused);
 
         bool printUsage = false;
         try {
@@ -490,6 +492,7 @@ int main(
 
         use_cl_khr_gl_sharing = !hostCopy;
         use_cl_khr_gl_event = !hostSync;
+        animate = !paused;
     }
 
     if (!glfwInit()) {

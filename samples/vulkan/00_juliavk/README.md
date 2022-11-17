@@ -69,13 +69,14 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 | `--lwx <number>` | 0 | Specify the local work size in the X direction.  If either local works size dimension is zero a `NULL` local work size is used.
 | `--lwy <number>` | 0 | Specify the local work size in the Y direction.  If either local works size dimension is zero a `NULL` local work size is used.
 | `--immediate` | n/a | Prefer `VK_PRESENT_MODE_IMMEDIATE_KHR` (no vsync).  May result in faster framerates at the cost of visible tearing.
+| `--paused` | n/a | Start with the animation paused.
 
 ## Controls While Running
 
 | Control | Description |
 |:--|:--|
 | `Escape` | Exits from the sample.
-| `Space` | Toggle animation (default: `false`).
+| `Space` | Toggle animation.
 | `A` | Increase the real part of the complex constant `C`.
 | `Z` | Decrease the real part of the complex constant `C`.
 | `S` | Increase the imaginary part of the complex constant `C`.

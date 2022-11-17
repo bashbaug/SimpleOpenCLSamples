@@ -21,13 +21,14 @@ This example shows how to copy from an OpenCL buffer to OpenGL.
 | `-g` | 0| Specify the local work size.  If the local works size is zero a `NULL` local work size is used.
 | `-w` | 1024 | Specify the render width in pixels.
 | `-h` | 1024 | Specify the render height in pixels.
+| `--paused` | n/a | Start with the animation paused.
 
 ## Controls While Running
 
 | Control | Description |
 |:--|:--|
 | `Escape` | Exits from the sample.
-| `Space` | Toggle animation (default: `false`).
+| `Space` | Toggle animation.
 | `S` | Single-step the simulation.
 | `R` | Re-initialize the simulation.
 | `V` | Toggle vsync (default: `true`). Disabling vsync may increase framerate but may cause [screen tearing](https://en.wikipedia.org/wiki/Screen_tearing).

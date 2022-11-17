@@ -39,13 +39,14 @@ Note: Many of these command line arguments are identical to the earlier Julia se
 | `--gwy <number>` | 512 | Specify the global work size to execute, in the Y direction.  This also determines the height of the generated image.
 | `--lwx <number>` | 0 | Specify the local work size in the X direction.  If either local works size dimension is zero a `NULL` local work size is used.
 | `--lwy <number>` | 0 | Specify the local work size in the Y direction.  If either local works size dimension is zero a `NULL` local work size is used.
+| `--paused` | n/a | Start with the animation paused.
 
 ## Controls While Running
 
 | Control | Description |
 |:--|:--|
 | `Escape` | Exits from the sample.
-| `Space` | Toggle animation (default: `false`).
+| `Space` | Toggle animation.
 | `V` | Toggle vsync (default: `true`). Disabling vsync may increase framerate but may cause [screen tearing](https://en.wikipedia.org/wiki/Screen_tearing).
 | `A` | Increase the real part of the complex constant `C`.
 | `Z` | Decrease the real part of the complex constant `C`.
