@@ -24,6 +24,12 @@
 
 #include <CL/opencl.hpp>
 
+#include "util.hpp"
+
+#ifndef CL_KHR_SEMAPHORE_EXTENSION_NAME
+#define CL_KHR_SEMAPHORE_EXTENSION_NAME "cl_khr_semaphore"
+#endif
+
 const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
@@ -33,6 +39,20 @@ kernel void Add1( global uint* dst, global uint* src )
     dst[id] = src[id] + 1;
 }
 )CLC";
+
+static void PrintSemaphoreTypes(const std::vector<cl_semaphore_type_khr>& types)
+{
+    for (auto type : types) {
+        switch(type) {
+        case CL_SEMAPHORE_TYPE_BINARY_KHR:
+            printf("\t\tCL_SEMAPHORE_TYPE_BINARY_KHR\n");
+            break;
+        default:
+            printf("\t\t(Unknown semaphore type: %08X)\n", type);
+            break;
+        }
+    }
+}
 
 int main(
     int argc,
@@ -77,6 +97,27 @@ int main(
 
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+
+    // device queries:
+
+    bool has_cl_khr_command_buffer =
+        checkDeviceForExtension(devices[deviceIndex], CL_KHR_SEMAPHORE_EXTENSION_NAME);
+    if (has_cl_khr_command_buffer) {
+        printf("Device supports " CL_KHR_SEMAPHORE_EXTENSION_NAME ".\n");
+    } else {
+        printf("Device does not support " CL_KHR_SEMAPHORE_EXTENSION_NAME ", exiting.\n");
+        return -1;
+    }
+
+    std::vector<cl_semaphore_type_khr> platformSemaphoreTypes =
+        platforms[platformIndex].getInfo<CL_PLATFORM_SEMAPHORE_TYPES_KHR>();
+    printf("\tPlatform Semaphore Types:\n");
+    PrintSemaphoreTypes(platformSemaphoreTypes);
+
+    std::vector<cl_semaphore_type_khr> deviceSemaphoreTypes =
+        devices[deviceIndex].getInfo<CL_DEVICE_SEMAPHORE_TYPES_KHR>();
+    printf("\tDevice Semaphore Types:\n");
+    PrintSemaphoreTypes(deviceSemaphoreTypes);
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue q0 = cl::CommandQueue{context, devices[deviceIndex]};
@@ -124,6 +165,43 @@ int main(
 
     q0.flush();
     q1.finish();
+
+    // semaphore queries:
+    {
+        printf("\tSemaphore Info:\n");
+
+        cl_semaphore_type_khr semaphoreType = 0;
+        clGetSemaphoreInfoKHR(
+            semaphore,
+            CL_SEMAPHORE_TYPE_KHR,
+            sizeof(semaphoreType),
+            &semaphoreType,
+            NULL );
+        printf("\t\tCL_SEMAPHORE_TYPE_KHR: %u\n", semaphoreType);
+
+        cl_context testContext = NULL;
+        clGetSemaphoreInfoKHR(
+            semaphore,
+            CL_SEMAPHORE_CONTEXT_KHR,
+            sizeof(testContext),
+            &testContext,
+            NULL );
+        printf("\t\tCL_SEMAPHORE_CONTEXT_KHR: %p (%s)\n",
+            testContext,
+            testContext == context() ? "matches" : "MISMATCH!");
+
+        cl_uint refCount = 0;
+        clGetSemaphoreInfoKHR(
+            semaphore,
+            CL_SEMAPHORE_REFERENCE_COUNT_KHR,
+            sizeof(refCount),
+            &refCount,
+            NULL );
+        printf("\t\tCL_SEMAPHORE_REFERENCE_COUNT_KHR: %u\n", refCount);
+
+        clReleaseSemaphoreKHR(semaphore);
+        semaphore = NULL;
+    }
 
     // verify results by printing the first few values
     if (gwx > 3) {

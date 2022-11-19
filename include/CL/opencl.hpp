@@ -1552,6 +1552,11 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_EXTERNAL_MEMORY_IMPOR
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_EXTERNAL_MEMORY_IMPORT_HANDLE_TYPES_KHR, cl::vector<cl_external_memory_handle_type_khr>)
 #endif // cl_khr_external_memory
 
+#if defined(cl_khr_semaphore)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_SEMAPHORE_TYPES_KHR, cl::vector<cl_semaphore_type_khr>)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_SEMAPHORE_TYPES_KHR, cl::vector<cl_semaphore_type_khr>)
+#endif // cl_khr_external_memory
+
 #if defined(cl_khr_external_semaphore)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_SEMAPHORE_IMPORT_HANDLE_TYPES_KHR, cl::vector<cl_external_semaphore_handle_type_khr>)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_platform_info, CL_PLATFORM_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR, cl::vector<cl_external_semaphore_handle_type_khr>)
