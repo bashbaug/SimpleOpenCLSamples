@@ -136,9 +136,14 @@ int main(
         CL_MEM_ALLOC_HOST_PTR,
         gwx * sizeof( cl_uint ) };
 
+    cl_semaphore_properties_khr semaphoreProperties[] = {
+        CL_SEMAPHORE_TYPE_KHR,
+        CL_SEMAPHORE_TYPE_BINARY_KHR,
+        0,
+    };
     cl_semaphore_khr semaphore = clCreateSemaphoreWithPropertiesKHR(
         context(),
-        NULL,
+        semaphoreProperties,
         NULL );
 
     cl_uint pattern = 0;

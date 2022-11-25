@@ -26,15 +26,80 @@ typedef struct _cl_semaphore_khr
 {
     static _cl_semaphore_khr* create(
         cl_context context,
-        const cl_semaphore_properties_khr* props,
+        const cl_semaphore_properties_khr* properties,
         cl_int* errcode_ret)
     {
-        // TODO: parse and record properties
+        cl_semaphore_khr semaphore = NULL;
+        cl_int errorCode = CL_SUCCESS;
+
+        ptrdiff_t numProperties = 0;
+        cl_semaphore_type_khr type = ~0;
+
+        if( properties )
+        {
+            const cl_semaphore_properties_khr* check = properties;
+            bool found_CL_SEMAPHORE_TYPE_KHR = false;
+            bool found_CL_DEVICE_HANDLE_LIST_KHR = false;
+            while( errorCode == CL_SUCCESS && check[0] != 0 )
+            {
+                cl_int  property = (cl_int)check[0];
+                switch( property )
+                {
+                case CL_SEMAPHORE_TYPE_KHR:
+                    if( found_CL_SEMAPHORE_TYPE_KHR )
+                    {
+                        errorCode = CL_INVALID_VALUE;
+                    }
+                    else
+                    {
+                        found_CL_SEMAPHORE_TYPE_KHR = true;
+                        type = ((const cl_semaphore_type_khr*)(check + 1))[0];
+                        check += 2;
+                    }
+                    break;
+                case CL_DEVICE_HANDLE_LIST_KHR:
+                    if( found_CL_DEVICE_HANDLE_LIST_KHR )
+                    {
+                        errorCode = CL_INVALID_VALUE;
+                    }
+                    else
+                    {
+                        found_CL_DEVICE_HANDLE_LIST_KHR = true;
+                        ++check;
+                        while(*check++ != CL_DEVICE_HANDLE_LIST_END_KHR)
+                        {
+                            // TODO: validate device handles.
+                        }
+                    }
+                    break;
+                default:
+                    errorCode = CL_INVALID_VALUE;
+                    break;
+                }
+            }
+            numProperties = check - properties + 1;
+        }
+        switch( type )
+        {
+        case CL_SEMAPHORE_TYPE_BINARY_KHR:
+            break;
+        default:
+            errorCode = CL_INVALID_VALUE;
+        }
         if( errcode_ret )
         {
-            errcode_ret[0] = CL_SUCCESS;
+            errcode_ret[0] = errorCode;
         }
-        return new _cl_semaphore_khr(context);
+        if( errorCode == CL_SUCCESS )
+        {
+            semaphore = new _cl_semaphore_khr(context, type);
+            semaphore->Properties.reserve(numProperties);
+            semaphore->Properties.insert(
+                semaphore->Properties.begin(),
+                properties,
+                properties + numProperties );
+        }
+        return semaphore;
     }
 
     static bool isValid( cl_semaphore_khr semaphore )
@@ -45,17 +110,18 @@ typedef struct _cl_semaphore_khr
     const cl_uint Magic;
     const cl_context Context;
     const cl_semaphore_type_khr Type;
+    std::vector<cl_semaphore_properties_khr> Properties;
 
-    cl_uint RefCount;
+    std::atomic<cl_uint> RefCount;
     cl_event Event;
 
 private:
     static constexpr cl_uint cMagic = 0x53454d41;   // "SEMA"
 
-    _cl_semaphore_khr(cl_context context) :
+    _cl_semaphore_khr(cl_context context, cl_semaphore_type_khr type) :
         Magic(cMagic),
         Context(context),
-        Type(CL_SEMAPHORE_TYPE_BINARY_KHR),
+        Type(type),
         RefCount(1),
         Event(NULL) {}
 } cli_semaphore;
@@ -205,7 +271,7 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
     {
     case CL_SEMAPHORE_CONTEXT_KHR:
         {
-            auto*   ptr = (cl_context*)param_value;
+            auto ptr = (cl_context*)param_value;
             return writeParamToMemory(
                 param_value_size,
                 semaphore->Context,
@@ -214,19 +280,26 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
         }
     case CL_SEMAPHORE_REFERENCE_COUNT_KHR:
         {
-            auto*   ptr = (cl_uint*)param_value;
+            auto ptr = (cl_uint*)param_value;
             return writeParamToMemory(
                 param_value_size,
-                semaphore->RefCount,
+                semaphore->RefCount.load(std::memory_order_relaxed),
                 param_value_size_ret,
                 ptr );
         }
     case CL_SEMAPHORE_PROPERTIES_KHR:
-        // TODO!
-        return CL_INVALID_VALUE;
+        {
+            auto ptr = (cl_semaphore_properties_khr*)param_value;
+            return writeVectorToMemory(
+                param_value_size,
+                semaphore->Properties,
+                param_value_size_ret,
+                ptr );
+        }
+        break;
     case CL_SEMAPHORE_TYPE_KHR:
         {
-            auto*   ptr = (cl_semaphore_type_khr*)param_value;
+            auto ptr = (cl_semaphore_type_khr*)param_value;
             return writeParamToMemory(
                 param_value_size,
                 semaphore->Type,
@@ -255,7 +328,7 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
                 }
             }
 
-            auto*   ptr = (cl_semaphore_payload_khr*)param_value;
+            auto ptr = (cl_semaphore_payload_khr*)param_value;
             return writeParamToMemory(
                 param_value_size,
                 payload,
@@ -278,7 +351,7 @@ cl_int CL_API_CALL clRetainSemaphoreKHR_EMU(
         return CL_INVALID_SEMAPHORE_KHR;
     }
 
-    semaphore->RefCount++;
+    semaphore->RefCount.fetch_add(1, std::memory_order_relaxed);
     return CL_SUCCESS;
 }
 
@@ -290,8 +363,8 @@ cl_int CL_API_CALL clReleaseSemaphoreKHR_EMU(
         return CL_INVALID_SEMAPHORE_KHR;
     }
 
-    semaphore->RefCount--;
-    if( semaphore->RefCount == 0 )
+    semaphore->RefCount.fetch_sub(1, std::memory_order_relaxed);
+    if( semaphore->RefCount.load(std::memory_order_relaxed) == 0 )
     {
         delete semaphore;
     }
@@ -347,7 +420,7 @@ bool clGetDeviceInfo_override(
 
                 oldExtensions += newExtensions;
 
-                auto*   ptr = (char*)param_value;
+                auto ptr = (char*)param_value;
                 cl_int errorCode = writeStringToMemory(
                     param_value_size,
                     oldExtensions.c_str(),
@@ -421,7 +494,7 @@ bool clGetDeviceInfo_override(
             // If we decide to emulate multiple semaphore types we will need
             // to return an array, but for now we can return just the binary
             // semaphore type.
-            auto    ptr = (cl_semaphore_type_khr*)param_value;
+            auto ptr = (cl_semaphore_type_khr*)param_value;
             cl_semaphore_type_khr type = CL_SEMAPHORE_TYPE_BINARY_KHR;
             cl_int errorCode = writeParamToMemory(
                 param_value_size,
@@ -525,7 +598,7 @@ bool clGetPlatformInfo_override(
 
                 oldExtensions += newExtensions;
 
-                auto*   ptr = (char*)param_value;
+                auto ptr = (char*)param_value;
                 cl_int errorCode = writeStringToMemory(
                     param_value_size,
                     oldExtensions.c_str(),
@@ -579,7 +652,7 @@ bool clGetPlatformInfo_override(
 
                 extension.version = CL_MAKE_VERSION(0, 9, 0);
 
-                auto*   ptr = (cl_name_version*)param_value;
+                auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
                     param_value_size,
                     extensions,
@@ -599,7 +672,7 @@ bool clGetPlatformInfo_override(
             // If we decide to emulate multiple semaphore types we will need
             // to return an array, but for now we can return just the binary
             // semaphore type.
-            auto    ptr = (cl_semaphore_type_khr*)param_value;
+            auto ptr = (cl_semaphore_type_khr*)param_value;
             cl_semaphore_type_khr type = CL_SEMAPHORE_TYPE_BINARY_KHR;
             cl_int errorCode = writeParamToMemory(
                 param_value_size,
