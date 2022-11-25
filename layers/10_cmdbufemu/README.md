@@ -31,3 +31,4 @@ clInitLayer
 This section describes some of the limitations of the emulated `cl_khr_command_buffer` functionality:
 
 * Many error conditions are not properly checked for and returned.
+* Many functions are not thread safe.

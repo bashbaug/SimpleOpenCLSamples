@@ -18,6 +18,12 @@
 
 #include "emulate.h"
 
+SLayerContext& getLayerContext(void)
+{
+    static SLayerContext c;
+    return c;
+}
+
 #if defined(cl_khr_command_buffer_mutable_dispatch)
 
 // Supported mutable dispatch capabilities.
@@ -1465,7 +1471,7 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
     {
         if( errorCode == CL_SUCCESS )
         {
-            g_pLayerContext->EventMap[event[0]] = startEvent;
+            getLayerContext().EventMap[event[0]] = startEvent;
         }
         else
         {
@@ -2224,8 +2230,9 @@ bool clGetEventInfo_override(
     switch(param_name) {
     case CL_EVENT_COMMAND_TYPE:
         {
-            auto it = g_pLayerContext->EventMap.find(event);
-            if (it != g_pLayerContext->EventMap.end()) {
+            auto& context = getLayerContext();
+            auto it = context.EventMap.find(event);
+            if (it != context.EventMap.end()) {
                 cl_command_type type = CL_COMMAND_COMMAND_BUFFER_KHR;
                 auto ptr = (cl_command_type*)param_value;
                 cl_int errorCode = writeParamToMemory(
@@ -2260,8 +2267,9 @@ bool clGetEventProfilingInfo_override(
     case CL_PROFILING_COMMAND_SUBMIT:
     case CL_PROFILING_COMMAND_START:
         {
-            auto it = g_pLayerContext->EventMap.find(event);
-            if (it != g_pLayerContext->EventMap.end()) {
+            auto& context = getLayerContext();
+            auto it = context.EventMap.find(event);
+            if (it != context.EventMap.end()) {
                 cl_int errorCode = g_pNextDispatch->clGetEventProfilingInfo(
                     it->second,
                     param_name,
