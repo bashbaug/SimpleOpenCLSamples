@@ -150,20 +150,20 @@ int main(
 
     // execution
 
-    kernel.setArg(0, b0);
-    kernel.setArg(1, b1);
+    kernel.setArg(0, b1);   // dst
+    kernel.setArg(1, b0);   // src
     q0.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
     clEnqueueSignalSemaphoresKHR(q0(), 1, &semaphore, NULL, 0, NULL, NULL);
 
     clEnqueueWaitSemaphoresKHR(q1(), 1, &semaphore, NULL, 0, NULL, NULL);
-    kernel.setArg(0, b1);
-    kernel.setArg(1, b0);
+    kernel.setArg(0, b0);   // dst
+    kernel.setArg(1, b1);   // src
     q1.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
     clEnqueueSignalSemaphoresKHR(q1(), 1, &semaphore, NULL, 0, NULL, NULL);
 
     clEnqueueWaitSemaphoresKHR(q1(), 1, &semaphore, NULL, 0, NULL, NULL);
-    kernel.setArg(0, b0);
-    kernel.setArg(1, b1);
+    kernel.setArg(0, b1);   // dst
+    kernel.setArg(1, b0);   // src
     q1.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
 
     q0.flush();
