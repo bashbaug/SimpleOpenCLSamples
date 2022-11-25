@@ -30,8 +30,6 @@
 #define CL_KHR_SEMAPHORE_EXTENSION_NAME "cl_khr_semaphore"
 #endif
 
-const size_t    gwx = 1024*1024;
-
 static const char kernelString[] = R"CLC(
 kernel void Add1( global uint* dst, global uint* src )
 {
