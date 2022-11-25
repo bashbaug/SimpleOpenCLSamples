@@ -28,7 +28,6 @@
 #include "emulate.h"
 
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
-struct SLayerContext* g_pLayerContext = NULL;
 
 static cl_int CL_API_CALL
 clGetDeviceInfo_layer(
@@ -155,9 +154,10 @@ clReleaseEvent_layer(
         &refCount,
         nullptr);
     if (refCount == 1) {
-        auto it = g_pLayerContext->EventMap.find(event);
-        if (it != g_pLayerContext->EventMap.end()) {
-            g_pLayerContext->EventMap.erase(it);
+        auto& context = getLayerContext();
+        auto it = context.EventMap.find(event);
+        if (it != context.EventMap.end()) {
+            context.EventMap.erase(it);
         }
     }
 
@@ -215,13 +215,6 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
 
     if (num_entries < dispatchTableSize) {
         return CL_INVALID_VALUE;
-    }
-
-    if (g_pLayerContext == NULL) {
-        g_pLayerContext = new SLayerContext();
-        if (g_pLayerContext == NULL) {
-            return CL_OUT_OF_HOST_MEMORY;
-        }
     }
 
     _init_dispatch();

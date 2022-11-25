@@ -15,8 +15,9 @@ struct SLayerContext
     CEventMap EventMap;
 };
 
+SLayerContext& getLayerContext(void);
+
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
-extern struct SLayerContext* g_pLayerContext;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Emulated Functions

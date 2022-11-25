@@ -22,6 +22,12 @@
 #define CL_KHR_SEMAPHORE_EXTENSION_NAME "cl_khr_semaphore"
 #endif
 
+SLayerContext& getLayerContext(void)
+{
+    static SLayerContext c;
+    return c;
+}
+
 typedef struct _cl_semaphore_khr
 {
     static _cl_semaphore_khr* create(
@@ -188,7 +194,7 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
 
     if( event )
     {
-        g_pLayerContext->EventMap[event[0]] = CL_COMMAND_SEMAPHORE_WAIT_KHR;
+        getLayerContext().EventMap[event[0]] = CL_COMMAND_SEMAPHORE_WAIT_KHR;
     }
 
     return retVal;
@@ -249,7 +255,7 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
     }
     else
     {
-        g_pLayerContext->EventMap[event[0]] = CL_COMMAND_SEMAPHORE_SIGNAL_KHR;
+        getLayerContext().EventMap[event[0]] = CL_COMMAND_SEMAPHORE_SIGNAL_KHR;
     }
 
     return retVal;
@@ -526,8 +532,9 @@ bool clGetEventInfo_override(
     switch(param_name) {
     case CL_EVENT_COMMAND_TYPE:
         {
-            auto it = g_pLayerContext->EventMap.find(event);
-            if (it != g_pLayerContext->EventMap.end()) {
+            auto& context = getLayerContext();
+            auto it = context.EventMap.find(event);
+            if (it != context.EventMap.end()) {
                 cl_command_type type = it->second;
                 auto ptr = (cl_command_type*)param_value;
                 cl_int errorCode = writeParamToMemory(
