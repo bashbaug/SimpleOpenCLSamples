@@ -38,6 +38,7 @@ clGetDeviceInfo_layer(
     size_t *        param_value_size_ret)
 {
     cl_int  errorCode = CL_SUCCESS;
+
     if (clGetDeviceInfo_override(
             device,
             param_name,
@@ -55,6 +56,63 @@ clGetDeviceInfo_layer(
 
     return errorCode;
 }
+
+static cl_int CL_API_CALL
+clGetEventInfo_layer(
+    cl_event         event,
+    cl_event_info    param_name,
+    size_t           param_value_size,
+    void *           param_value,
+    size_t *         param_value_size_ret)
+{
+    cl_int  errorCode = CL_SUCCESS;
+
+    if (clGetEventInfo_override(
+            event,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret,
+            &errorCode) == false) {
+        return g_pNextDispatch->clGetEventInfo(
+            event,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret);
+    }
+
+    return errorCode;
+}
+
+static cl_int CL_API_CALL
+clGetEventProfilingInfo_layer(
+    cl_event            event,
+    cl_profiling_info   param_name,
+    size_t              param_value_size,
+    void *              param_value,
+    size_t *            param_value_size_ret)
+{
+    cl_int  errorCode = CL_SUCCESS;
+
+    if (clGetEventProfilingInfo_override(
+            event,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret,
+            &errorCode) == false) {
+        return g_pNextDispatch->clGetEventProfilingInfo(
+            event,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret);
+    }
+
+    return errorCode;
+}
+
 
 #define CHECK_RETURN_EXTENSION_FUNCTION( _funcname )                        \
     if (strcmp(func_name, #_funcname) == 0) {                               \
@@ -107,6 +165,7 @@ clGetPlatformInfo_layer(
     size_t *         param_value_size_ret)
 {
     cl_int  errorCode = CL_SUCCESS;
+
     if (clGetPlatformInfo_override(
             platform,
             param_name,
@@ -125,12 +184,38 @@ clGetPlatformInfo_layer(
     return errorCode;
 }
 
+static cl_int CL_API_CALL
+clReleaseEvent_layer(
+    cl_event         event)
+{
+    cl_uint refCount = 0;
+    g_pNextDispatch->clGetEventInfo(
+        event,
+        CL_EVENT_REFERENCE_COUNT,
+        sizeof(refCount),
+        &refCount,
+        nullptr);
+    if (refCount == 1) {
+        auto& context = getLayerContext();
+        auto it = context.EventMap.find(event);
+        if (it != context.EventMap.end()) {
+            g_pNextDispatch->clReleaseEvent(it->second);
+            context.EventMap.erase(it);
+        }
+    }
+
+    return g_pNextDispatch->clReleaseEvent(event);
+}
+
 static struct _cl_icd_dispatch dispatch;
 static void _init_dispatch()
 {
-    dispatch.clGetDeviceInfo = &clGetDeviceInfo_layer;
-    dispatch.clGetExtensionFunctionAddressForPlatform = &clGetExtensionFunctionAddressForPlatform_layer;
-    dispatch.clGetPlatformInfo = &clGetPlatformInfo_layer;
+    dispatch.clGetDeviceInfo = clGetDeviceInfo_layer;
+    dispatch.clGetEventInfo = clGetEventInfo_layer;
+    dispatch.clGetEventProfilingInfo = clGetEventProfilingInfo_layer;
+    dispatch.clGetExtensionFunctionAddressForPlatform = clGetExtensionFunctionAddressForPlatform_layer;
+    dispatch.clGetPlatformInfo = clGetPlatformInfo_layer;
+    dispatch.clReleaseEvent = clReleaseEvent_layer;
 }
 
 CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
@@ -185,4 +270,3 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
 
     return CL_SUCCESS;
 }
-
