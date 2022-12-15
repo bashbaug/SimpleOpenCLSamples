@@ -76,7 +76,7 @@ static void PrintDeviceInfoSummary(
         printf("\tDriver Version: %s\n", devices[i].getInfo<CL_DRIVER_VERSION>().c_str() );
 
         if (checkDeviceForExtension(devices[i], "cl_amd_device_attribute_query")) {
-            printf("\tFor: cl_amd_device_attribute_query:\n");
+            printf("\n\tFor: cl_amd_device_attribute_query:\n");
             printf("\tDevice Profiling Timer Offset:          %" PRIu64 "\n", devices[i].getInfo<CL_DEVICE_PROFILING_TIMER_OFFSET_AMD>());
             //devices[i].getInfo<CL_DEVICE_TOPOLOGY_AMD>();
             //devices[i].getInfo<CL_DEVICE_BOARD_NAME_AMD>();
@@ -103,7 +103,7 @@ static void PrintDeviceInfoSummary(
         }
 
         if (checkDeviceForExtension(devices[i], "cl_intel_device_attribute_query")) {
-            printf("\tFor: cl_intel_device_attribute_query:\n");
+            printf("\n\tFor: cl_intel_device_attribute_query:\n");
             if (deviceType & CL_DEVICE_TYPE_GPU) {
                 printf("\tDevice IP Version:               %08X\n", devices[i].getInfo<CL_DEVICE_IP_VERSION_INTEL>());
                 printf("\tDevice ID:                       %04X\n", devices[i].getInfo<CL_DEVICE_ID_INTEL>());
@@ -121,7 +121,7 @@ static void PrintDeviceInfoSummary(
         }
 
         if (checkDeviceForExtension(devices[i], "cl_nv_device_attribute_query")) {
-            printf("\tFor: cl_nv_device_attribute_query:\n");
+            printf("\n\tFor: cl_nv_device_attribute_query:\n");
             printf("\tDevice Compute Capability Major: %u\n", devices[i].getInfo<CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV>());
             printf("\tDevice Compute Capability Minor: %u\n", devices[i].getInfo<CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV>());
             printf("\tDevice Registers Per Block:      %u\n", devices[i].getInfo<CL_DEVICE_REGISTERS_PER_BLOCK_NV>());
@@ -133,6 +133,46 @@ static void PrintDeviceInfoSummary(
             printf("\tThis device does not support cl_nv_device_attribute_query.\n");
         }
 
+        if (checkDeviceForExtension(devices[i], "cl_khr_device_uuid")) {
+            printf("\n\tFor: cl_khr_device_uuid:\n");
+
+            auto driverUUID = devices[i].getInfo<CL_DRIVER_UUID_KHR>();
+            printf("\tDriver UUID: %02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X\n",
+                driverUUID[0], driverUUID[1], driverUUID[2], driverUUID[3],
+                driverUUID[4], driverUUID[5], driverUUID[6], driverUUID[7],
+                driverUUID[8], driverUUID[9], driverUUID[10], driverUUID[11],
+                driverUUID[12], driverUUID[13], driverUUID[14], driverUUID[15]);
+
+            auto deviceUUID = devices[i].getInfo<CL_DEVICE_UUID_KHR>();
+            printf("\tDevice UUID: %02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X\n",
+                deviceUUID[0], deviceUUID[1], deviceUUID[2], deviceUUID[3],
+                deviceUUID[4], deviceUUID[5], deviceUUID[6], deviceUUID[7],
+                deviceUUID[8], deviceUUID[9], deviceUUID[10], deviceUUID[11],
+                deviceUUID[12], deviceUUID[13], deviceUUID[14], deviceUUID[15]);
+
+            printf("\tLUID Valid:  %s\n", devices[i].getInfo<CL_DEVICE_LUID_VALID_KHR>() ? "true" : "false");
+
+            auto deviceLUID = devices[i].getInfo<CL_DEVICE_LUID_KHR>();
+            printf("\tDevice LUID: %02X%02X%02X%02X-%02X%02X%02X%02X\n",
+                deviceLUID[0], deviceLUID[1], deviceLUID[2], deviceLUID[3],
+                deviceLUID[4], deviceLUID[5], deviceLUID[6], deviceLUID[7]);
+            printf("\tNode Mask:   %u\n", devices[i].getInfo<CL_DEVICE_NODE_MASK_KHR>());
+        } else {
+            printf("\tThis device does not support cl_khr_device_uuid.\n");
+        }
+
+        if (checkDeviceForExtension(devices[i], "cl_khr_pci_bus_info")) {
+            printf("\n\tFor: cl_khr_pci_bus_info:\n");
+
+            auto pciInfo = devices[i].getInfo<CL_DEVICE_PCI_BUS_INFO_KHR>();
+            printf("\tPCI Bus Info: %04X:%02X:%02X.%02X\n",
+                pciInfo.pci_domain,
+                pciInfo.pci_bus,
+                pciInfo.pci_device,
+                pciInfo.pci_function);
+        } else {
+            printf("\tThis device does not support cl_khr_device_uuid.\n");
+        }
     }
 }
 
