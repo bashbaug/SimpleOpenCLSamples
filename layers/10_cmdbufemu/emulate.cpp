@@ -2029,7 +2029,7 @@ bool clGetDeviceInfo_override(
 
                 oldExtensions += newExtensions;
 
-                auto*   ptr = (char*)param_value;
+                auto ptr = (char*)param_value;
                 cl_int errorCode = writeStringToMemory(
                     param_value_size,
                     oldExtensions.c_str(),
@@ -2361,7 +2361,7 @@ bool clGetPlatformInfo_override(
 
                 oldExtensions += newExtensions;
 
-                auto*   ptr = (char*)param_value;
+                auto ptr = (char*)param_value;
                 cl_int errorCode = writeStringToMemory(
                     param_value_size,
                     oldExtensions.c_str(),
@@ -2446,7 +2446,7 @@ bool clGetPlatformInfo_override(
                 }
 #endif
 
-                auto*   ptr = (cl_name_version*)param_value;
+                auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
                     param_value_size,
                     extensions,
