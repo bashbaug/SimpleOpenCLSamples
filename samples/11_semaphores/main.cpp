@@ -139,10 +139,14 @@ int main(
         CL_SEMAPHORE_TYPE_BINARY_KHR,
         0,
     };
-    cl_semaphore_khr semaphore = clCreateSemaphoreWithPropertiesKHR(
+    cl_semaphore_khr semaphoreq0q1 = clCreateSemaphoreWithPropertiesKHR(
         context(),
         semaphoreProperties,
         NULL );
+    cl_semaphore_khr semaphoreq1q0 = clCreateSemaphoreWithPropertiesKHR(
+        context(),
+        semaphoreProperties,
+        NULL);
 
     cl_uint pattern = 0;
     q0.enqueueFillBuffer(b0, pattern, 0, gwx * sizeof(cl_uint));
@@ -153,18 +157,30 @@ int main(
     kernel.setArg(0, b1);   // dst
     kernel.setArg(1, b0);   // src
     q0.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
-    clEnqueueSignalSemaphoresKHR(q0(), 1, &semaphore, NULL, 0, NULL, NULL);
+    clEnqueueSignalSemaphoresKHR(q0(), 1, &semaphoreq0q1, NULL, 0, NULL, NULL);
 
-    clEnqueueWaitSemaphoresKHR(q1(), 1, &semaphore, NULL, 0, NULL, NULL);
+    clEnqueueWaitSemaphoresKHR(q1(), 1, &semaphoreq0q1, NULL, 0, NULL, NULL);
     kernel.setArg(0, b0);   // dst
     kernel.setArg(1, b1);   // src
     q1.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
-    clEnqueueSignalSemaphoresKHR(q1(), 1, &semaphore, NULL, 0, NULL, NULL);
+    clEnqueueSignalSemaphoresKHR(q1(), 1, &semaphoreq1q0, NULL, 0, NULL, NULL);
 
-    clEnqueueWaitSemaphoresKHR(q0(), 1, &semaphore, NULL, 0, NULL, NULL);
+    clEnqueueWaitSemaphoresKHR(q0(), 1, &semaphoreq1q0, NULL, 0, NULL, NULL);
     kernel.setArg(0, b1);   // dst
     kernel.setArg(1, b0);   // src
     q0.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
+    clEnqueueSignalSemaphoresKHR(q0(), 1, &semaphoreq0q1, NULL, 0, NULL, NULL);
+
+    clEnqueueWaitSemaphoresKHR(q1(), 1, &semaphoreq0q1, NULL, 0, NULL, NULL);
+    kernel.setArg(0, b0);   // dst
+    kernel.setArg(1, b1);   // src
+    q1.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{ gwx });
+    clEnqueueSignalSemaphoresKHR(q1(), 1, &semaphoreq1q0, NULL, 0, NULL, NULL);
+
+    clEnqueueWaitSemaphoresKHR(q0(), 1, &semaphoreq1q0, NULL, 0, NULL, NULL);
+    kernel.setArg(0, b1);   // dst
+    kernel.setArg(1, b0);   // src
+    q0.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{ gwx });
 
     q0.flush();
     q1.flush();
@@ -176,7 +192,7 @@ int main(
 
         cl_semaphore_type_khr semaphoreType = 0;
         clGetSemaphoreInfoKHR(
-            semaphore,
+            semaphoreq0q1,
             CL_SEMAPHORE_TYPE_KHR,
             sizeof(semaphoreType),
             &semaphoreType,
@@ -185,7 +201,7 @@ int main(
 
         cl_context testContext = NULL;
         clGetSemaphoreInfoKHR(
-            semaphore,
+            semaphoreq0q1,
             CL_SEMAPHORE_CONTEXT_KHR,
             sizeof(testContext),
             &testContext,
@@ -196,15 +212,18 @@ int main(
 
         cl_uint refCount = 0;
         clGetSemaphoreInfoKHR(
-            semaphore,
+            semaphoreq0q1,
             CL_SEMAPHORE_REFERENCE_COUNT_KHR,
             sizeof(refCount),
             &refCount,
             NULL );
         printf("\t\tCL_SEMAPHORE_REFERENCE_COUNT_KHR: %u\n", refCount);
 
-        clReleaseSemaphoreKHR(semaphore);
-        semaphore = NULL;
+        clReleaseSemaphoreKHR(semaphoreq0q1);
+        semaphoreq0q1 = NULL;
+
+        clReleaseSemaphoreKHR(semaphoreq1q0);
+        semaphoreq1q0 = NULL;
     }
 
     // verify results by printing the first few values
