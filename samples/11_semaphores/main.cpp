@@ -161,13 +161,14 @@ int main(
     q1.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
     clEnqueueSignalSemaphoresKHR(q1(), 1, &semaphore, NULL, 0, NULL, NULL);
 
-    clEnqueueWaitSemaphoresKHR(q1(), 1, &semaphore, NULL, 0, NULL, NULL);
+    clEnqueueWaitSemaphoresKHR(q0(), 1, &semaphore, NULL, 0, NULL, NULL);
     kernel.setArg(0, b1);   // dst
     kernel.setArg(1, b0);   // src
-    q1.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
+    q0.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
 
     q0.flush();
-    q1.finish();
+    q1.flush();
+    q0.finish();
 
     // semaphore queries:
     {
