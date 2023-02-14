@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -206,12 +207,12 @@ private:
 
 struct BarrierWithWaitList : Command
 {
-    static BarrierWithWaitList* create(
+    static std::unique_ptr<BarrierWithWaitList> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue)
     {
         auto ret = new BarrierWithWaitList(cmdbuf, queue);
-        return ret;
+        return std::unique_ptr<BarrierWithWaitList>(ret);
     }
 
     int playback(
@@ -235,7 +236,7 @@ private:
 
 struct CopyBuffer : Command
 {
-    static CopyBuffer* create(
+    static std::unique_ptr<CopyBuffer> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_mem src_buffer,
@@ -252,7 +253,16 @@ struct CopyBuffer : Command
         ret->dst_offset = dst_offset;
         ret->size = size;
 
-        return ret;
+        g_pNextDispatch->clRetainMemObject(ret->src_buffer);
+        g_pNextDispatch->clRetainMemObject(ret->dst_buffer);
+
+        return std::unique_ptr<CopyBuffer>(ret);
+    }
+
+    ~CopyBuffer()
+    {
+        g_pNextDispatch->clReleaseMemObject(src_buffer);
+        g_pNextDispatch->clReleaseMemObject(dst_buffer);
     }
 
     int playback(
@@ -287,7 +297,7 @@ private:
 
 struct CopyBufferRect : Command
 {
-    static CopyBufferRect* create(
+    static std::unique_ptr<CopyBufferRect> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_mem src_buffer,
@@ -312,7 +322,16 @@ struct CopyBufferRect : Command
         ret->dst_row_pitch = dst_row_pitch;
         ret->dst_slice_pitch = dst_slice_pitch;
 
-        return ret;
+        g_pNextDispatch->clRetainMemObject(ret->src_buffer);
+        g_pNextDispatch->clRetainMemObject(ret->dst_buffer);
+
+        return std::unique_ptr<CopyBufferRect>(ret);
+    }
+
+    ~CopyBufferRect()
+    {
+        g_pNextDispatch->clReleaseMemObject(src_buffer);
+        g_pNextDispatch->clReleaseMemObject(dst_buffer);
     }
 
     int playback(
@@ -355,7 +374,7 @@ private:
 
 struct CopyBufferToImage : Command
 {
-    static CopyBufferToImage* create(
+    static std::unique_ptr<CopyBufferToImage> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_mem src_buffer,
@@ -372,7 +391,16 @@ struct CopyBufferToImage : Command
         std::copy(dst_origin, dst_origin + 3, ret->dst_origin.begin());
         std::copy(region, region + 3, ret->region.begin());
 
-        return ret;
+        g_pNextDispatch->clRetainMemObject(ret->src_buffer);
+        g_pNextDispatch->clRetainMemObject(ret->dst_image);
+
+        return std::unique_ptr<CopyBufferToImage>(ret);
+    }
+
+    ~CopyBufferToImage()
+    {
+        g_pNextDispatch->clReleaseMemObject(src_buffer);
+        g_pNextDispatch->clReleaseMemObject(dst_image);
     }
 
     int playback(
@@ -407,7 +435,7 @@ private:
 
 struct CopyImage : Command
 {
-    static CopyImage* create(
+    static std::unique_ptr<CopyImage> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_mem src_image,
@@ -424,7 +452,16 @@ struct CopyImage : Command
         std::copy(dst_origin, dst_origin + 3, ret->dst_origin.begin());
         std::copy(region, region + 3, ret->region.begin());
 
-        return ret;
+        g_pNextDispatch->clRetainMemObject(ret->src_image);
+        g_pNextDispatch->clRetainMemObject(ret->dst_image);
+
+        return std::unique_ptr<CopyImage>(ret);
+    }
+
+    ~CopyImage()
+    {
+        g_pNextDispatch->clReleaseMemObject(src_image);
+        g_pNextDispatch->clReleaseMemObject(dst_image);
     }
 
     int playback(
@@ -454,7 +491,7 @@ private:
 
 struct CopyImageToBuffer : Command
 {
-    static CopyImageToBuffer* create(
+    static std::unique_ptr<CopyImageToBuffer> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_mem src_image,
@@ -471,7 +508,16 @@ struct CopyImageToBuffer : Command
         std::copy(region, region + 3, ret->region.begin());
         ret->dst_offset = dst_offset;
 
-        return ret;
+        g_pNextDispatch->clRetainMemObject(ret->src_image);
+        g_pNextDispatch->clRetainMemObject(ret->dst_buffer);
+
+        return std::unique_ptr<CopyImageToBuffer>(ret);
+    }
+
+    ~CopyImageToBuffer()
+    {
+        g_pNextDispatch->clReleaseMemObject(src_image);
+        g_pNextDispatch->clReleaseMemObject(dst_buffer);
     }
 
     int playback(
@@ -506,7 +552,7 @@ private:
 
 struct FillBuffer : Command
 {
-    static FillBuffer* create(
+    static std::unique_ptr<FillBuffer> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_mem buffer,
@@ -529,7 +575,14 @@ struct FillBuffer : Command
         ret->offset = offset;
         ret->size = size;
 
-        return ret;
+        g_pNextDispatch->clRetainMemObject(ret->buffer);
+
+        return std::unique_ptr<FillBuffer>(ret);
+    }
+
+    ~FillBuffer()
+    {
+        g_pNextDispatch->clReleaseMemObject(buffer);
     }
 
     int playback(
@@ -563,7 +616,7 @@ private:
 
 struct FillImage : Command
 {
-    static FillImage* create(
+    static std::unique_ptr<FillImage> create(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_mem image,
@@ -593,7 +646,14 @@ struct FillImage : Command
         std::copy(origin, origin + 3, ret->origin.begin());
         std::copy(region, region + 3, ret->region.begin());
 
-        return ret;
+        g_pNextDispatch->clRetainMemObject(ret->image);
+
+        return std::unique_ptr<FillImage>(ret);
+    }
+
+    ~FillImage()
+    {
+        g_pNextDispatch->clReleaseMemObject(image);
     }
 
     int playback(
@@ -718,6 +778,11 @@ struct NDRangeKernel : Command
         }
 
         return CL_SUCCESS;
+    }
+
+    ~NDRangeKernel()
+    {
+        g_pNextDispatch->clReleaseKernel(kernel);
     }
 
 #if defined(cl_khr_command_buffer_mutable_dispatch)
@@ -1034,8 +1099,22 @@ typedef struct _cl_command_buffer_khr
                 cmdbuf->Properties.begin(),
                 properties,
                 properties + numProperties );
+
+            for( auto queue : cmdbuf->Queues )
+            {
+                g_pNextDispatch->clRetainCommandQueue(queue);
+            }
         }
+
         return cmdbuf;
+    }
+
+    ~_cl_command_buffer_khr()
+    {
+        for( auto queue : Queues )
+        {
+            g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
     }
 
     static bool isValid( cl_command_buffer_khr cmdbuf )
@@ -1198,7 +1277,7 @@ typedef struct _cl_command_buffer_khr
     }
 
     void    addCommand(
-                Command* command,
+                std::unique_ptr<Command> command,
                 cl_uint num_sync_points,
                 const cl_sync_point_khr* wait_list,
                 cl_sync_point_khr* sync_point,
@@ -1214,7 +1293,7 @@ typedef struct _cl_command_buffer_khr
             wait_list,
             syncPoint);
 
-        Commands.push_back(command);
+        Commands.push_back(std::move(command));
 
         if( sync_point != nullptr )
         {
@@ -1222,7 +1301,7 @@ typedef struct _cl_command_buffer_khr
         }
         if( mutable_handle != nullptr )
         {
-            mutable_handle[0] = command;
+            mutable_handle[0] = command.get();
         }
     }
 
@@ -1245,7 +1324,7 @@ typedef struct _cl_command_buffer_khr
         const uint32_t numSyncPoints = NextSyncPoint.load(std::memory_order_relaxed);
         std::vector<cl_event> deps(numSyncPoints, nullptr);
 
-        for( auto command : Commands )
+        for( const auto& command : Commands )
         {
             errorCode = command->playback(queue, deps);
             if( errorCode != CL_SUCCESS )
@@ -1342,7 +1421,7 @@ private:
     cl_command_buffer_flags_khr Flags;
     std::atomic<uint32_t> RefCount;
 
-    std::vector<Command*> Commands;
+    std::vector<std::unique_ptr<Command>> Commands;
     std::atomic<uint32_t> NextSyncPoint;
 
     _cl_command_buffer_khr(cl_command_buffer_flags_khr flags) :
@@ -1882,7 +1961,7 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
     }
 
     cmdbuf->addCommand(
-        command,
+        std::unique_ptr<NDRangeKernel>(command),
         num_sync_points_in_wait_list,
         sync_point_wait_list,
         sync_point,
