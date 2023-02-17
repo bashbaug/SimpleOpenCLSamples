@@ -30,6 +30,9 @@
 #define CL_KHR_SEMAPHORE_EXTENSION_NAME "cl_khr_semaphore"
 #endif
 
+#define CL_SEMAPHORE_PENDING_SIGNAL_KHR 0x10000
+#define CL_SEMAPHORE_PENDING_WAIT_KHR   0x10001
+
 static const char kernelString[] = R"CLC(
 kernel void Add1( global uint* dst, global uint* src )
 {
@@ -148,6 +151,14 @@ int main(
         semaphoreProperties,
         NULL);
 
+    cl_bool pending_signal = false;
+    clGetSemaphoreInfoKHR(semaphoreq0q1, CL_SEMAPHORE_PENDING_SIGNAL_KHR, sizeof(cl_bool), &pending_signal, nullptr);
+    // what does this return?
+
+    cl_bool pending_wait = false;
+    clGetSemaphoreInfoKHR(semaphoreq0q1, CL_SEMAPHORE_PENDING_WAIT_KHR, sizeof(cl_bool), &pending_wait, nullptr);
+    // what does this return?
+
     cl_uint pattern = 0;
     q0.enqueueFillBuffer(b0, pattern, 0, gwx * sizeof(cl_uint));
     q0.finish();
@@ -158,8 +169,18 @@ int main(
     kernel.setArg(1, b0);   // src
     q0.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
     clEnqueueSignalSemaphoresKHR(q0(), 1, &semaphoreq0q1, NULL, 0, NULL, NULL);
+    //q0.flush();
+    do {
+        clGetSemaphoreInfoKHR(semaphoreq0q1, CL_SEMAPHORE_PENDING_SIGNAL_KHR, sizeof(cl_bool), &pending_signal, nullptr);
+        //if (pending_signal == false) q0.flush();
+    } while (pending_signal == false);
 
     clEnqueueWaitSemaphoresKHR(q1(), 1, &semaphoreq0q1, NULL, 0, NULL, NULL);
+    //q1.flush();
+    do {
+        clGetSemaphoreInfoKHR(semaphoreq0q1, CL_SEMAPHORE_PENDING_WAIT_KHR, sizeof(cl_bool), &pending_wait, nullptr);
+        //if (pending_wait == false) q1.flush();
+    } while (pending_wait == false);
     kernel.setArg(0, b0);   // dst
     kernel.setArg(1, b1);   // src
     q1.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange{gwx} );
@@ -182,6 +203,8 @@ int main(
     kernel.setArg(1, b0);   // src
     q0.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{ gwx });
 
+
+    // what is needed here?
     q0.flush();
     q1.flush();
     q0.finish();
