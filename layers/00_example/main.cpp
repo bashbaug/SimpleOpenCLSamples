@@ -25,6 +25,9 @@
 
 #include <stdio.h>
 
+// Utility functions to properly check and return values from queries.
+#include "layer_util.hpp"
+
 // This is the dispatch table for this layer.
 // It will contain functions that this layer hooks.
 static struct _cl_icd_dispatch dispatch;
@@ -56,28 +59,6 @@ static void _init_dispatch()
     dispatch.clGetPlatformIDs = &clGetPlatformIDs_layer;
 }
 
-// This is a utility function to properly check and return values from queries.
-template<class T>
-static cl_int writeParamToMemory(
-    size_t param_value_size,
-    T param,
-    size_t* param_value_size_ret,
-    T* pointer)
-{
-    if (pointer != nullptr) {
-        if (param_value_size < sizeof(param)) {
-            return CL_INVALID_VALUE;
-        }
-        *pointer = param;
-    }
-
-    if (param_value_size_ret != nullptr) {
-        *param_value_size_ret = sizeof(param);
-    }
-
-    return CL_SUCCESS;
-}
-
 // This is boilerplate code that will be similar for all layers.
 
 CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
@@ -98,6 +79,18 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
                 ptr);
         }
         break;
+#if defined(CL_LAYER_NAME)
+    case CL_LAYER_NAME:
+        {
+            auto ptr = (char*)param_value;
+            return writeStringToMemory(
+                param_value_size,
+                "Example Layer",
+                param_value_size_ret,
+                ptr);
+        }
+        break;
+#endif
     default:
         return CL_INVALID_VALUE;
     }

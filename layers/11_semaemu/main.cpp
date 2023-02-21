@@ -27,6 +27,10 @@
 
 #include "emulate.h"
 
+#ifndef CL_KHR_SEMAPHORE_EXTENSION_NAME
+#define CL_KHR_SEMAPHORE_EXTENSION_NAME "cl_khr_semaphore"
+#endif
+
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
 static cl_int CL_API_CALL
@@ -192,6 +196,18 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
                 ptr);
         }
         break;
+#if defined(CL_LAYER_NAME)
+    case CL_LAYER_NAME:
+        {
+            auto ptr = (char*)param_value;
+            return writeStringToMemory(
+                param_value_size,
+                "Emulation Layer for " CL_KHR_SEMAPHORE_EXTENSION_NAME,
+                param_value_size_ret,
+                ptr);
+        }
+        break;
+#endif
     default:
         return CL_INVALID_VALUE;
     }
