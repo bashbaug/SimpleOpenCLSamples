@@ -317,7 +317,9 @@ int main(
             sizeof(testQueue),
             &testQueue,
             NULL );
-        printf("\t\tCL_MUTABLE_COMMAND_COMMAND_QUEUE_KHR: %p\n", testQueue );
+        printf("\t\tCL_MUTABLE_COMMAND_COMMAND_QUEUE_KHR: %p (%s)\n",
+            testQueue,
+            testQueue == commandQueue() ? "matches" : "MISMATCH!");
 
         cl_command_type type = 0;
         clGetMutableCommandInfoKHR(

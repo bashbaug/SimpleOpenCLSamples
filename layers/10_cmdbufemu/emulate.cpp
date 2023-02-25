@@ -66,9 +66,6 @@ typedef struct _cl_mutable_command_khr
         {
         case CL_MUTABLE_COMMAND_COMMAND_QUEUE_KHR:
             {
-                // TODO: Should this return NULL if the passed-in command
-                // queue is NULL?  Or the queue associated with the command
-                // buffer?
                 auto ptr = (cl_command_queue*)param_value;
                 return writeParamToMemory(
                     param_value_size,
@@ -187,11 +184,7 @@ typedef struct _cl_mutable_command_khr
     _cl_mutable_command_khr(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
-        cl_command_type type ) :
-        Magic(cMagic),
-        Type(type),
-        CmdBuf(cmdbuf),
-        Queue(queue) {}
+        cl_command_type type);
 
 private:
     static constexpr cl_uint cMagic = 0x4d434442;   // "MCMD"
@@ -1441,6 +1434,20 @@ private:
         RefCount(1),
         NextSyncPoint(1) {}
 } CommandBuffer;
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// We need to define the mutable command constructor separately and after the
+// definition of a command buffer because we will call into the command buffer
+// to get the queue if the passed-in queue is NULL.
+_cl_mutable_command_khr::_cl_mutable_command_khr(
+    cl_command_buffer_khr cmdbuf,
+    cl_command_queue queue,
+    cl_command_type type) :
+    Magic(cMagic),
+    Type(type),
+    CmdBuf(cmdbuf),
+    Queue(queue ? queue : cmdbuf->getQueue()) {}
 
 ///////////////////////////////////////////////////////////////////////////////
 //
