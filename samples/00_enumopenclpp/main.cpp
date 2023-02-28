@@ -50,7 +50,7 @@ static void PrintDeviceType(
 }
 
 static cl_int PrintDeviceInfoSummary(
-    const std::vector<cl::Device> devices )
+    const std::vector<cl::Device>& devices )
 {
     for( size_t i = 0; i < devices.size(); i++ )
     {

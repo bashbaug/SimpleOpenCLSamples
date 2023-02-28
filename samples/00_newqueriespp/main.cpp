@@ -108,7 +108,7 @@ static void PrintDeviceDeviceEnqueueCapabilities(
 #endif
 
 static void PrintDeviceInfoSummary(
-    const std::vector<cl::Device> devices )
+    const std::vector<cl::Device>& devices )
 {
     size_t  i = 0;
     for( i = 0; i < devices.size(); i++ )
