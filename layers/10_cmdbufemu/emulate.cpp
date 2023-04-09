@@ -740,6 +740,7 @@ struct NDRangeKernel : Command
         auto command = std::unique_ptr<NDRangeKernel>(
             new NDRangeKernel(cmdbuf, queue));
 
+        command->original_kernel = kernel;
         command->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
         command->work_dim = work_dim;
 
@@ -780,12 +781,15 @@ struct NDRangeKernel : Command
                 local_work_size + work_dim);
         }
 
+        g_pNextDispatch->clRetainKernel(command->original_kernel);
+
         return command;
     }
 
     ~NDRangeKernel()
     {
         g_pNextDispatch->clReleaseKernel(kernel);
+        g_pNextDispatch->clReleaseKernel(original_kernel);
     }
 
 #if defined(cl_khr_command_buffer_mutable_dispatch)
@@ -812,7 +816,7 @@ struct NDRangeKernel : Command
                 auto ptr = (cl_kernel*)param_value;
                 return writeParamToMemory(
                     param_value_size,
-                    kernel,
+                    original_kernel,
                     param_value_size_ret,
                     ptr );
             }
@@ -1023,6 +1027,7 @@ struct NDRangeKernel : Command
             signal);
     }
 
+    cl_kernel original_kernel = nullptr;
     cl_kernel kernel = nullptr;
     cl_uint work_dim = 0;
 #if defined(cl_khr_command_buffer_mutable_dispatch)
@@ -1204,6 +1209,30 @@ typedef struct _cl_command_buffer_khr
                     ptr );
             }
             break;
+#if defined(CL_COMMAND_BUFFER_CONTEXT_KHR)
+        // This enum was not in the original specification so some headers may
+        // not have it.
+        case CL_COMMAND_BUFFER_CONTEXT_KHR:
+            {
+                cl_context context = nullptr;
+                if( cl_int errorCode = g_pNextDispatch->clGetCommandQueueInfo(
+                        getQueue(),
+                        CL_QUEUE_CONTEXT,
+                        sizeof(context),
+                        &context,
+                        nullptr) )
+                {
+                    return errorCode;
+                }
+                auto ptr = (cl_context*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    context,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+#endif
         default:
             break;
         }

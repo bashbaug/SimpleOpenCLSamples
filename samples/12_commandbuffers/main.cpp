@@ -12,6 +12,11 @@
 
 #include "util.hpp"
 
+// This is a new enum that might not be in all headers yet.
+#ifndef CL_COMMAND_BUFFER_CONTEXT_KHR
+#define CL_COMMAND_BUFFER_CONTEXT_KHR 0x1299
+#endif
+
 const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
@@ -199,6 +204,17 @@ int main(
         printf("\t\tCL_COMMAND_BUFFER_QUEUES_KHR: %p (%s)\n",
             testQueue,
             testQueue == commandQueue() ? "matches" : "MISMATCH!");
+
+        cl_context testContext = NULL;
+        clGetCommandBufferInfoKHR(
+            cmdbuf,
+            CL_COMMAND_BUFFER_CONTEXT_KHR,
+            sizeof(testContext),
+            &testContext,
+            NULL );
+        printf("\t\tCL_COMMAND_BUFFER_CONEXT: %p (%s)\n",
+            testContext,
+            testContext == context() ? "matches" : "MISMATCH!");
 
         cl_uint refCount = 0;
         clGetCommandBufferInfoKHR(

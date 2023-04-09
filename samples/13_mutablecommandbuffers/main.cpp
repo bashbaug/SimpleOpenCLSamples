@@ -329,6 +329,17 @@ int main(
             &type,
             NULL );
         printf("\t\tCL_MUTABLE_COMMAND_COMMAND_TYPE_KHR: %u\n", type);
+
+        cl_kernel testKernel = NULL;
+        clGetMutableCommandInfoKHR(
+            command,
+            CL_MUTABLE_DISPATCH_KERNEL_KHR,
+            sizeof(testKernel),
+            &testKernel,
+            NULL );
+        printf("\t\tCL_MUTABLE_DISPATCH_KERNEL_KHR: %p (%s)\n",
+            testKernel,
+            testKernel == kernel() ? "matches" : "MISMATCH!" );
     }
 
     clFinalizeCommandBufferKHR(cmdbuf);
