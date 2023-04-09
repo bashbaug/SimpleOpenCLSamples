@@ -1209,6 +1209,30 @@ typedef struct _cl_command_buffer_khr
                     ptr );
             }
             break;
+#if defined(CL_COMMAND_BUFFER_CONTEXT_KHR)
+        // This enum was not in the original specification so some headers may
+        // not have it.
+        case CL_COMMAND_BUFFER_CONTEXT_KHR:
+            {
+                cl_context context = nullptr;
+                if( cl_int errorCode = g_pNextDispatch->clGetCommandQueueInfo(
+                        getQueue(),
+                        CL_QUEUE_CONTEXT,
+                        sizeof(context),
+                        &context,
+                        nullptr) )
+                {
+                    return errorCode;
+                }
+                auto ptr = (cl_context*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    context,
+                    param_value_size_ret,
+                    ptr );
+            }
+            break;
+#endif
         default:
             break;
         }
