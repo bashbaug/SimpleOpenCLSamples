@@ -19,6 +19,11 @@
 
 #include "emulate.h"
 
+static constexpr cl_version version_cl_khr_command_buffer =
+    CL_MAKE_VERSION(0, 9, 2);
+static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
+    CL_MAKE_VERSION(0, 9, 0);
+
 SLayerContext& getLayerContext(void)
 {
     static SLayerContext c;
@@ -2038,6 +2043,29 @@ cl_int CL_API_CALL clGetCommandBufferInfoKHR_EMU(
         param_value_size_ret);
 }
 
+#if defined(cl_khr_command_buffer_multi_device) && 0
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// cl_khr_command_buffer_multi_device
+cl_command_buffer_khr CL_API_CALL clRemapCommandBufferKHR_EMU(
+    cl_command_buffer_khr command_buffer,
+    cl_bool automatic,
+    cl_uint num_queues,
+    const cl_command_queue* queues,
+    cl_uint num_handles,
+    const cl_mutable_command_khr* handles,
+    cl_mutable_command_khr* handles_ret,
+    cl_int* errcode_ret)
+{
+    if (errcode_ret) {
+        errcode_ret[0] = CL_OUT_OF_HOST_MEMORY;
+    }
+    return nullptr;
+}
+
+#endif
+
 #if defined(cl_khr_command_buffer_mutable_dispatch)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2226,7 +2254,7 @@ bool clGetDeviceInfo_override(
                     memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                     strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
 
-                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                    extension.version = version_cl_khr_command_buffer;
                 }
 #if defined(cl_khr_command_buffer_mutable_dispatch)
                 {
@@ -2236,7 +2264,7 @@ bool clGetDeviceInfo_override(
                     memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                     strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
 
-                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                    extension.version = version_cl_khr_command_buffer_mutable_dispatch;
                 }
 #endif
 
@@ -2558,7 +2586,7 @@ bool clGetPlatformInfo_override(
                     memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                     strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
 
-                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                    extension.version = version_cl_khr_command_buffer;
                 }
 #if defined(cl_khr_command_buffer_mutable_dispatch)
                 {
@@ -2568,7 +2596,7 @@ bool clGetPlatformInfo_override(
                     memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                     strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
 
-                    extension.version = CL_MAKE_VERSION(0, 9, 0);
+                    extension.version = version_cl_khr_command_buffer_mutable_dispatch;
                 }
 #endif
 

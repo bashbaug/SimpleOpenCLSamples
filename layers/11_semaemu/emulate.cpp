@@ -22,6 +22,9 @@
 #define CL_KHR_SEMAPHORE_EXTENSION_NAME "cl_khr_semaphore"
 #endif
 
+static constexpr cl_version version_cl_khr_semaphore =
+    CL_MAKE_VERSION(0, 9, 0);
+
 SLayerContext& getLayerContext(void)
 {
     static SLayerContext c;
