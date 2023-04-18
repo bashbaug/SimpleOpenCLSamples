@@ -148,6 +148,10 @@ clGetExtensionFunctionAddressForPlatform_layer(
     CHECK_RETURN_EXTENSION_FUNCTION( clCommandNDRangeKernelKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetCommandBufferInfoKHR );
 
+#if defined(cl_khr_command_buffer_multi_device) && 0
+    CHECK_RETURN_EXTENSION_FUNCTION( clRemapCommandBufferKHR );
+#endif
+
 #if defined(cl_khr_command_buffer_mutable_dispatch)
     CHECK_RETURN_EXTENSION_FUNCTION( clUpdateMutableCommandsKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetMutableCommandInfoKHR );

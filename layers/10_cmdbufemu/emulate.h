@@ -168,6 +168,20 @@ cl_int CL_API_CALL clGetCommandBufferInfoKHR_EMU(
     void* param_value,
     size_t* param_value_size_ret);
 
+#if defined(cl_khr_command_buffer_multi_device) && 0
+
+cl_command_buffer_khr CL_API_CALL clRemapCommandBufferKHR_EMU(
+    cl_command_buffer_khr command_buffer,
+    cl_bool automatic,
+    cl_uint num_queues,
+    const cl_command_queue* queues,
+    cl_uint num_handles,
+    const cl_mutable_command_khr* handles,
+    cl_mutable_command_khr* handles_ret,
+    cl_int* errcode_ret);
+
+#endif // defined(cl_khr_command_buffer_multi_device)
+
 #if defined(cl_khr_command_buffer_mutable_dispatch)
 
 cl_int CL_API_CALL clUpdateMutableCommandsKHR_EMU(
