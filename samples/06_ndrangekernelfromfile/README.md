@@ -57,8 +57,10 @@ If so, can you pass the right build options to enable non-uniform work-group sup
 | `--file <string>` | `ndrange_sample_kernel.cl` | Specify the name of the file with the OpenCL kernel source.
 | `--name <string>` | `Test` | Specify the name of the OpenCL kernel in the source file.
 | `--options <string>` | None | Specify optional program build options.
-| `--gwx <number>` | 512 | Specify the global work size to execute.
-| `--lwx <number>` | 512 | Specify the local work size grouping.
+| `--gwx <number>` | 512 | Specify the global work size to execute, in the X-dimension (first dimension, fastest moving)
+| `--gwy <number>` | 1 | Specify the global work size to execute, in the Y-dimension (second dimension, slowest moving)
+| `--lwx <number>` | 32 | Specify the local work size grouping, in the X-dimension (first dimension, fastest moving).
+| `--lwy <number>` | 1 | Specify the local work size grouping, in the Y-dimension (second dimension, slowest moving).
 | `-a` | `false` | Show advanced options.
 | `-c` | `false` | (advanced) Use `clCompileProgram` and `clLinkProgram` instead of `clBuildProgram`.
 | `--compileoptions <string>` | None | (advanced) Specify optional program compile options.
