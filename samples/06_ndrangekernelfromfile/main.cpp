@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2021 Ben Ashbaugh
+// Copyright (c) 2019-2023 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,9 @@ int main(
     std::string linkOptions;
     bool compile = false;
     size_t gwx = 512;
+    size_t gwy = 1;
     size_t lwx = 32;
+    size_t lwy = 1;
 
     {
         bool advanced = false;
@@ -73,8 +75,10 @@ int main(
         op.add<popl::Value<std::string>>("", "file", "Kernel File Name", fileName, &fileName);
         op.add<popl::Value<std::string>>("", "name", "Kernel Name", kernelName, &kernelName);
         op.add<popl::Value<std::string>>("", "options", "Program Build Options", buildOptions, &buildOptions);
-        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size", gwx, &gwx);
-        op.add<popl::Value<size_t>>("", "lwx", "Local Work Size (0 -> NULL)", lwx, &lwx);
+        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size in the X-dimension", gwx, &gwx);
+        op.add<popl::Value<size_t>>("", "gwy", "Global Work Size in the Y-dimension", gwy, &gwy);
+        op.add<popl::Value<size_t>>("", "lwx", "Local Work Size in the X-dimension (0 -> NULL)", lwx, &lwx);
+        op.add<popl::Value<size_t>>("", "lwy", "Local Work Size in the Y-dimension (0 -> NULL)", lwy, &lwy);
         op.add<popl::Switch>("a", "advanced", "Show advanced options", &advanced);
         op.add<popl::Switch, popl::Attribute::advanced>("c", "compilelink", "Use clCompileProgram and clLinkProgram", &compile);
         op.add<popl::Value<std::string>, popl::Attribute::advanced>("", "compileoptions", "Program Compile Options", compileOptions, &compileOptions);
@@ -156,15 +160,17 @@ int main(
     cl::Buffer deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,
-        gwx * sizeof( cl_uint ) };
+        gwx * gwy * sizeof( cl_uint ) };
 
     // execution
     kernel.setArg(0, deviceMemDst);
     commandQueue.enqueueNDRangeKernel(
         kernel,
         cl::NullRange,
-        cl::NDRange{gwx},
-        (lwx == 0) ? cl::NullRange : cl::NDRange{lwx});
+        cl::NDRange{gwx, gwy},
+        (lwx == 0) || (lwy == 0) ?
+            cl::NullRange :
+            cl::NDRange{lwx, lwy});
 
     // verify results by printing the first few values
     if (gwx > 3) {
@@ -173,7 +179,7 @@ int main(
             CL_TRUE,
             CL_MAP_READ,
             0,
-            gwx * sizeof( cl_uint ) );
+            gwx * gwy * sizeof( cl_uint ) );
 
         printf("First few values: [0] = %u, [1] = %u, [2] = %u\n", ptr[0], ptr[1], ptr[2]);
 
