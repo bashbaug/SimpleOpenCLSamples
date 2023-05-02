@@ -473,8 +473,13 @@ struct CopyImage : Command
     {
         auto wait_list = getEventWaitList(deps);
         auto signal = getEventSignalPtr(deps);
-        return g_pNextDispatch->clEnqueueBarrierWithWaitList(
+        return g_pNextDispatch->clEnqueueCopyImage(
             queue,
+            src_image,
+            dst_image,
+            src_origin.data(),
+            dst_origin.data(),
+            region.data(),
             static_cast<cl_uint>(wait_list.size()),
             wait_list.data(),
             signal);
@@ -636,13 +641,19 @@ struct FillImage : Command
 
         auto p = reinterpret_cast<const uint8_t*>(fill_color);
 
-        size_t s = 0;
+        cl_image_format format;
         g_pNextDispatch->clGetImageInfo(
             image,
-            CL_IMAGE_ELEMENT_SIZE,
-            sizeof(size_t),
-            &s,
+            CL_IMAGE_FORMAT,
+            sizeof(format),
+            &format,
             nullptr);
+
+        // The fill color is a single floating-point value for CL_DEPTH images
+        // and a 32-bit four-component value for all other image types.
+        size_t s =
+            format.image_channel_order == CL_DEPTH ?
+            sizeof(float) : 4 * sizeof(float);
         ret->fill_color.reserve(s);
         ret->fill_color.insert(
             ret->fill_color.begin(),
