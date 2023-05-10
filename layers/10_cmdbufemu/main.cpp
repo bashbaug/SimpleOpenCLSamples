@@ -124,14 +124,8 @@ clGetExtensionFunctionAddressForPlatform_layer(
     cl_platform_id platform,
     const char *   func_name)
 {
-    void* ret = g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
-        platform,
-        func_name);
-
-    if (ret) {
-        return ret;
-    }
-
+    // For now, prefer the emulated functions, even if the extension is
+    // supported natively.  Eventually this should become smarter.
     CHECK_RETURN_EXTENSION_FUNCTION( clCreateCommandBufferKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clFinalizeCommandBufferKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clRetainCommandBufferKHR );
@@ -157,7 +151,9 @@ clGetExtensionFunctionAddressForPlatform_layer(
     CHECK_RETURN_EXTENSION_FUNCTION( clGetMutableCommandInfoKHR );
 #endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
-    return nullptr;
+    return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+        platform,
+        func_name);
 }
 
 static cl_int CL_API_CALL

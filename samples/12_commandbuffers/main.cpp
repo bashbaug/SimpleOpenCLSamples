@@ -212,7 +212,7 @@ int main(
             sizeof(testContext),
             &testContext,
             NULL );
-        printf("\t\tCL_COMMAND_BUFFER_CONEXT: %p (%s)\n",
+        printf("\t\tCL_COMMAND_BUFFER_CONTEXT: %p (%s)\n",
             testContext,
             testContext == context() ? "matches" : "MISMATCH!");
 
