@@ -100,14 +100,8 @@ clGetExtensionFunctionAddressForPlatform_layer(
     cl_platform_id platform,
     const char *   func_name)
 {
-    void* ret = g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
-        platform,
-        func_name);
-
-    //if (ret) {
-    //    return ret;
-    //}
-
+    // For now, prefer the emulated functions, even if the extension is
+    // supported natively.  Eventually this should become smarter.
     CHECK_RETURN_EXTENSION_FUNCTION( clCreateSemaphoreWithPropertiesKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clEnqueueWaitSemaphoresKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clEnqueueSignalSemaphoresKHR );
@@ -115,7 +109,9 @@ clGetExtensionFunctionAddressForPlatform_layer(
     CHECK_RETURN_EXTENSION_FUNCTION( clRetainSemaphoreKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clReleaseSemaphoreKHR );
 
-    return nullptr;
+    return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+        platform,
+        func_name);
 }
 
 static cl_int CL_API_CALL
