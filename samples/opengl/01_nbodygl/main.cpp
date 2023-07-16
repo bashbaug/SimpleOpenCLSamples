@@ -325,6 +325,15 @@ int main(
         glfwPollEvents();
     }
 
+    // Clean up OpenCL resources before destroying the window and glfw.
+    context = nullptr;
+    commandQueue = nullptr;
+    program = nullptr;
+    kernel = nullptr;
+    pos[0] = nullptr;
+    pos[1] = nullptr;
+    vel = nullptr;
+
     glfwDestroyWindow(pWindow);
     glfwTerminate();
 

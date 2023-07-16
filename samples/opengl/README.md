@@ -62,3 +62,4 @@ After installing, GLFW should be found by the OpenCL samples.
 
 * [juliagl](./00_juliagl): Demonstrates sharing an OpenGL texture with OpenCL.
 * [nbodygl](./01_nbodygl): Demonstrates rendering an OpenCL vertex buffer with OpenGL.
+* [sobelgl](./01_sobelgl): Displays the result of a Sobel edge detection filter with OpenGL.
