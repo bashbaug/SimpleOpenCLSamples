@@ -573,13 +573,6 @@ int main(
     kernelJulia = cl::Kernel{ program, "Julia" };
     kernelSobel = cl::Kernel{ program, "Sobel" };
 
-#if 0
-const sampler_t sampler =
-    CLK_NORMALIZED_COORDS_FALSE |
-    CLK_ADDRESS_CLAMP |
-    CLK_FILTER_NEAREST;
-#endif
-
     sampler = cl::Sampler{
         context,
         CL_FALSE,   // normalized coords
