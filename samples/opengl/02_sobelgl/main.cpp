@@ -133,7 +133,7 @@ kernel void Sobel( read_only image2d_t src, write_only image2d_t dst, sampler_t 
         texel_ul - texel_ur
         + 2.0f * texel_l - 2.0f * texel_r
         + texel_bl - texel_br;
-    
+
     float4 gy =
         texel_ul + 2.0f * texel_u + texel_ur
         - texel_bl - 2.0f * texel_b - texel_br;
