@@ -85,7 +85,7 @@ kernel void Sobel( global uchar4* src, global uchar4* dst )
 
     int x = (int)get_global_id(0);
     int y = (int)get_global_id(1);
-	
+
     float4 texel_ul = x > 0 && y > 0 ?
         convert_float4(src[ (y - 1) * cWidth + (x - 1)]) : 0.0f;
     float4 texel_u  = y > 0 ?
@@ -199,9 +199,9 @@ int main(
         kernelJulia.setArg(0, deviceMemTmp);
         kernelJulia.setArg(1, cr);
         kernelJulia.setArg(2, ci);
-		
-		kernelSobel.setArg(0, deviceMemTmp);
-		kernelSobel.setArg(1, deviceMemDst);
+
+        kernelSobel.setArg(0, deviceMemTmp);
+        kernelSobel.setArg(1, deviceMemDst);
 
         cl::NDRange lws;    // NullRange by default.
 
