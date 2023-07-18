@@ -22,8 +22,10 @@
 
 #include <popl/popl.hpp>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+
 #include <CL/opencl.hpp>
-#include "bmp.hpp"
 
 const char* filename = "mandelbrot.bmp";
 
@@ -148,7 +150,7 @@ int main(
             // two greys.
             colors[i] = (buf[i] & 0x1) ? 240 : 20;
         }
-        BMP::save_image(colors.data(), width, height, filename);
+        stbi_write_bmp(filename, width, height, 1, colors.data());
         printf("Wrote image file %s\n", filename);
 
         commandQueue.enqueueUnmapMemObject(

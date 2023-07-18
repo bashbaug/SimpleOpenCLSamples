@@ -22,8 +22,10 @@
 
 #include <popl/popl.hpp>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+
 #include <CL/opencl.hpp>
-#include "bmp.hpp"
 
 #include <chrono>
 
@@ -69,8 +71,8 @@ kernel void Julia( global uchar4* dst, float cr, float ci )
     result = max( result, 0.0f );
     result = min( result, 1.0f );
 
-    // BGRA
-    float4 color = (float4)( 1.0f, sqrt(result), result, 1.0f );
+    // RGBA
+    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
 
     dst[ y * cWidth + x ] = convert_uchar4(color * 255.0f);
 }
@@ -191,7 +193,7 @@ int main(
                 0,
                 gwx * gwy * sizeof(cl_uchar4) ) );
 
-        BMP::save_image(buf, gwx, gwy, filename);
+        stbi_write_bmp(filename, gwx, gwy, 4, buf);
         printf("Wrote image file %s\n", filename);
 
         commandQueue.enqueueUnmapMemObject(

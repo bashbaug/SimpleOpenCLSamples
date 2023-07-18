@@ -22,8 +22,10 @@
 
 #include <popl/popl.hpp>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+
 #include <CL/opencl.hpp>
-#include "bmp.hpp"
 
 #include <chrono>
 
@@ -49,7 +51,7 @@ cl::CommandQueue commandQueue;
 cl::Kernel kernel;
 cl::Buffer deviceMemDst;
 
-// Part 2: Fix the OpenCL Kernel Code.
+// Part 2: Fix the OpenCL C program source.
 // Solution: Fix the typo.
 static const char kernelString[] = R"CLC(
 kernel void SinJulia(global uchar4* dst, float cr, float ci)
@@ -89,11 +91,11 @@ kernel void SinJulia(global uchar4* dst, float cr, float ci)
     result = max(result, 0.0f);
     result = min(result, 1.0f);
 
-    // BGRA
+    // RGBA
     float4 color = (float4)(
-        1.0f,
-        result,
         result * result,
+        result,
+        1.0f,
         1.0f );
 
     dst[ y * xMax + x ] = convert_uchar4(color * 255.0f);
@@ -162,7 +164,7 @@ static void checkResults()
             0,
             gwx * gwy * sizeof(cl_uchar4) ) );
 
-    BMP::save_image(buf, gwx, gwy, filename);
+    stbi_write_bmp(filename, gwx, gwy, 4, buf);
     printf("Wrote image file %s\n", filename);
 
     commandQueue.enqueueUnmapMemObject(
