@@ -15,7 +15,7 @@ If implicit synchronization is not supported then the application will still run
 
 ## Key APIs and Concepts
 
-This example shows how create a sampler, pass it to a kernel, and use it to read texel data from an image.
+This example shows how create a sampler, pass it to a kernel, and use it to read data from an image.
 
 ```c
 clCreateSampler
