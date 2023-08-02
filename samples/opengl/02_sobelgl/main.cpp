@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2023 Ben Ashbaugh
+// Copyright (c) 2023 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -63,8 +63,11 @@ float cr = -0.123f;
 float ci =  0.745f;
 
 cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl::Image2D mem;
+cl::Kernel kernelJulia;
+cl::Kernel kernelSobel;
+cl::Sampler sampler;
+cl::Image2D memTmp;
+cl::Image2D memDst;
 
 static const char kernelString[] = R"CLC(
 kernel void Julia( write_only image2d_t dst, float cr, float ci )
@@ -108,6 +111,38 @@ kernel void Julia( write_only image2d_t dst, float cr, float ci )
     float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
 
     write_imagef(dst, (int2)(x, y), color);
+}
+
+kernel void Sobel( read_only image2d_t src, write_only image2d_t dst, sampler_t sampler )
+{
+    int x = (int)get_global_id(0);
+    int y = (int)get_global_id(1);
+
+    float4 texel_ul = read_imagef(src, sampler, (int2)(x - 1, y - 1));
+    float4 texel_u  = read_imagef(src, sampler, (int2)(x    , y - 1));
+    float4 texel_ur = read_imagef(src, sampler, (int2)(x + 1, y - 1));
+
+    float4 texel_l  = read_imagef(src, sampler, (int2)(x - 1, y    ));
+    float4 texel_r  = read_imagef(src, sampler, (int2)(x + 1, y    ));
+
+    float4 texel_bl = read_imagef(src, sampler, (int2)(x - 1, y + 1));
+    float4 texel_b  = read_imagef(src, sampler, (int2)(x    , y + 1));
+    float4 texel_br = read_imagef(src, sampler, (int2)(x + 1, y + 1));
+
+    float4 gx =
+        texel_ul - texel_ur
+        + 2.0f * texel_l - 2.0f * texel_r
+        + texel_bl - texel_br;
+
+    float4 gy =
+        texel_ul + 2.0f * texel_u + texel_ur
+        - texel_bl - 2.0f * texel_b - texel_br;
+
+    float4 mag = sqrt(gx * gx + gy * gy);
+
+    float grey = mag.x * 0.2126f + mag.y * 0.7152f + mag.z * 0.0722f;
+
+    write_imagef(dst, (int2)(x, y), (float4)(grey, grey, grey, 1.0f));
 }
 )CLC";
 
@@ -307,6 +342,24 @@ static void display(void)
         redraw = false;
     }
 
+    // Execute the Julia OpenCL kernel.
+    // This kernel does not need OpenGL interop.
+    kernelJulia.setArg(0, memTmp);
+    kernelJulia.setArg(1, cr);
+    kernelJulia.setArg(2, ci);
+
+    cl::NDRange lws;    // NullRange by default.
+    if( lwx > 0 && lwy > 0 )
+    {
+        lws = cl::NDRange{lwx, lwy};
+    }
+
+    commandQueue.enqueueNDRangeKernel(
+        kernelJulia,
+        cl::NullRange,
+        cl::NDRange{gwx, gwy},
+        lws);
+
     // If we support interop we need to acquire the OpenCL image object we
     // created from the OpenGL texture.  If we do not support interop then we
     // will compute into the OpenCL image object then manually transfer its
@@ -321,25 +374,19 @@ static void display(void)
         clEnqueueAcquireGLObjects(
             commandQueue(),
             1,
-            &mem(),
+            &memDst(),
             0,
             NULL,
             NULL);
     }
 
-    // Execute the OpenCL kernel as usual.
-    kernel.setArg(0, mem);
-    kernel.setArg(1, cr);
-    kernel.setArg(2, ci);
-
-    cl::NDRange lws;    // NullRange by default.
-    if( lwx > 0 && lwy > 0 )
-    {
-        lws = cl::NDRange{lwx, lwy};
-    }
+    // Execute the Sobel OpenCL kernel.
+    kernelSobel.setArg(0, memTmp);
+    kernelSobel.setArg(1, memDst);
+    kernelSobel.setArg(2, sampler);
 
     commandQueue.enqueueNDRangeKernel(
-        kernel,
+        kernelSobel,
         cl::NullRange,
         cl::NDRange{gwx, gwy},
         lws);
@@ -354,7 +401,7 @@ static void display(void)
         clEnqueueReleaseGLObjects(
             commandQueue(),
             1,
-            &mem(),
+            &memDst(),
             0,
             NULL,
             NULL);
@@ -363,7 +410,7 @@ static void display(void)
         // its contents to OpenGL, then unmap the OpenCL image object.
         size_t rowPitch = 0;
         void* pixels = commandQueue.enqueueMapImage(
-            mem,
+            memDst,
             CL_TRUE,
             CL_MAP_READ,
             {0, 0, 0},
@@ -382,7 +429,7 @@ static void display(void)
             pixels);
 
         commandQueue.enqueueUnmapMemObject(
-            mem,
+            memDst,
             pixels);
     }
 
@@ -485,7 +532,7 @@ int main(
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: juliagl [options]\n"
+                "Usage: sobelgl [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }
@@ -503,7 +550,7 @@ int main(
     // Create an OpenGL window.  This needs to be done before creating the
     // OpenCL context because we need to know information about the OpenGL
     // context to create an OpenCL context that supports sharing.
-    pWindow = glfwCreateWindow((int)gwx, (int)gwy, "Julia Set with OpenGL", NULL, NULL);
+    pWindow = glfwCreateWindow((int)gwx, (int)gwy, "Sobel Filter with OpenGL", NULL, NULL);
     glfwMakeContextCurrent(pWindow);
 
     std::vector<cl::Platform> platforms;
@@ -523,9 +570,21 @@ int main(
 
     cl::Program program{ context, kernelString };
     program.build();
-    kernel = cl::Kernel{ program, "Julia" };
+    kernelJulia = cl::Kernel{ program, "Julia" };
+    kernelSobel = cl::Kernel{ program, "Sobel" };
 
-    mem = createImage(context);
+    sampler = cl::Sampler{
+        context,
+        CL_FALSE,   // normalized coords
+        CL_ADDRESS_CLAMP,
+        CL_FILTER_NEAREST };
+
+    memTmp = cl::Image2D{
+        context,
+        CL_MEM_READ_WRITE,
+        cl::ImageFormat{CL_RGBA, CL_FLOAT},
+        gwx, gwy };
+    memDst = createImage(context);
 
     glfwSetKeyCallback(pWindow, keyboard);
     glfwSetFramebufferSizeCallback(pWindow, resize);
@@ -542,8 +601,11 @@ int main(
     context = nullptr;
     commandQueue = nullptr;
     program = nullptr;
-    kernel = nullptr;
-    mem = nullptr;
+    kernelJulia = nullptr;
+    kernelSobel = nullptr;
+    sampler = nullptr;
+    memTmp = nullptr;
+    memDst = nullptr;
 
     glfwDestroyWindow(pWindow);
     glfwTerminate();

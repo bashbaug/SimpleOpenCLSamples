@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019-2021 Ben Ashbaugh
+# Copyright (c) 2019-2023 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -76,8 +76,8 @@ kernel void Julia( global uchar4* dst, float cr, float ci )
     result = max( result, 0.0f );
     result = min( result, 1.0f );
 
-    // BGRA
-    float4 color = (float4)( 1.0f, sqrt(result), result, 1.0f );
+    // RGBA
+    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
 
     dst[ y * cWidth + x ] = convert_uchar4(color * 255.0f);
 }
@@ -148,7 +148,7 @@ if __name__ == "__main__":
                                               0, gwx * gwy, np.uint32)
     with mapped_dst.base:
         # note: this generates a 24-bit .bmp file instead of a 32-bit .bmp file!
-        (b, g, r, a) = Image.fromarray(mapped_dst.reshape((gwy, gwx)), 'RGBA').split()
+        (r, g, b, a) = Image.fromarray(mapped_dst.reshape((gwy, gwx)), 'RGBA').split()
         image = Image.merge('RGB', (r, g, b))
         image.save(filename)
         print('Wrote image file {}'.format(filename))

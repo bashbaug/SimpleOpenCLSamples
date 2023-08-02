@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022 Ben Ashbaugh
+// Copyright (c) 2022-2023 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -324,6 +324,15 @@ int main(
 
         glfwPollEvents();
     }
+
+    // Clean up OpenCL resources before destroying the window and glfw.
+    context = nullptr;
+    commandQueue = nullptr;
+    program = nullptr;
+    kernel = nullptr;
+    pos[0] = nullptr;
+    pos[1] = nullptr;
+    vel = nullptr;
 
     glfwDestroyWindow(pWindow);
     glfwTerminate();

@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020 Ben Ashbaugh
+# Copyright (c) 2019-2023 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -84,6 +84,7 @@ add_subdirectory( 01_copybuffer )
 add_subdirectory( 02_copybufferkernel )
 add_subdirectory( 03_mandelbrot )
 add_subdirectory( 04_julia )
+add_subdirectory( 04_sobel )
 add_subdirectory( 05_kernelfromfile )
 add_subdirectory( 05_spirvkernelfromfile )
 add_subdirectory( 06_ndrangekernelfromfile )
