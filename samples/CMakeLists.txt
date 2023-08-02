@@ -90,6 +90,8 @@ add_subdirectory( 06_ndrangekernelfromfile )
 
 add_subdirectory( 10_queueexperiments )
 
+add_subdirectory( 99_svmunmap )
+
 set(BUILD_EXTENSION_SAMPLES TRUE)
 if(NOT TARGET OpenCLExt)
     message(STATUS "Skipping Extension Samples - OpenCL Extension Loader is not found.")
