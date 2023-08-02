@@ -198,7 +198,7 @@ int main(
 
         commandQueue.enqueueUnmapMemObject(
             deviceMemDst,
-            (void*)buf ); // TODO: Why isn't this a const void* in the API?
+            (void*)buf );
     }
 
     return 0;
