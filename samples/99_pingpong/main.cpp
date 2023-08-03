@@ -71,26 +71,72 @@ bool DeviceHostPingPongTest()
 {
   // Raw string literal for the second kernel
   std::string pingPongKernelSrc{R"CLC(
-   kernel void pingPong(global volatile atomic_int *hostAccessibleDeviceMem)
-   {
-     int val;
-     while ((val = atomic_load(hostAccessibleDeviceMem)) > 0)
-     {
-       if (val % 2 == 0)
-       {
-         // If I the printfs are enabled, results with
-         // NDRange failure -5 (CL_OUT_OF_RESOURCES) on iGPU.
+#if 0
+kernel void pingPong(global volatile atomic_int *hostAccessibleDeviceMem)
+{
+  int val;
+  while ((val = atomic_load(hostAccessibleDeviceMem)) > 0)
+  {
+    if (val % 2 == 0)
+    {
+      // If I the printfs are enabled, results with
+      // NDRange failure -5 (CL_OUT_OF_RESOURCES) on iGPU.
 
-         // If disabled, gets stuck; seems the data does not propagate through
-         // caches etc. after the initial sych., most likely).
+      // If disabled, gets stuck; seems the data does not propagate through
+      // caches etc. after the initial sych., most likely).
 
-         //printf("Device updating %p...\n", hostAccessibleDeviceMem);
-         val -= 1;
-         atomic_store(hostAccessibleDeviceMem, val);
-         //printf("Device value now at %d.\n", *hostAccessibleDeviceMem);
-       }
-     }
-   }
+      //printf("Device updating %p...\n", hostAccessibleDeviceMem);
+      val -= 1;
+      atomic_store(hostAccessibleDeviceMem, val);
+      //printf("Device value now at %d.\n", *hostAccessibleDeviceMem);
+    }
+  }
+}
+#endif
+
+int my_nt_load(global int* ptr) {
+  // Note: the fence is needed to keep the compiler from hoisting the load outside of the loop!
+  atomic_work_item_fence(CLK_GLOBAL_MEM_FENCE, memory_order_acquire, memory_scope_all_devices);
+  return __builtin_nontemporal_load(ptr);
+}
+
+kernel void pingPongNT(global int *hostAccessibleDeviceMem)
+{
+  int val;
+  while ((val = my_nt_load(hostAccessibleDeviceMem)) > 0) {
+    if (val % 2 == 0) {
+      __builtin_nontemporal_store(val - 1, hostAccessibleDeviceMem);
+    }
+  }
+}
+
+#if 0
+enum LSC_LDCC {
+    LSC_LDCC_DEFAULT      = 0,
+    LSC_LDCC_L1UC_L3UC    = 1,   // Override to L1 uncached and L3 uncached
+    LSC_LDCC_L1UC_L3C     = 2,   // Override to L1 uncached and L3 cached
+    LSC_LDCC_L1C_L3UC     = 3,   // Override to L1 cached and L3 uncached
+    LSC_LDCC_L1C_L3C      = 4,   // Override to L1 cached and L3 cached
+    LSC_LDCC_L1S_L3UC     = 5,   // Override to L1 streaming load and L3 uncached
+    LSC_LDCC_L1S_L3C      = 6,   // Override to L1 streaming load and L3 cached
+    LSC_LDCC_L1IAR_L3C    = 7,   // Override to L1 invalidate-after-read, and L3 cached
+};
+uint    __builtin_IB_lsc_load_global_uint  (const __global uint   *base, int immElemOff, enum LSC_LDCC cacheOpt); //D32V1
+
+int my_uc_load(global int* ptr) {
+  return as_int(__builtin_IB_lsc_load_global_uint((const global uint*)ptr, 0, LSC_LDCC_L1UC_L3UC));
+}
+
+kernel void pingPongUC(global int *hostAccessibleDeviceMem)
+{
+  int val;
+  while ((val = my_uc_load(hostAccessibleDeviceMem)) > 0) {
+    if (val % 2 == 0) {
+      __builtin_nontemporal_store(val - 1, hostAccessibleDeviceMem);
+    }
+  }
+}
+#endif
 )CLC"};
 
   std::vector<std::string> programStrings;
@@ -119,7 +165,7 @@ bool DeviceHostPingPongTest()
   cl_mem_properties_intel properties[] =
     {CL_MEM_ALLOC_FLAGS_INTEL, CL_MEM_ALLOC_WRITE_COMBINED_INTEL, 0};
   volatile int *pingPongValue =
-    (int*)clSharedMemAllocINTEL(cl::Context::getDefault().get(),
+    (int*)clDeviceMemAllocINTEL(cl::Context::getDefault().get(),
                            cl::Device::getDefault().get(),
                            properties, sizeof(int),
                            4, &errcode);
@@ -133,29 +179,27 @@ bool DeviceHostPingPongTest()
 
 #endif
 
+  printf("Before updating value on the host...\n");
+
   *pingPongValue = 10;
   CPU_FENCE;
+
+  printf("After updating value on the host...\n");
 
   //////////////
   // Traditional cl_mem allocations
 
   auto pingPongKernel =
-    cl::KernelFunctor<cl_int*>(prog, "pingPong");
-
-#ifdef UNIFIED_SHARED_MEMORY
-  cl_bool T = CL_TRUE;
-  clSetKernelExecInfo(pingPongKernel.getKernel().get(),
-                      CL_KERNEL_EXEC_INFO_INDIRECT_SHARED_ACCESS_INTEL,
-                      sizeof(cl_bool), &T);
-#endif
+    cl::KernelFunctor<cl_int*>(prog, "pingPongNT");
 
   pingPongKernel(cl::EnqueueArgs(cl::NDRange(1), cl::NDRange(1)), (int*)pingPongValue);
+  cl::flush();
 
   while (*pingPongValue > 0)
   {
     if (*pingPongValue % 2 == 1)
     {
-      printf("Host updating %p...\n", pingPongValue);
+      printf("Host updating %p, value currently at %d...\n", pingPongValue, *pingPongValue);
       *pingPongValue -= 1;
       printf("Host value now at %d.\n", *pingPongValue);
     }
