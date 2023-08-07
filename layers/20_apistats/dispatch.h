@@ -12,12 +12,12 @@ extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetPlatformIDs(
+static cl_int CL_API_CALL clGetPlatformIDs_layer(
     cl_uint num_entries,
     cl_platform_id* platforms,
     cl_uint* num_platforms)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetPlatformIDs");
     return g_pNextDispatch->clGetPlatformIDs(
         num_entries,
         platforms,
@@ -26,14 +26,14 @@ static cl_int CL_API_CALL clGetPlatformIDs(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetPlatformInfo(
+static cl_int CL_API_CALL clGetPlatformInfo_layer(
     cl_platform_id platform,
     cl_platform_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetPlatformInfo");
     return g_pNextDispatch->clGetPlatformInfo(
         platform,
         param_name,
@@ -44,14 +44,14 @@ static cl_int CL_API_CALL clGetPlatformInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetDeviceIDs(
+static cl_int CL_API_CALL clGetDeviceIDs_layer(
     cl_platform_id platform,
     cl_device_type device_type,
     cl_uint num_entries,
     cl_device_id* devices,
     cl_uint* num_devices)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetDeviceIDs");
     return g_pNextDispatch->clGetDeviceIDs(
         platform,
         device_type,
@@ -62,14 +62,14 @@ static cl_int CL_API_CALL clGetDeviceIDs(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetDeviceInfo(
+static cl_int CL_API_CALL clGetDeviceInfo_layer(
     cl_device_id device,
     cl_device_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetDeviceInfo");
     return g_pNextDispatch->clGetDeviceInfo(
         device,
         param_name,
@@ -80,7 +80,7 @@ static cl_int CL_API_CALL clGetDeviceInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_context CL_API_CALL clCreateContext(
+static cl_context CL_API_CALL clCreateContext_layer(
     const cl_context_properties* properties,
     cl_uint num_devices,
     const cl_device_id* devices,
@@ -88,7 +88,7 @@ static cl_context CL_API_CALL clCreateContext(
     void* user_data,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateContext");
     return g_pNextDispatch->clCreateContext(
         properties,
         num_devices,
@@ -100,14 +100,14 @@ static cl_context CL_API_CALL clCreateContext(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_context CL_API_CALL clCreateContextFromType(
+static cl_context CL_API_CALL clCreateContextFromType_layer(
     const cl_context_properties* properties,
     cl_device_type device_type,
     void (CL_CALLBACK* pfn_notify)(const char* errinfo, const void* private_info, size_t cb, void* user_data),
     void* user_data,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateContextFromType");
     return g_pNextDispatch->clCreateContextFromType(
         properties,
         device_type,
@@ -118,34 +118,34 @@ static cl_context CL_API_CALL clCreateContextFromType(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainContext(
+static cl_int CL_API_CALL clRetainContext_layer(
     cl_context context)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainContext");
     return g_pNextDispatch->clRetainContext(
         context);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseContext(
+static cl_int CL_API_CALL clReleaseContext_layer(
     cl_context context)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseContext");
     return g_pNextDispatch->clReleaseContext(
         context);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetContextInfo(
+static cl_int CL_API_CALL clGetContextInfo_layer(
     cl_context context,
     cl_context_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetContextInfo");
     return g_pNextDispatch->clGetContextInfo(
         context,
         param_name,
@@ -156,34 +156,34 @@ static cl_int CL_API_CALL clGetContextInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainCommandQueue(
+static cl_int CL_API_CALL clRetainCommandQueue_layer(
     cl_command_queue command_queue)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainCommandQueue");
     return g_pNextDispatch->clRetainCommandQueue(
         command_queue);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseCommandQueue(
+static cl_int CL_API_CALL clReleaseCommandQueue_layer(
     cl_command_queue command_queue)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseCommandQueue");
     return g_pNextDispatch->clReleaseCommandQueue(
         command_queue);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetCommandQueueInfo(
+static cl_int CL_API_CALL clGetCommandQueueInfo_layer(
     cl_command_queue command_queue,
     cl_command_queue_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetCommandQueueInfo");
     return g_pNextDispatch->clGetCommandQueueInfo(
         command_queue,
         param_name,
@@ -194,14 +194,14 @@ static cl_int CL_API_CALL clGetCommandQueueInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreateBuffer(
+static cl_mem CL_API_CALL clCreateBuffer_layer(
     cl_context context,
     cl_mem_flags flags,
     size_t size,
     void* host_ptr,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateBuffer");
     return g_pNextDispatch->clCreateBuffer(
         context,
         flags,
@@ -212,27 +212,27 @@ static cl_mem CL_API_CALL clCreateBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainMemObject(
+static cl_int CL_API_CALL clRetainMemObject_layer(
     cl_mem memobj)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainMemObject");
     return g_pNextDispatch->clRetainMemObject(
         memobj);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseMemObject(
+static cl_int CL_API_CALL clReleaseMemObject_layer(
     cl_mem memobj)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseMemObject");
     return g_pNextDispatch->clReleaseMemObject(
         memobj);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetSupportedImageFormats(
+static cl_int CL_API_CALL clGetSupportedImageFormats_layer(
     cl_context context,
     cl_mem_flags flags,
     cl_mem_object_type image_type,
@@ -240,7 +240,7 @@ static cl_int CL_API_CALL clGetSupportedImageFormats(
     cl_image_format* image_formats,
     cl_uint* num_image_formats)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetSupportedImageFormats");
     return g_pNextDispatch->clGetSupportedImageFormats(
         context,
         flags,
@@ -252,14 +252,14 @@ static cl_int CL_API_CALL clGetSupportedImageFormats(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetMemObjectInfo(
+static cl_int CL_API_CALL clGetMemObjectInfo_layer(
     cl_mem memobj,
     cl_mem_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetMemObjectInfo");
     return g_pNextDispatch->clGetMemObjectInfo(
         memobj,
         param_name,
@@ -270,14 +270,14 @@ static cl_int CL_API_CALL clGetMemObjectInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetImageInfo(
+static cl_int CL_API_CALL clGetImageInfo_layer(
     cl_mem image,
     cl_image_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetImageInfo");
     return g_pNextDispatch->clGetImageInfo(
         image,
         param_name,
@@ -288,34 +288,34 @@ static cl_int CL_API_CALL clGetImageInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainSampler(
+static cl_int CL_API_CALL clRetainSampler_layer(
     cl_sampler sampler)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainSampler");
     return g_pNextDispatch->clRetainSampler(
         sampler);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseSampler(
+static cl_int CL_API_CALL clReleaseSampler_layer(
     cl_sampler sampler)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseSampler");
     return g_pNextDispatch->clReleaseSampler(
         sampler);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetSamplerInfo(
+static cl_int CL_API_CALL clGetSamplerInfo_layer(
     cl_sampler sampler,
     cl_sampler_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetSamplerInfo");
     return g_pNextDispatch->clGetSamplerInfo(
         sampler,
         param_name,
@@ -326,14 +326,14 @@ static cl_int CL_API_CALL clGetSamplerInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_program CL_API_CALL clCreateProgramWithSource(
+static cl_program CL_API_CALL clCreateProgramWithSource_layer(
     cl_context context,
     cl_uint count,
     const char** strings,
     const size_t* lengths,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateProgramWithSource");
     return g_pNextDispatch->clCreateProgramWithSource(
         context,
         count,
@@ -344,7 +344,7 @@ static cl_program CL_API_CALL clCreateProgramWithSource(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_program CL_API_CALL clCreateProgramWithBinary(
+static cl_program CL_API_CALL clCreateProgramWithBinary_layer(
     cl_context context,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -353,7 +353,7 @@ static cl_program CL_API_CALL clCreateProgramWithBinary(
     cl_int* binary_status,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateProgramWithBinary");
     return g_pNextDispatch->clCreateProgramWithBinary(
         context,
         num_devices,
@@ -366,27 +366,27 @@ static cl_program CL_API_CALL clCreateProgramWithBinary(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainProgram(
+static cl_int CL_API_CALL clRetainProgram_layer(
     cl_program program)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainProgram");
     return g_pNextDispatch->clRetainProgram(
         program);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseProgram(
+static cl_int CL_API_CALL clReleaseProgram_layer(
     cl_program program)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseProgram");
     return g_pNextDispatch->clReleaseProgram(
         program);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clBuildProgram(
+static cl_int CL_API_CALL clBuildProgram_layer(
     cl_program program,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -394,7 +394,7 @@ static cl_int CL_API_CALL clBuildProgram(
     void (CL_CALLBACK* pfn_notify)(cl_program program, void* user_data),
     void* user_data)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clBuildProgram");
     return g_pNextDispatch->clBuildProgram(
         program,
         num_devices,
@@ -406,14 +406,14 @@ static cl_int CL_API_CALL clBuildProgram(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetProgramInfo(
+static cl_int CL_API_CALL clGetProgramInfo_layer(
     cl_program program,
     cl_program_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetProgramInfo");
     return g_pNextDispatch->clGetProgramInfo(
         program,
         param_name,
@@ -424,7 +424,7 @@ static cl_int CL_API_CALL clGetProgramInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetProgramBuildInfo(
+static cl_int CL_API_CALL clGetProgramBuildInfo_layer(
     cl_program program,
     cl_device_id device,
     cl_program_build_info param_name,
@@ -432,7 +432,7 @@ static cl_int CL_API_CALL clGetProgramBuildInfo(
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetProgramBuildInfo");
     return g_pNextDispatch->clGetProgramBuildInfo(
         program,
         device,
@@ -444,12 +444,12 @@ static cl_int CL_API_CALL clGetProgramBuildInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_kernel CL_API_CALL clCreateKernel(
+static cl_kernel CL_API_CALL clCreateKernel_layer(
     cl_program program,
     const char* kernel_name,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateKernel");
     return g_pNextDispatch->clCreateKernel(
         program,
         kernel_name,
@@ -458,13 +458,13 @@ static cl_kernel CL_API_CALL clCreateKernel(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clCreateKernelsInProgram(
+static cl_int CL_API_CALL clCreateKernelsInProgram_layer(
     cl_program program,
     cl_uint num_kernels,
     cl_kernel* kernels,
     cl_uint* num_kernels_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateKernelsInProgram");
     return g_pNextDispatch->clCreateKernelsInProgram(
         program,
         num_kernels,
@@ -474,33 +474,33 @@ static cl_int CL_API_CALL clCreateKernelsInProgram(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainKernel(
+static cl_int CL_API_CALL clRetainKernel_layer(
     cl_kernel kernel)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainKernel");
     return g_pNextDispatch->clRetainKernel(
         kernel);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseKernel(
+static cl_int CL_API_CALL clReleaseKernel_layer(
     cl_kernel kernel)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseKernel");
     return g_pNextDispatch->clReleaseKernel(
         kernel);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetKernelArg(
+static cl_int CL_API_CALL clSetKernelArg_layer(
     cl_kernel kernel,
     cl_uint arg_index,
     size_t arg_size,
     const void* arg_value)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetKernelArg");
     return g_pNextDispatch->clSetKernelArg(
         kernel,
         arg_index,
@@ -510,14 +510,14 @@ static cl_int CL_API_CALL clSetKernelArg(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetKernelInfo(
+static cl_int CL_API_CALL clGetKernelInfo_layer(
     cl_kernel kernel,
     cl_kernel_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetKernelInfo");
     return g_pNextDispatch->clGetKernelInfo(
         kernel,
         param_name,
@@ -528,7 +528,7 @@ static cl_int CL_API_CALL clGetKernelInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetKernelWorkGroupInfo(
+static cl_int CL_API_CALL clGetKernelWorkGroupInfo_layer(
     cl_kernel kernel,
     cl_device_id device,
     cl_kernel_work_group_info param_name,
@@ -536,7 +536,7 @@ static cl_int CL_API_CALL clGetKernelWorkGroupInfo(
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetKernelWorkGroupInfo");
     return g_pNextDispatch->clGetKernelWorkGroupInfo(
         kernel,
         device,
@@ -548,11 +548,11 @@ static cl_int CL_API_CALL clGetKernelWorkGroupInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clWaitForEvents(
+static cl_int CL_API_CALL clWaitForEvents_layer(
     cl_uint num_events,
     const cl_event* event_list)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clWaitForEvents");
     return g_pNextDispatch->clWaitForEvents(
         num_events,
         event_list);
@@ -560,14 +560,14 @@ static cl_int CL_API_CALL clWaitForEvents(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetEventInfo(
+static cl_int CL_API_CALL clGetEventInfo_layer(
     cl_event event,
     cl_event_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetEventInfo");
     return g_pNextDispatch->clGetEventInfo(
         event,
         param_name,
@@ -578,34 +578,34 @@ static cl_int CL_API_CALL clGetEventInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainEvent(
+static cl_int CL_API_CALL clRetainEvent_layer(
     cl_event event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainEvent");
     return g_pNextDispatch->clRetainEvent(
         event);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseEvent(
+static cl_int CL_API_CALL clReleaseEvent_layer(
     cl_event event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseEvent");
     return g_pNextDispatch->clReleaseEvent(
         event);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetEventProfilingInfo(
+static cl_int CL_API_CALL clGetEventProfilingInfo_layer(
     cl_event event,
     cl_profiling_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetEventProfilingInfo");
     return g_pNextDispatch->clGetEventProfilingInfo(
         event,
         param_name,
@@ -616,27 +616,27 @@ static cl_int CL_API_CALL clGetEventProfilingInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clFlush(
+static cl_int CL_API_CALL clFlush_layer(
     cl_command_queue command_queue)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clFlush");
     return g_pNextDispatch->clFlush(
         command_queue);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clFinish(
+static cl_int CL_API_CALL clFinish_layer(
     cl_command_queue command_queue)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clFinish");
     return g_pNextDispatch->clFinish(
         command_queue);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueReadBuffer(
+static cl_int CL_API_CALL clEnqueueReadBuffer_layer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_read,
@@ -647,7 +647,7 @@ static cl_int CL_API_CALL clEnqueueReadBuffer(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueReadBuffer");
     return g_pNextDispatch->clEnqueueReadBuffer(
         command_queue,
         buffer,
@@ -662,7 +662,7 @@ static cl_int CL_API_CALL clEnqueueReadBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueWriteBuffer(
+static cl_int CL_API_CALL clEnqueueWriteBuffer_layer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_write,
@@ -673,7 +673,7 @@ static cl_int CL_API_CALL clEnqueueWriteBuffer(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueWriteBuffer");
     return g_pNextDispatch->clEnqueueWriteBuffer(
         command_queue,
         buffer,
@@ -688,7 +688,7 @@ static cl_int CL_API_CALL clEnqueueWriteBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueCopyBuffer(
+static cl_int CL_API_CALL clEnqueueCopyBuffer_layer(
     cl_command_queue command_queue,
     cl_mem src_buffer,
     cl_mem dst_buffer,
@@ -699,7 +699,7 @@ static cl_int CL_API_CALL clEnqueueCopyBuffer(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueCopyBuffer");
     return g_pNextDispatch->clEnqueueCopyBuffer(
         command_queue,
         src_buffer,
@@ -714,7 +714,7 @@ static cl_int CL_API_CALL clEnqueueCopyBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueReadImage(
+static cl_int CL_API_CALL clEnqueueReadImage_layer(
     cl_command_queue command_queue,
     cl_mem image,
     cl_bool blocking_read,
@@ -727,7 +727,7 @@ static cl_int CL_API_CALL clEnqueueReadImage(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueReadImage");
     return g_pNextDispatch->clEnqueueReadImage(
         command_queue,
         image,
@@ -744,7 +744,7 @@ static cl_int CL_API_CALL clEnqueueReadImage(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueWriteImage(
+static cl_int CL_API_CALL clEnqueueWriteImage_layer(
     cl_command_queue command_queue,
     cl_mem image,
     cl_bool blocking_write,
@@ -757,7 +757,7 @@ static cl_int CL_API_CALL clEnqueueWriteImage(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueWriteImage");
     return g_pNextDispatch->clEnqueueWriteImage(
         command_queue,
         image,
@@ -774,7 +774,7 @@ static cl_int CL_API_CALL clEnqueueWriteImage(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueCopyImage(
+static cl_int CL_API_CALL clEnqueueCopyImage_layer(
     cl_command_queue command_queue,
     cl_mem src_image,
     cl_mem dst_image,
@@ -785,7 +785,7 @@ static cl_int CL_API_CALL clEnqueueCopyImage(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueCopyImage");
     return g_pNextDispatch->clEnqueueCopyImage(
         command_queue,
         src_image,
@@ -800,7 +800,7 @@ static cl_int CL_API_CALL clEnqueueCopyImage(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueCopyImageToBuffer(
+static cl_int CL_API_CALL clEnqueueCopyImageToBuffer_layer(
     cl_command_queue command_queue,
     cl_mem src_image,
     cl_mem dst_buffer,
@@ -811,7 +811,7 @@ static cl_int CL_API_CALL clEnqueueCopyImageToBuffer(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueCopyImageToBuffer");
     return g_pNextDispatch->clEnqueueCopyImageToBuffer(
         command_queue,
         src_image,
@@ -826,7 +826,7 @@ static cl_int CL_API_CALL clEnqueueCopyImageToBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueCopyBufferToImage(
+static cl_int CL_API_CALL clEnqueueCopyBufferToImage_layer(
     cl_command_queue command_queue,
     cl_mem src_buffer,
     cl_mem dst_image,
@@ -837,7 +837,7 @@ static cl_int CL_API_CALL clEnqueueCopyBufferToImage(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueCopyBufferToImage");
     return g_pNextDispatch->clEnqueueCopyBufferToImage(
         command_queue,
         src_buffer,
@@ -852,7 +852,7 @@ static cl_int CL_API_CALL clEnqueueCopyBufferToImage(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void* CL_API_CALL clEnqueueMapBuffer(
+static void* CL_API_CALL clEnqueueMapBuffer_layer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_map,
@@ -864,7 +864,7 @@ static void* CL_API_CALL clEnqueueMapBuffer(
     cl_event* event,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueMapBuffer");
     return g_pNextDispatch->clEnqueueMapBuffer(
         command_queue,
         buffer,
@@ -880,7 +880,7 @@ static void* CL_API_CALL clEnqueueMapBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void* CL_API_CALL clEnqueueMapImage(
+static void* CL_API_CALL clEnqueueMapImage_layer(
     cl_command_queue command_queue,
     cl_mem image,
     cl_bool blocking_map,
@@ -894,7 +894,7 @@ static void* CL_API_CALL clEnqueueMapImage(
     cl_event* event,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueMapImage");
     return g_pNextDispatch->clEnqueueMapImage(
         command_queue,
         image,
@@ -912,7 +912,7 @@ static void* CL_API_CALL clEnqueueMapImage(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueUnmapMemObject(
+static cl_int CL_API_CALL clEnqueueUnmapMemObject_layer(
     cl_command_queue command_queue,
     cl_mem memobj,
     void* mapped_ptr,
@@ -920,7 +920,7 @@ static cl_int CL_API_CALL clEnqueueUnmapMemObject(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueUnmapMemObject");
     return g_pNextDispatch->clEnqueueUnmapMemObject(
         command_queue,
         memobj,
@@ -932,7 +932,7 @@ static cl_int CL_API_CALL clEnqueueUnmapMemObject(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueNDRangeKernel(
+static cl_int CL_API_CALL clEnqueueNDRangeKernel_layer(
     cl_command_queue command_queue,
     cl_kernel kernel,
     cl_uint work_dim,
@@ -943,7 +943,7 @@ static cl_int CL_API_CALL clEnqueueNDRangeKernel(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueNDRangeKernel");
     return g_pNextDispatch->clEnqueueNDRangeKernel(
         command_queue,
         kernel,
@@ -958,7 +958,7 @@ static cl_int CL_API_CALL clEnqueueNDRangeKernel(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueNativeKernel(
+static cl_int CL_API_CALL clEnqueueNativeKernel_layer(
     cl_command_queue command_queue,
     void (CL_CALLBACK* user_func)(void*),
     void* args,
@@ -970,7 +970,7 @@ static cl_int CL_API_CALL clEnqueueNativeKernel(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueNativeKernel");
     return g_pNextDispatch->clEnqueueNativeKernel(
         command_queue,
         user_func,
@@ -986,13 +986,13 @@ static cl_int CL_API_CALL clEnqueueNativeKernel(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetCommandQueueProperty(
+static cl_int CL_API_CALL clSetCommandQueueProperty_layer(
     cl_command_queue command_queue,
     cl_command_queue_properties properties,
     cl_bool enable,
     cl_command_queue_properties* old_properties)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetCommandQueueProperty");
     return g_pNextDispatch->clSetCommandQueueProperty(
         command_queue,
         properties,
@@ -1002,7 +1002,7 @@ static cl_int CL_API_CALL clSetCommandQueueProperty(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreateImage2D(
+static cl_mem CL_API_CALL clCreateImage2D_layer(
     cl_context context,
     cl_mem_flags flags,
     const cl_image_format* image_format,
@@ -1012,7 +1012,7 @@ static cl_mem CL_API_CALL clCreateImage2D(
     void* host_ptr,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateImage2D");
     return g_pNextDispatch->clCreateImage2D(
         context,
         flags,
@@ -1026,7 +1026,7 @@ static cl_mem CL_API_CALL clCreateImage2D(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreateImage3D(
+static cl_mem CL_API_CALL clCreateImage3D_layer(
     cl_context context,
     cl_mem_flags flags,
     const cl_image_format* image_format,
@@ -1038,7 +1038,7 @@ static cl_mem CL_API_CALL clCreateImage3D(
     void* host_ptr,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateImage3D");
     return g_pNextDispatch->clCreateImage3D(
         context,
         flags,
@@ -1054,11 +1054,11 @@ static cl_mem CL_API_CALL clCreateImage3D(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueMarker(
+static cl_int CL_API_CALL clEnqueueMarker_layer(
     cl_command_queue command_queue,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueMarker");
     return g_pNextDispatch->clEnqueueMarker(
         command_queue,
         event);
@@ -1066,12 +1066,12 @@ static cl_int CL_API_CALL clEnqueueMarker(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueWaitForEvents(
+static cl_int CL_API_CALL clEnqueueWaitForEvents_layer(
     cl_command_queue command_queue,
     cl_uint num_events,
     const cl_event* event_list)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueWaitForEvents");
     return g_pNextDispatch->clEnqueueWaitForEvents(
         command_queue,
         num_events,
@@ -1080,42 +1080,42 @@ static cl_int CL_API_CALL clEnqueueWaitForEvents(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueBarrier(
+static cl_int CL_API_CALL clEnqueueBarrier_layer(
     cl_command_queue command_queue)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueBarrier");
     return g_pNextDispatch->clEnqueueBarrier(
         command_queue);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clUnloadCompiler(
+static cl_int CL_API_CALL clUnloadCompiler_layer(
     void)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clUnloadCompiler");
     return g_pNextDispatch->clUnloadCompiler();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void* CL_API_CALL clGetExtensionFunctionAddress(
+static void* CL_API_CALL clGetExtensionFunctionAddress_layer(
     const char* func_name)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetExtensionFunctionAddress");
     return g_pNextDispatch->clGetExtensionFunctionAddress(
         func_name);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_command_queue CL_API_CALL clCreateCommandQueue(
+static cl_command_queue CL_API_CALL clCreateCommandQueue_layer(
     cl_context context,
     cl_device_id device,
     cl_command_queue_properties properties,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateCommandQueue");
     return g_pNextDispatch->clCreateCommandQueue(
         context,
         device,
@@ -1125,14 +1125,14 @@ static cl_command_queue CL_API_CALL clCreateCommandQueue(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_sampler CL_API_CALL clCreateSampler(
+static cl_sampler CL_API_CALL clCreateSampler_layer(
     cl_context context,
     cl_bool normalized_coords,
     cl_addressing_mode addressing_mode,
     cl_filter_mode filter_mode,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateSampler");
     return g_pNextDispatch->clCreateSampler(
         context,
         normalized_coords,
@@ -1143,14 +1143,14 @@ static cl_sampler CL_API_CALL clCreateSampler(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueTask(
+static cl_int CL_API_CALL clEnqueueTask_layer(
     cl_command_queue command_queue,
     cl_kernel kernel,
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueTask");
     return g_pNextDispatch->clEnqueueTask(
         command_queue,
         kernel,
@@ -1161,14 +1161,14 @@ static cl_int CL_API_CALL clEnqueueTask(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreateSubBuffer(
+static cl_mem CL_API_CALL clCreateSubBuffer_layer(
     cl_mem buffer,
     cl_mem_flags flags,
     cl_buffer_create_type buffer_create_type,
     const void* buffer_create_info,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateSubBuffer");
     return g_pNextDispatch->clCreateSubBuffer(
         buffer,
         flags,
@@ -1179,12 +1179,12 @@ static cl_mem CL_API_CALL clCreateSubBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetMemObjectDestructorCallback(
+static cl_int CL_API_CALL clSetMemObjectDestructorCallback_layer(
     cl_mem memobj,
     void (CL_CALLBACK* pfn_notify)(cl_mem memobj, void* user_data),
     void* user_data)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetMemObjectDestructorCallback");
     return g_pNextDispatch->clSetMemObjectDestructorCallback(
         memobj,
         pfn_notify,
@@ -1193,11 +1193,11 @@ static cl_int CL_API_CALL clSetMemObjectDestructorCallback(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_event CL_API_CALL clCreateUserEvent(
+static cl_event CL_API_CALL clCreateUserEvent_layer(
     cl_context context,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateUserEvent");
     return g_pNextDispatch->clCreateUserEvent(
         context,
         errcode_ret);
@@ -1205,11 +1205,11 @@ static cl_event CL_API_CALL clCreateUserEvent(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetUserEventStatus(
+static cl_int CL_API_CALL clSetUserEventStatus_layer(
     cl_event event,
     cl_int execution_status)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetUserEventStatus");
     return g_pNextDispatch->clSetUserEventStatus(
         event,
         execution_status);
@@ -1217,13 +1217,13 @@ static cl_int CL_API_CALL clSetUserEventStatus(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetEventCallback(
+static cl_int CL_API_CALL clSetEventCallback_layer(
     cl_event event,
     cl_int command_exec_callback_type,
     void (CL_CALLBACK* pfn_notify)(cl_event event, cl_int event_command_status, void *user_data),
     void* user_data)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetEventCallback");
     return g_pNextDispatch->clSetEventCallback(
         event,
         command_exec_callback_type,
@@ -1233,7 +1233,7 @@ static cl_int CL_API_CALL clSetEventCallback(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueReadBufferRect(
+static cl_int CL_API_CALL clEnqueueReadBufferRect_layer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_read,
@@ -1249,7 +1249,7 @@ static cl_int CL_API_CALL clEnqueueReadBufferRect(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueReadBufferRect");
     return g_pNextDispatch->clEnqueueReadBufferRect(
         command_queue,
         buffer,
@@ -1269,7 +1269,7 @@ static cl_int CL_API_CALL clEnqueueReadBufferRect(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueWriteBufferRect(
+static cl_int CL_API_CALL clEnqueueWriteBufferRect_layer(
     cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_write,
@@ -1285,7 +1285,7 @@ static cl_int CL_API_CALL clEnqueueWriteBufferRect(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueWriteBufferRect");
     return g_pNextDispatch->clEnqueueWriteBufferRect(
         command_queue,
         buffer,
@@ -1305,7 +1305,7 @@ static cl_int CL_API_CALL clEnqueueWriteBufferRect(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueCopyBufferRect(
+static cl_int CL_API_CALL clEnqueueCopyBufferRect_layer(
     cl_command_queue command_queue,
     cl_mem src_buffer,
     cl_mem dst_buffer,
@@ -1320,7 +1320,7 @@ static cl_int CL_API_CALL clEnqueueCopyBufferRect(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueCopyBufferRect");
     return g_pNextDispatch->clEnqueueCopyBufferRect(
         command_queue,
         src_buffer,
@@ -1339,14 +1339,14 @@ static cl_int CL_API_CALL clEnqueueCopyBufferRect(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clCreateSubDevices(
+static cl_int CL_API_CALL clCreateSubDevices_layer(
     cl_device_id in_device,
     const cl_device_partition_property* properties,
     cl_uint num_devices,
     cl_device_id* out_devices,
     cl_uint* num_devices_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateSubDevices");
     return g_pNextDispatch->clCreateSubDevices(
         in_device,
         properties,
@@ -1357,27 +1357,27 @@ static cl_int CL_API_CALL clCreateSubDevices(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clRetainDevice(
+static cl_int CL_API_CALL clRetainDevice_layer(
     cl_device_id device)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clRetainDevice");
     return g_pNextDispatch->clRetainDevice(
         device);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clReleaseDevice(
+static cl_int CL_API_CALL clReleaseDevice_layer(
     cl_device_id device)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clReleaseDevice");
     return g_pNextDispatch->clReleaseDevice(
         device);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreateImage(
+static cl_mem CL_API_CALL clCreateImage_layer(
     cl_context context,
     cl_mem_flags flags,
     const cl_image_format* image_format,
@@ -1385,7 +1385,7 @@ static cl_mem CL_API_CALL clCreateImage(
     void* host_ptr,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateImage");
     return g_pNextDispatch->clCreateImage(
         context,
         flags,
@@ -1397,14 +1397,14 @@ static cl_mem CL_API_CALL clCreateImage(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_program CL_API_CALL clCreateProgramWithBuiltInKernels(
+static cl_program CL_API_CALL clCreateProgramWithBuiltInKernels_layer(
     cl_context context,
     cl_uint num_devices,
     const cl_device_id* device_list,
     const char* kernel_names,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateProgramWithBuiltInKernels");
     return g_pNextDispatch->clCreateProgramWithBuiltInKernels(
         context,
         num_devices,
@@ -1415,7 +1415,7 @@ static cl_program CL_API_CALL clCreateProgramWithBuiltInKernels(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clCompileProgram(
+static cl_int CL_API_CALL clCompileProgram_layer(
     cl_program program,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -1426,7 +1426,7 @@ static cl_int CL_API_CALL clCompileProgram(
     void (CL_CALLBACK* pfn_notify)(cl_program program, void* user_data),
     void* user_data)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCompileProgram");
     return g_pNextDispatch->clCompileProgram(
         program,
         num_devices,
@@ -1441,7 +1441,7 @@ static cl_int CL_API_CALL clCompileProgram(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_program CL_API_CALL clLinkProgram(
+static cl_program CL_API_CALL clLinkProgram_layer(
     cl_context context,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -1452,7 +1452,7 @@ static cl_program CL_API_CALL clLinkProgram(
     void* user_data,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clLinkProgram");
     return g_pNextDispatch->clLinkProgram(
         context,
         num_devices,
@@ -1467,17 +1467,17 @@ static cl_program CL_API_CALL clLinkProgram(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clUnloadPlatformCompiler(
+static cl_int CL_API_CALL clUnloadPlatformCompiler_layer(
     cl_platform_id platform)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clUnloadPlatformCompiler");
     return g_pNextDispatch->clUnloadPlatformCompiler(
         platform);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetKernelArgInfo(
+static cl_int CL_API_CALL clGetKernelArgInfo_layer(
     cl_kernel kernel,
     cl_uint arg_index,
     cl_kernel_arg_info param_name,
@@ -1485,7 +1485,7 @@ static cl_int CL_API_CALL clGetKernelArgInfo(
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetKernelArgInfo");
     return g_pNextDispatch->clGetKernelArgInfo(
         kernel,
         arg_index,
@@ -1497,7 +1497,7 @@ static cl_int CL_API_CALL clGetKernelArgInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueFillBuffer(
+static cl_int CL_API_CALL clEnqueueFillBuffer_layer(
     cl_command_queue command_queue,
     cl_mem buffer,
     const void* pattern,
@@ -1508,7 +1508,7 @@ static cl_int CL_API_CALL clEnqueueFillBuffer(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueFillBuffer");
     return g_pNextDispatch->clEnqueueFillBuffer(
         command_queue,
         buffer,
@@ -1523,7 +1523,7 @@ static cl_int CL_API_CALL clEnqueueFillBuffer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueFillImage(
+static cl_int CL_API_CALL clEnqueueFillImage_layer(
     cl_command_queue command_queue,
     cl_mem image,
     const void* fill_color,
@@ -1533,7 +1533,7 @@ static cl_int CL_API_CALL clEnqueueFillImage(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueFillImage");
     return g_pNextDispatch->clEnqueueFillImage(
         command_queue,
         image,
@@ -1547,7 +1547,7 @@ static cl_int CL_API_CALL clEnqueueFillImage(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueMigrateMemObjects(
+static cl_int CL_API_CALL clEnqueueMigrateMemObjects_layer(
     cl_command_queue command_queue,
     cl_uint num_mem_objects,
     const cl_mem* mem_objects,
@@ -1556,7 +1556,7 @@ static cl_int CL_API_CALL clEnqueueMigrateMemObjects(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueMigrateMemObjects");
     return g_pNextDispatch->clEnqueueMigrateMemObjects(
         command_queue,
         num_mem_objects,
@@ -1569,13 +1569,13 @@ static cl_int CL_API_CALL clEnqueueMigrateMemObjects(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueMarkerWithWaitList(
+static cl_int CL_API_CALL clEnqueueMarkerWithWaitList_layer(
     cl_command_queue command_queue,
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueMarkerWithWaitList");
     return g_pNextDispatch->clEnqueueMarkerWithWaitList(
         command_queue,
         num_events_in_wait_list,
@@ -1585,13 +1585,13 @@ static cl_int CL_API_CALL clEnqueueMarkerWithWaitList(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueBarrierWithWaitList(
+static cl_int CL_API_CALL clEnqueueBarrierWithWaitList_layer(
     cl_command_queue command_queue,
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueBarrierWithWaitList");
     return g_pNextDispatch->clEnqueueBarrierWithWaitList(
         command_queue,
         num_events_in_wait_list,
@@ -1601,11 +1601,11 @@ static cl_int CL_API_CALL clEnqueueBarrierWithWaitList(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void* CL_API_CALL clGetExtensionFunctionAddressForPlatform(
+static void* CL_API_CALL clGetExtensionFunctionAddressForPlatform_layer(
     cl_platform_id platform,
     const char* func_name)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetExtensionFunctionAddressForPlatform");
     return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
         platform,
         func_name);
@@ -1613,13 +1613,13 @@ static void* CL_API_CALL clGetExtensionFunctionAddressForPlatform(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_command_queue CL_API_CALL clCreateCommandQueueWithProperties(
+static cl_command_queue CL_API_CALL clCreateCommandQueueWithProperties_layer(
     cl_context context,
     cl_device_id device,
     const cl_queue_properties* properties,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateCommandQueueWithProperties");
     return g_pNextDispatch->clCreateCommandQueueWithProperties(
         context,
         device,
@@ -1629,7 +1629,7 @@ static cl_command_queue CL_API_CALL clCreateCommandQueueWithProperties(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreatePipe(
+static cl_mem CL_API_CALL clCreatePipe_layer(
     cl_context context,
     cl_mem_flags flags,
     cl_uint pipe_packet_size,
@@ -1637,7 +1637,7 @@ static cl_mem CL_API_CALL clCreatePipe(
     const cl_pipe_properties* properties,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreatePipe");
     return g_pNextDispatch->clCreatePipe(
         context,
         flags,
@@ -1649,14 +1649,14 @@ static cl_mem CL_API_CALL clCreatePipe(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetPipeInfo(
+static cl_int CL_API_CALL clGetPipeInfo_layer(
     cl_mem pipe,
     cl_pipe_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetPipeInfo");
     return g_pNextDispatch->clGetPipeInfo(
         pipe,
         param_name,
@@ -1667,13 +1667,13 @@ static cl_int CL_API_CALL clGetPipeInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void* CL_API_CALL clSVMAlloc(
+static void* CL_API_CALL clSVMAlloc_layer(
     cl_context context,
     cl_svm_mem_flags flags,
     size_t size,
     cl_uint alignment)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSVMAlloc");
     return g_pNextDispatch->clSVMAlloc(
         context,
         flags,
@@ -1683,11 +1683,11 @@ static void* CL_API_CALL clSVMAlloc(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void CL_API_CALL clSVMFree(
+static void CL_API_CALL clSVMFree_layer(
     cl_context context,
     void* svm_pointer)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSVMFree");
     return g_pNextDispatch->clSVMFree(
         context,
         svm_pointer);
@@ -1695,12 +1695,12 @@ static void CL_API_CALL clSVMFree(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_sampler CL_API_CALL clCreateSamplerWithProperties(
+static cl_sampler CL_API_CALL clCreateSamplerWithProperties_layer(
     cl_context context,
     const cl_sampler_properties* sampler_properties,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateSamplerWithProperties");
     return g_pNextDispatch->clCreateSamplerWithProperties(
         context,
         sampler_properties,
@@ -1709,12 +1709,12 @@ static cl_sampler CL_API_CALL clCreateSamplerWithProperties(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetKernelArgSVMPointer(
+static cl_int CL_API_CALL clSetKernelArgSVMPointer_layer(
     cl_kernel kernel,
     cl_uint arg_index,
     const void* arg_value)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetKernelArgSVMPointer");
     return g_pNextDispatch->clSetKernelArgSVMPointer(
         kernel,
         arg_index,
@@ -1723,13 +1723,13 @@ static cl_int CL_API_CALL clSetKernelArgSVMPointer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetKernelExecInfo(
+static cl_int CL_API_CALL clSetKernelExecInfo_layer(
     cl_kernel kernel,
     cl_kernel_exec_info param_name,
     size_t param_value_size,
     const void* param_value)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetKernelExecInfo");
     return g_pNextDispatch->clSetKernelExecInfo(
         kernel,
         param_name,
@@ -1739,7 +1739,7 @@ static cl_int CL_API_CALL clSetKernelExecInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueSVMFree(
+static cl_int CL_API_CALL clEnqueueSVMFree_layer(
     cl_command_queue command_queue,
     cl_uint num_svm_pointers,
     void* svm_pointers[],
@@ -1749,7 +1749,7 @@ static cl_int CL_API_CALL clEnqueueSVMFree(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueSVMFree");
     return g_pNextDispatch->clEnqueueSVMFree(
         command_queue,
         num_svm_pointers,
@@ -1763,7 +1763,7 @@ static cl_int CL_API_CALL clEnqueueSVMFree(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueSVMMemcpy(
+static cl_int CL_API_CALL clEnqueueSVMMemcpy_layer(
     cl_command_queue command_queue,
     cl_bool blocking_copy,
     void* dst_ptr,
@@ -1773,7 +1773,7 @@ static cl_int CL_API_CALL clEnqueueSVMMemcpy(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueSVMMemcpy");
     return g_pNextDispatch->clEnqueueSVMMemcpy(
         command_queue,
         blocking_copy,
@@ -1787,7 +1787,7 @@ static cl_int CL_API_CALL clEnqueueSVMMemcpy(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueSVMMemFill(
+static cl_int CL_API_CALL clEnqueueSVMMemFill_layer(
     cl_command_queue command_queue,
     void* svm_ptr,
     const void* pattern,
@@ -1797,7 +1797,7 @@ static cl_int CL_API_CALL clEnqueueSVMMemFill(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueSVMMemFill");
     return g_pNextDispatch->clEnqueueSVMMemFill(
         command_queue,
         svm_ptr,
@@ -1811,7 +1811,7 @@ static cl_int CL_API_CALL clEnqueueSVMMemFill(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueSVMMap(
+static cl_int CL_API_CALL clEnqueueSVMMap_layer(
     cl_command_queue command_queue,
     cl_bool blocking_map,
     cl_map_flags flags,
@@ -1821,7 +1821,7 @@ static cl_int CL_API_CALL clEnqueueSVMMap(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueSVMMap");
     return g_pNextDispatch->clEnqueueSVMMap(
         command_queue,
         blocking_map,
@@ -1835,14 +1835,14 @@ static cl_int CL_API_CALL clEnqueueSVMMap(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueSVMUnmap(
+static cl_int CL_API_CALL clEnqueueSVMUnmap_layer(
     cl_command_queue command_queue,
     void* svm_ptr,
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueSVMUnmap");
     return g_pNextDispatch->clEnqueueSVMUnmap(
         command_queue,
         svm_ptr,
@@ -1853,12 +1853,12 @@ static cl_int CL_API_CALL clEnqueueSVMUnmap(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetDefaultDeviceCommandQueue(
+static cl_int CL_API_CALL clSetDefaultDeviceCommandQueue_layer(
     cl_context context,
     cl_device_id device,
     cl_command_queue command_queue)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetDefaultDeviceCommandQueue");
     return g_pNextDispatch->clSetDefaultDeviceCommandQueue(
         context,
         device,
@@ -1867,12 +1867,12 @@ static cl_int CL_API_CALL clSetDefaultDeviceCommandQueue(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetDeviceAndHostTimer(
+static cl_int CL_API_CALL clGetDeviceAndHostTimer_layer(
     cl_device_id device,
     cl_ulong* device_timestamp,
     cl_ulong* host_timestamp)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetDeviceAndHostTimer");
     return g_pNextDispatch->clGetDeviceAndHostTimer(
         device,
         device_timestamp,
@@ -1881,11 +1881,11 @@ static cl_int CL_API_CALL clGetDeviceAndHostTimer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetHostTimer(
+static cl_int CL_API_CALL clGetHostTimer_layer(
     cl_device_id device,
     cl_ulong* host_timestamp)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetHostTimer");
     return g_pNextDispatch->clGetHostTimer(
         device,
         host_timestamp);
@@ -1893,13 +1893,13 @@ static cl_int CL_API_CALL clGetHostTimer(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_program CL_API_CALL clCreateProgramWithIL(
+static cl_program CL_API_CALL clCreateProgramWithIL_layer(
     cl_context context,
     const void* il,
     size_t length,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateProgramWithIL");
     return g_pNextDispatch->clCreateProgramWithIL(
         context,
         il,
@@ -1909,11 +1909,11 @@ static cl_program CL_API_CALL clCreateProgramWithIL(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_kernel CL_API_CALL clCloneKernel(
+static cl_kernel CL_API_CALL clCloneKernel_layer(
     cl_kernel source_kernel,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCloneKernel");
     return g_pNextDispatch->clCloneKernel(
         source_kernel,
         errcode_ret);
@@ -1921,7 +1921,7 @@ static cl_kernel CL_API_CALL clCloneKernel(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clGetKernelSubGroupInfo(
+static cl_int CL_API_CALL clGetKernelSubGroupInfo_layer(
     cl_kernel kernel,
     cl_device_id device,
     cl_kernel_sub_group_info param_name,
@@ -1931,7 +1931,7 @@ static cl_int CL_API_CALL clGetKernelSubGroupInfo(
     void* param_value,
     size_t* param_value_size_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clGetKernelSubGroupInfo");
     return g_pNextDispatch->clGetKernelSubGroupInfo(
         kernel,
         device,
@@ -1945,7 +1945,7 @@ static cl_int CL_API_CALL clGetKernelSubGroupInfo(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clEnqueueSVMMigrateMem(
+static cl_int CL_API_CALL clEnqueueSVMMigrateMem_layer(
     cl_command_queue command_queue,
     cl_uint num_svm_pointers,
     const void** svm_pointers,
@@ -1955,7 +1955,7 @@ static cl_int CL_API_CALL clEnqueueSVMMigrateMem(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clEnqueueSVMMigrateMem");
     return g_pNextDispatch->clEnqueueSVMMigrateMem(
         command_queue,
         num_svm_pointers,
@@ -1969,13 +1969,13 @@ static cl_int CL_API_CALL clEnqueueSVMMigrateMem(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetProgramSpecializationConstant(
+static cl_int CL_API_CALL clSetProgramSpecializationConstant_layer(
     cl_program program,
     cl_uint spec_id,
     size_t spec_size,
     const void* spec_value)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetProgramSpecializationConstant");
     return g_pNextDispatch->clSetProgramSpecializationConstant(
         program,
         spec_id,
@@ -1985,12 +1985,12 @@ static cl_int CL_API_CALL clSetProgramSpecializationConstant(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetProgramReleaseCallback(
+static cl_int CL_API_CALL clSetProgramReleaseCallback_layer(
     cl_program program,
     void (CL_CALLBACK* pfn_notify)(cl_program program, void* user_data),
     void* user_data)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetProgramReleaseCallback");
     return g_pNextDispatch->clSetProgramReleaseCallback(
         program,
         pfn_notify,
@@ -1999,12 +1999,12 @@ static cl_int CL_API_CALL clSetProgramReleaseCallback(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_int CL_API_CALL clSetContextDestructorCallback(
+static cl_int CL_API_CALL clSetContextDestructorCallback_layer(
     cl_context context,
     void (CL_CALLBACK* pfn_notify)(cl_context context, void* user_data),
     void* user_data)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clSetContextDestructorCallback");
     return g_pNextDispatch->clSetContextDestructorCallback(
         context,
         pfn_notify,
@@ -2013,7 +2013,7 @@ static cl_int CL_API_CALL clSetContextDestructorCallback(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreateBufferWithProperties(
+static cl_mem CL_API_CALL clCreateBufferWithProperties_layer(
     cl_context context,
     const cl_mem_properties* properties,
     cl_mem_flags flags,
@@ -2021,7 +2021,7 @@ static cl_mem CL_API_CALL clCreateBufferWithProperties(
     void* host_ptr,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateBufferWithProperties");
     return g_pNextDispatch->clCreateBufferWithProperties(
         context,
         properties,
@@ -2033,7 +2033,7 @@ static cl_mem CL_API_CALL clCreateBufferWithProperties(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static cl_mem CL_API_CALL clCreateImageWithProperties(
+static cl_mem CL_API_CALL clCreateImageWithProperties_layer(
     cl_context context,
     const cl_mem_properties* properties,
     cl_mem_flags flags,
@@ -2042,7 +2042,7 @@ static cl_mem CL_API_CALL clCreateImageWithProperties(
     void* host_ptr,
     cl_int* errcode_ret)
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("clCreateImageWithProperties");
     return g_pNextDispatch->clCreateImageWithProperties(
         context,
         properties,

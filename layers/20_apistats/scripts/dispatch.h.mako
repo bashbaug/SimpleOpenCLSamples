@@ -16,7 +16,7 @@ extern const struct _cl_icd_dispatch* g_pNextDispatch;
 %>
 ///////////////////////////////////////////////////////////////////////////////
 
-static ${api.RetType} CL_API_CALL ${api.Name}(
+static ${api.RetType} CL_API_CALL ${api.Name}_layer(
 %if len(api.Params) == 0:
     void)
 %else:
@@ -29,7 +29,7 @@ static ${api.RetType} CL_API_CALL ${api.Name}(
 %  endfor
 %endif
 {
-    PROFILE_SCOPE(__func__);
+    PROFILE_SCOPE("${api.Name}");
 %if len(api.Params) == 0:
     return g_pNextDispatch->${api.Name}();
 %else:
