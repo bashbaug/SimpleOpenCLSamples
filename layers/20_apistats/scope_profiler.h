@@ -17,6 +17,130 @@
 #include <unordered_map>
 #include <vector>
 
+#include <chrono>
+class TimerChrono {
+public:
+    using clock = std::chrono::steady_clock;
+
+    TimerChrono() {}
+    inline uint64_t ticks() {
+        return std::chrono::time_point_cast<std::chrono::nanoseconds>(clock::now())
+            .time_since_epoch()
+            .count();
+    }
+
+    inline double ticks_to_usf(uint64_t tick_delta) {
+        return (double)tick_delta / 1000.0;
+    }
+    inline double ticks_to_nsf(uint64_t tick_delta) {
+        return (double)tick_delta;
+    }
+    inline uint64_t ticks_to_us(uint64_t tick_delta) {
+        return tick_delta / 1000;
+    }
+    inline uint64_t ticks_to_ns(uint64_t tick_delta) {
+        return tick_delta;
+    }
+};
+
+#if defined(_WIN32) || defined(_WIN64)
+
+#include "windows.h"
+#include <intrin.h>
+class TimerWindows {
+public:
+    TimerWindows() { 
+        LARGE_INTEGER freq;
+        QueryPerformanceFrequency(&freq);
+        m_Frequency = freq.QuadPart;
+    }
+
+    inline uint64_t ticks() {
+        LARGE_INTEGER qpcnt;
+        int rval = QueryPerformanceCounter(&qpcnt);
+        return qpcnt.QuadPart;
+    }
+
+    inline double ticks_to_usf(uint64_t tick_delta) {
+        return (double)tick_delta * 1000000 / m_frequency;
+    }
+    inline double ticks_to_nsf(uint64_t tick_delta) {
+        return (double)tick_delta * 1000000000 / m_frequency;
+    }
+    inline uint64_t ticks_to_us(uint64_t tick_delta) {
+        return tick_delta * 1000000 / m_frequency;
+    }
+    inline uint64_t ticks_to_ns(uint64_t tick_delta) {
+        return tick_delta * 1000000000 / m_frequency;
+    }
+
+//#if (defined(__x86_64_) || defined(__i386__) || defined(_i386))
+//  uint64_t clockticks() { return __rdtsc(); }
+//#else
+//  inline uint64_t clockticks() { return clock(); }
+//#endif
+
+private:
+    uint64_t m_frequency;
+};
+
+using Timer = TimerWindows;
+
+#elif defined(__linux__)
+
+#include <sched.h>
+// https://stackoverflow.com/questions/42189976/calculate-system-time-using-rdtsc
+// Discussion describes how clock_gettime() costs about 4 ns per call
+class TimerLinux {
+public:
+    TimerLinux() {}
+
+    inline uint64_t ticks() {
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        return (static_cast<uint64_t>(1000000000UL) *
+                static_cast<uint64_t>(ts.tv_sec) +
+                static_cast<uint64_t>(ts.tv_nsec));
+    }
+
+    inline double ticks_to_usf(uint64_t tick_delta) {
+        return (double)tick_delta / 1000.0;
+    }
+    inline double ticks_to_nsf(uint64_t tick_delta) {
+        return (double)tick_delta;
+    }
+    inline uint64_t ticks_to_us(uint64_t tick_delta) {
+        return tick_delta / 1000;
+    }
+    inline uint64_t ticks_to_ns(uint64_t tick_delta) {
+        return tick_delta;
+    }
+
+//#if defined(__x86_64_) || defined(__i386__) || defined(_i386)
+//  inline uint64_t clockticks() {
+//    unsigned int lo, hi;
+//    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+//    return ((uint64_t)hi << 32) | lo;
+//  }
+//#else
+//  inline uint64_t clockticks() { return clock(); }
+//#endif
+};
+
+using Timer = TimerLinux;
+
+#else
+
+using Timer = TimerChrono;
+
+#endif
+
+inline Timer& getTimer()
+{
+    static Timer timer;
+    return timer;
+}
+
 class StatsAggregator
 {
 public:
@@ -80,10 +204,10 @@ public:
         }
     }
 
-    void addRecord(const std::string& func, uint64_t delta)
+    void addRecord(const char* label, uint64_t delta)
     {
         //std::lock_guard<std::mutex> lock(m_Mutex);
-        SHostTimingStats&   stats = m_HostTimingStatsMap[func];
+        SHostTimingStats&   stats = m_HostTimingStatsMap[label];
 
         stats.NumberOfCalls++;
         stats.TotalNS += delta;
@@ -121,23 +245,20 @@ inline StatsAggregator& getAggregator()
 class ScopeProfiler
 {
 public:
-    using clock = std::chrono::steady_clock;
-
-    ScopeProfiler(const char* func) :
-        m_FuncName(func), m_Start(clock::now()) {}
+    ScopeProfiler(const char* label) :
+        m_Label(label), m_StartTicks(getTimer().ticks()) {}
     ~ScopeProfiler(void)
     {
-        clock::time_point   end = clock::now();
+        Timer& timer = getTimer();
+        uint64_t tick_delta = timer.ticks() - m_StartTicks;
+        uint64_t ns_delta = timer.ticks_to_ns(tick_delta);
 
-        using ns = std::chrono::nanoseconds;
-        uint64_t    delta = std::chrono::duration_cast<ns>(end - m_Start).count();
-
-        getAggregator().addRecord(m_FuncName, delta);
+        getAggregator().addRecord(m_Label, ns_delta);
     }
 
 private:
-    const char* m_FuncName;
-    clock::time_point   m_Start;
+    const char* m_Label;
+    uint64_t m_StartTicks;
 };
 
 #define PROFILE_SCOPE(_label)  \
