@@ -17,6 +17,8 @@
 #include <unordered_map>
 #include <vector>
 
+//#define USE_STRING_KEYS
+
 #include <chrono>
 class TimerChrono {
 public:
@@ -154,6 +156,7 @@ public:
         {
             os << std::endl << "Call Profiling Results:" << std::endl;
 
+#if defined(USE_STRING_KEYS)
             std::vector<std::string> keys;
             keys.reserve(m_HostTimingStatsMap.size());
 
@@ -201,6 +204,53 @@ public:
                     << std::right << std::setw(13) << hostTimingStats.MinNS << ", "
                     << std::right << std::setw(13) << hostTimingStats.MaxNS << std::endl;
             }
+#else
+            uint64_t    totalTotalNS = 0;
+            size_t      longestName = 32;
+
+            CHostTimingStatsMap::const_iterator i = m_HostTimingStatsMap.begin();
+            while( i != m_HostTimingStatsMap.end() )
+            {
+                const std::string& name = (*i).first;
+                const SHostTimingStats& hostTimingStats = (*i).second;
+
+                if( !name.empty() )
+                {
+                    totalTotalNS += hostTimingStats.TotalNS;
+                    longestName = std::max< size_t >( name.length(), longestName );
+                }
+
+                ++i;
+            }
+
+            os << std::endl << "Total Time (ns): " << totalTotalNS << std::endl;
+
+            os << std::endl
+                << std::right << std::setw(longestName) << "Function Name" << ", "
+                << std::right << std::setw( 6) << "Calls" << ", "
+                << std::right << std::setw(13) << "Time (ns)" << ", "
+                << std::right << std::setw( 8) << "Time (%)" << ", "
+                << std::right << std::setw(13) << "Average (ns)" << ", "
+                << std::right << std::setw(13) << "Min (ns)" << ", "
+                << std::right << std::setw(13) << "Max (ns)" << std::endl;
+
+            i = m_HostTimingStatsMap.begin();
+            while( i != m_HostTimingStatsMap.end() )
+            {
+                const char* name = (*i).first;
+                const SHostTimingStats& hostTimingStats = (*i).second;
+
+                os << std::right << std::setw(longestName) << name << ", "
+                    << std::right << std::setw( 6) << hostTimingStats.NumberOfCalls << ", "
+                    << std::right << std::setw(13) << hostTimingStats.TotalNS << ", "
+                    << std::right << std::setw( 7) << std::fixed << std::setprecision(2) << hostTimingStats.TotalNS * 100.0f / totalTotalNS << "%, "
+                    << std::right << std::setw(13) << hostTimingStats.TotalNS / hostTimingStats.NumberOfCalls << ", "
+                    << std::right << std::setw(13) << hostTimingStats.MinNS << ", "
+                    << std::right << std::setw(13) << hostTimingStats.MaxNS << std::endl;
+
+                ++i;
+            }
+#endif // defined(USE_STRING_KEYS)
         }
     }
 
@@ -232,7 +282,11 @@ private:
         uint64_t    TotalNS;
     };
 
+#if defined(USE_STRING_KEYS)
     typedef std::unordered_map<std::string, SHostTimingStats>   CHostTimingStatsMap;
+#else
+    typedef std::unordered_map<const char*, SHostTimingStats>   CHostTimingStatsMap;
+#endif // defined(USE_STRING_KEYS)
     CHostTimingStatsMap  m_HostTimingStatsMap;
 };
 
@@ -247,7 +301,7 @@ class ScopeProfiler
 public:
     ScopeProfiler(const char* label) :
         m_Label(label), m_StartTicks(getTimer().ticks()) {}
-    ~ScopeProfiler(void)
+    ~ScopeProfiler()
     {
         Timer& timer = getTimer();
         uint64_t tick_delta = timer.ticks() - m_StartTicks;
