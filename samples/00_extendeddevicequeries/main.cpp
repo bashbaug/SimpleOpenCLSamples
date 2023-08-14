@@ -171,7 +171,7 @@ static void PrintDeviceInfoSummary(
                 pciInfo.pci_device,
                 pciInfo.pci_function);
         } else {
-            printf("\tThis device does not support cl_khr_device_uuid.\n");
+            printf("\tThis device does not support cl_khr_pci_bus_info.\n");
         }
     }
 }
