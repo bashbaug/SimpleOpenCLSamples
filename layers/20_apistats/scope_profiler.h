@@ -55,7 +55,7 @@ public:
     TimerWindows() {
         LARGE_INTEGER freq;
         QueryPerformanceFrequency(&freq);
-        m_Frequency = freq.QuadPart;
+        m_frequency = freq.QuadPart;
     }
 
     inline uint64_t ticks() {
