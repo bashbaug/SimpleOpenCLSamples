@@ -13,12 +13,28 @@
 typedef cl_int (*pfn_clShutdownOCLICD)(void);
 pfn_clShutdownOCLICD clShutdownOCLICD = NULL;
 
+static void PrintPlatformList(const std::vector<cl::Platform>& platforms)
+{
+    for (const auto& platform: platforms) {
+        cl_int errorCode = CL_SUCCESS;
+        auto name = platform.getInfo<CL_PLATFORM_NAME>(&errorCode);
+        if (errorCode == CL_SUCCESS) {
+            printf("\tPlatform: %s\n", name.c_str());
+        } else {
+            printf("\tQuery returned %d\n", errorCode);
+        }
+    }
+}
+
 int main(
     int argc,
     char** argv )
 {
+    bool skipShutdown = false;
+
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch>("s", "skipshutdown", "Skip ICD Loader Shutdown", &skipShutdown);
 
         bool printUsage = false;
         try {
@@ -47,32 +63,28 @@ int main(
         return 0;
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
+    std::vector<cl::Platform> before;
+    cl::Platform::get(&before);
 
-    printf("Before shutting down: queried %zu platforms.\n", platforms.size());
-    for (const auto& platform: platforms) {
-        cl_int errorCode = CL_SUCCESS;
-        auto name = platform.getInfo<CL_PLATFORM_NAME>(&errorCode);
-        if (errorCode == CL_SUCCESS) {
-            printf("\tPlatform: %s\n", name.c_str());
-        } else {
-            printf("\tQuery returned %d\n", errorCode);
-        }
+    printf("Before shutting down: queried %zu platform(s).\n", before.size());
+    PrintPlatformList(before);
+
+    if (!skipShutdown) {
+        printf("\nCalling clShutdownOCLICD()!\n");
+        clShutdownOCLICD();
     }
 
-    clShutdownOCLICD();
+    std::vector<cl::Platform> after;
+    cl::Platform::get(&after);
 
-    printf("\nAfter shutting down:\n");
-    for (const auto& platform: platforms) {
-        cl_int errorCode = CL_SUCCESS;
-        auto name = platform.getInfo<CL_PLATFORM_NAME>(&errorCode);
-        if (errorCode == CL_SUCCESS) {
-            printf("\tPlatform: %s\n", name.c_str());
-        } else {
-            printf("\tQuery returned %d\n", errorCode);
-        }
-    }
+    printf("\nAfter shutting down: queried %zu platform(s).\n", after.size());
 
+    printf("\nPlatform information from old platform list:\n");
+    PrintPlatformList(before);
+
+    printf("\nPlatform information from new platform list:\n");
+    PrintPlatformList(after);
+
+    printf("\nAll done.\n");
     return 0;
 }
