@@ -236,7 +236,7 @@ int main(
             state == CL_COMMAND_BUFFER_STATE_RECORDING_KHR ? "RECORDING" :
             state == CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR ? "EXECUTABLE" :
             state == CL_COMMAND_BUFFER_STATE_PENDING_KHR ? "PENDING" :
-            state == CL_COMMAND_BUFFER_STATE_INVALID_KHR ? "INVALID" : "UNKNOWN!");
+            "UNKNOWN!");
 
         size_t propsSize = 0;
         clGetCommandBufferInfoKHR(
