@@ -147,6 +147,29 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     cl_sync_point_khr* sync_point,
     cl_mutable_command_khr* mutable_handle);
 
+cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
+    cl_command_buffer_khr command_buffer,
+    cl_command_queue command_queue,
+    void* dst_ptr,
+    const void* src_ptr,
+    size_t size,
+    cl_uint num_sync_points_in_wait_list,
+    const cl_sync_point_khr* sync_point_wait_list,
+    cl_sync_point_khr* sync_point,
+    cl_mutable_command_khr* mutable_handle);
+
+cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
+    cl_command_buffer_khr command_buffer,
+    cl_command_queue command_queue,
+    void* svm_ptr,
+    const void* pattern,
+    size_t pattern_size,
+    size_t size,
+    cl_uint num_sync_points_in_wait_list,
+    const cl_sync_point_khr* sync_point_wait_list,
+    cl_sync_point_khr* sync_point,
+    cl_mutable_command_khr* mutable_handle);
+
 cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
