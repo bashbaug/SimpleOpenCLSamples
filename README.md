@@ -59,7 +59,7 @@ implementations as well.
 
 ## Further Reading
 
-* [Environment Setup for Ubuntu 18.04](docs/env/ubuntu/18.04.md)
+* [Environment Setup for Ubuntu 22.04](docs/env/ubuntu/22.04.md)
 * [OpenCLPapers](https://github.com/bashbaug/OpenCLPapers)
 * [OpenCL Specs](https://www.khronos.org/registry/OpenCL/specs/)
 * [OpenCL Return Codes](https://streamhpc.com/blog/2013-04-28/opencl-error-codes/)
