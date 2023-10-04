@@ -61,8 +61,8 @@ implementations as well.
 
 * [Environment Setup for Ubuntu 22.04](docs/env/ubuntu/22.04.md)
 * [OpenCLPapers](https://github.com/bashbaug/OpenCLPapers)
-* [OpenCL Specs](https://www.khronos.org/registry/OpenCL/specs/)
-* [OpenCL Return Codes](https://streamhpc.com/blog/2013-04-28/opencl-error-codes/)
+* [OpenCL Specs](https://registry.khronos.org/OpenCL/)
+* [OpenCL Error Codes](https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_API.html#error_codes)
 
 ## A Note About Error Checking
 
