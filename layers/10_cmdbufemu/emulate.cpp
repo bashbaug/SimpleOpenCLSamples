@@ -20,7 +20,7 @@
 #include "emulate.h"
 
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 2);
+    CL_MAKE_VERSION(0, 9, 4);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
     CL_MAKE_VERSION(0, 9, 0);
 
@@ -699,6 +699,106 @@ private:
     FillImage(
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_FILL_IMAGE) {};
+};
+
+struct SVMMemcpy : Command
+{
+    static std::unique_ptr<SVMMemcpy> create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
+        void* dst_ptr,
+        const void* src_ptr,
+        size_t size)
+    {
+        auto ret = std::unique_ptr<SVMMemcpy>(
+            new SVMMemcpy(cmdbuf, queue));
+
+        ret->dst_ptr = dst_ptr;
+        ret->src_ptr = src_ptr;
+        ret->size = size;
+
+        return ret;
+    }
+
+    int playback(
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
+    {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
+        return g_pNextDispatch->clEnqueueSVMMemcpy(
+            queue,
+            CL_FALSE,
+            dst_ptr,
+            src_ptr,
+            size,
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
+    }
+
+    void* dst_ptr = nullptr;
+    const void* src_ptr = nullptr;
+    size_t size = 0;
+
+private:
+    SVMMemcpy(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_SVM_MEMCPY) {};
+};
+
+struct SVMMemFill : Command
+{
+    static std::unique_ptr<SVMMemFill> create(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue,
+        void* dst_ptr,
+        const void* pattern,
+        size_t pattern_size,
+        size_t size)
+    {
+        auto ret = std::unique_ptr<SVMMemFill>(
+            new SVMMemFill(cmdbuf, queue));
+
+        ret->dst_ptr = dst_ptr;
+
+        auto p = reinterpret_cast<const uint8_t*>(pattern);
+        ret->pattern.reserve(pattern_size);
+        ret->pattern.insert(
+            ret->pattern.begin(),
+            p,
+            p + pattern_size);
+
+        ret->size = size;
+
+        return ret;
+    }
+
+    int playback(
+        cl_command_queue queue,
+        std::vector<cl_event>& deps) const override
+    {
+        auto wait_list = getEventWaitList(deps);
+        auto signal = getEventSignalPtr(deps);
+        return g_pNextDispatch->clEnqueueSVMMemFill(
+            queue,
+            dst_ptr,
+            pattern.data(),
+            pattern.size(),
+            size,
+            static_cast<cl_uint>(wait_list.size()),
+            wait_list.data(),
+            signal);
+    }
+
+    void* dst_ptr = nullptr;
+    std::vector<uint8_t> pattern;
+    size_t size = 0;
+
+private:
+    SVMMemFill(
+        cl_command_buffer_khr cmdbuf,
+        cl_command_queue queue) : Command(cmdbuf, queue, CL_COMMAND_SVM_MEMFILL) {};
 };
 
 struct NDRangeKernel : Command
@@ -1970,6 +2070,90 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
             fill_color,
             origin,
             region),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
+        sync_point,
+        mutable_handle);
+    return CL_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// cl_khr_command_buffer
+cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
+    cl_command_buffer_khr cmdbuf,
+    cl_command_queue command_queue,
+    void* dst_ptr,
+    const void* src_ptr,
+    size_t size,
+    cl_uint num_sync_points_in_wait_list,
+    const cl_sync_point_khr* sync_point_wait_list,
+    cl_sync_point_khr* sync_point,
+    cl_mutable_command_khr* mutable_handle)
+{
+    if( !CommandBuffer::isValid(cmdbuf) )
+    {
+        return CL_INVALID_COMMAND_BUFFER_KHR;
+    }
+    if( cl_int errorCode = cmdbuf->checkRecordErrors(
+            command_queue,
+            num_sync_points_in_wait_list,
+            sync_point_wait_list,
+            mutable_handle) )
+    {
+        return errorCode;
+    }
+
+    cmdbuf->addCommand(
+        SVMMemcpy::create(
+            cmdbuf,
+            command_queue,
+            dst_ptr,
+            src_ptr,
+            size),
+        num_sync_points_in_wait_list,
+        sync_point_wait_list,
+        sync_point,
+        mutable_handle);
+    return CL_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// cl_khr_command_buffer
+cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
+    cl_command_buffer_khr cmdbuf,
+    cl_command_queue command_queue,
+    void* dst_ptr,
+    const void* pattern,
+    size_t pattern_size,
+    size_t size,
+    cl_uint num_sync_points_in_wait_list,
+    const cl_sync_point_khr* sync_point_wait_list,
+    cl_sync_point_khr* sync_point,
+    cl_mutable_command_khr* mutable_handle)
+{
+    if( !CommandBuffer::isValid(cmdbuf) )
+    {
+        return CL_INVALID_COMMAND_BUFFER_KHR;
+    }
+    if( cl_int errorCode = cmdbuf->checkRecordErrors(
+            command_queue,
+            num_sync_points_in_wait_list,
+            sync_point_wait_list,
+            mutable_handle) )
+    {
+        return errorCode;
+    }
+
+    cmdbuf->addCommand(
+        SVMMemFill::create(
+            cmdbuf,
+            command_queue,
+            dst_ptr,
+            pattern,
+            pattern_size,
+            size),
         num_sync_points_in_wait_list,
         sync_point_wait_list,
         sync_point,
