@@ -7,7 +7,7 @@ It works by intercepting calls to `clGetExtensionFunctionAddressForPlatform` to 
 If a query succeeds by default then the layer does nothing and simply returns the queried function pointer as-is.
 If the query is unsuccessful however, then the layer returns its own function pointer, which will emulate semaphores using events.
 
-This semaphore emulation layer currently implements v0.9.0 of the `cl_khr_semaphore` extension.
+This semaphore emulation layer currently implements v0.9.1 of the `cl_khr_semaphore` extension.
 The functionality in this emulation layer is sufficient to run the semaphore samples in this repository.
 
 Please note that the emulated semaphores are intended to be functional, but unlike a native implementation, they may not provide any performance benefit over similar code without using semaphores.

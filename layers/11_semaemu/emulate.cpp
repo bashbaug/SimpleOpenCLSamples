@@ -21,9 +21,13 @@
 #ifndef CL_KHR_SEMAPHORE_EXTENSION_NAME
 #define CL_KHR_SEMAPHORE_EXTENSION_NAME "cl_khr_semaphore"
 #endif
+#ifndef CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR
+#define CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR 0x2053
+#define CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR 0
+#endif
 
 static constexpr cl_version version_cl_khr_semaphore =
-    CL_MAKE_VERSION(0, 9, 0);
+    CL_MAKE_VERSION(0, 9, 1);
 
 SLayerContext& getLayerContext(void)
 {
@@ -48,7 +52,7 @@ typedef struct _cl_semaphore_khr
         {
             const cl_semaphore_properties_khr* check = properties;
             bool found_CL_SEMAPHORE_TYPE_KHR = false;
-            bool found_CL_DEVICE_HANDLE_LIST_KHR = false;
+            bool found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR = false;
             while( errorCode == CL_SUCCESS && check[0] != 0 )
             {
                 cl_int  property = (cl_int)check[0];
@@ -66,16 +70,16 @@ typedef struct _cl_semaphore_khr
                         check += 2;
                     }
                     break;
-                case CL_DEVICE_HANDLE_LIST_KHR:
-                    if( found_CL_DEVICE_HANDLE_LIST_KHR )
+                case CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR:
+                    if( found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR )
                     {
                         errorCode = CL_INVALID_VALUE;
                     }
                     else
                     {
-                        found_CL_DEVICE_HANDLE_LIST_KHR = true;
+                        found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR = true;
                         ++check;
-                        while(*check++ != CL_DEVICE_HANDLE_LIST_END_KHR)
+                        while(*check++ != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
                         {
                             // TODO: validate device handles.
                         }
