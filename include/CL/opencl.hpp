@@ -1550,6 +1550,19 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL, cl_device_unified_shared_memory_capabilities_intel ) \
     F(cl_device_info, CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL, cl_device_unified_shared_memory_capabilities_intel )
 
+#define CL_HPP_PARAM_NAME_CL_KHR_UNIFIED_SVM_(F) \
+    F(cl_platform_info, CL_PLATFORM_SVM_TYPE_CAPABILITIES_KHR, cl::vector<cl_svm_capabilities_khr>) \
+    \
+    F(cl_device_info, CL_DEVICE_SVM_TYPE_CAPABILITIES_KHR, cl::vector<cl_svm_capabilities_khr>) \
+    \
+    F(cl_svm_pointer_info_khr, CL_SVM_INFO_TYPE_INDEX_KHR, cl_uint) \
+    F(cl_svm_pointer_info_khr, CL_SVM_INFO_CAPABILITIES_KHR, cl_svm_capabilities_khr) \
+    F(cl_svm_pointer_info_khr, CL_SVM_INFO_PROPERTIES_KHR, cl::vector<cl_svm_alloc_properties_khr>) \
+    F(cl_svm_pointer_info_khr, CL_SVM_INFO_ACCESS_FLAGS_KHR, cl_svm_alloc_access_flags_khr) \
+    F(cl_svm_pointer_info_khr, CL_SVM_INFO_BASE_PTR_KHR, void*) \
+    F(cl_svm_pointer_info_khr, CL_SVM_INFO_SIZE_KHR, size_type) \
+    F(cl_svm_pointer_info_khr, CL_SVM_INFO_ASSOCIATED_DEVICE_HANDLE_KHR, cl::Device)
+
 template <typename enum_type, cl_int Name>
 struct param_traits {};
 
@@ -1827,6 +1840,10 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_kernel_work_group_info, CL_KERNEL_SPILL_MEM_SIZE
 #if defined(cl_intel_unified_shared_memory)
 CL_HPP_PARAM_NAME_CL_INTEL_UNIFIED_SHARED_MEMORY_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // cl_intel_unified_shared_memory
+
+#if defined(cl_khr_unified_svm)
+CL_HPP_PARAM_NAME_CL_KHR_UNIFIED_SVM_(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif
 
 // Convenience functions
 

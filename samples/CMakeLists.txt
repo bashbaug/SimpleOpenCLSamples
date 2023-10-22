@@ -57,6 +57,7 @@ add_subdirectory( python )
 add_subdirectory( vulkan )
 add_subdirectory( svm )
 add_subdirectory( usm )
+add_subdirectory( usvm )
 
 add_subdirectory( 00_enumopencl )
 add_subdirectory( 00_enumopenclpp )

@@ -1,12 +1,12 @@
-# Copyright (c) 2020-2024 Ben Ashbaugh
+# Copyright (c) 2023 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
 add_opencl_sample(
     TEST
     NUMBER 01
-    TARGET usmmeminfo
-    VERSION 120
-    CATEGORY usm
+    TARGET usvmmeminfo
+    VERSION 300
+    CATEGORY usvm
     SOURCES main.cpp
     LIBS OpenCLExt)

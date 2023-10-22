@@ -23,6 +23,7 @@ function(add_opencl_layer)
     add_library(${OPENCL_LAYER_TARGET} MODULE ${OPENCL_LAYER_SOURCES})
 
     target_include_directories(${OPENCL_LAYER_TARGET} PRIVATE ${OpenCL_INCLUDE_DIR} ${OPENCL_LAYER_INCLUDES})
+    target_link_libraries(${OPENCL_LAYER_TARGET} ${OPENCL_LAYER_LIBS})
 
     target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_TARGET_OPENCL_VERSION=${OPENCL_LAYER_VERSION})
     target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_USE_DEPRECATED_OPENCL_1_0_APIS)
@@ -53,3 +54,13 @@ add_subdirectory( 00_example )
 
 add_subdirectory( 10_cmdbufemu )
 add_subdirectory( 11_semaemu )
+
+set(BUILD_EXTENSION_LAYERS TRUE)
+if(NOT TARGET OpenCLExt)
+    message(STATUS "Skipping Extension Layers - OpenCL Extension Loader is not found.")
+    set(BUILD_EXTENSION_LAYERS FALSE)
+endif()
+
+if(BUILD_EXTENSION_LAYERS)
+    add_subdirectory( 99_svmplusplus )
+endif()
