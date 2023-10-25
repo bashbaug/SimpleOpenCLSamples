@@ -20,7 +20,7 @@
 
 add_opencl_sample(
     TEST
-    NUMBER 00
+    NUMBER 01
     TARGET usmmeminfo
     VERSION 120
     CATEGORY usm

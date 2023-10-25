@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022 Ben Ashbaugh
+// Copyright (c) 2023 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -82,7 +82,7 @@ static bool isUSMPtr(
         type == CL_SVM_MEM_TYPE_SHARED_EXP;
 }
 
-static cl_device_id getAssociatedDeviceFromPropertie(
+static cl_device_id getAssociatedDeviceFromProperties(
     const cl_svm_mem_properties_exp* props)
 {
     if (props) {
@@ -112,7 +112,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
     cl_uint alignment,
     cl_int* errcode_ret)
 {
-    cl_device_id device = getAssociatedDeviceFromPropertie(properties);
+    cl_device_id device = getAssociatedDeviceFromProperties(properties);
 
     if (flags & CL_MEM_SVM_DEVICE_EXP) {
         return clDeviceMemAllocINTEL(
@@ -202,6 +202,53 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
     size_t* param_value_size_ret)
 {
     switch(param_name) {
+    case CL_DEVICE_SVM_CAPABILITIES:
+        {
+            cl_device_unified_shared_memory_capabilities_intel deviceCaps = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL,
+                sizeof(deviceCaps),
+                &deviceCaps,
+                nullptr );
+
+            cl_device_unified_shared_memory_capabilities_intel hostCaps = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,
+                sizeof(hostCaps),
+                &hostCaps,
+                nullptr );
+
+            // We can just check the single device shared capabilities:
+            cl_device_unified_shared_memory_capabilities_intel sharedCaps = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
+                sizeof(sharedCaps),
+                &sharedCaps,
+                nullptr );
+
+            cl_device_svm_capabilities svmCaps = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_SVM_CAPABILITIES,
+                sizeof(svmCaps),
+                &svmCaps,
+                nullptr );
+
+            svmCaps |= (deviceCaps != 0) ? CL_DEVICE_SVM_DEVICE_ALLOC_EXP : 0;
+            svmCaps |= (hostCaps   != 0) ? CL_DEVICE_SVM_HOST_ALLOC_EXP   : 0;
+            svmCaps |= (sharedCaps != 0) ? CL_DEVICE_SVM_SHARED_ALLOC_EXP : 0;
+
+            auto ptr = (cl_device_svm_capabilities*)param_value;
+            return writeParamToMemory(
+                param_value_size,
+                svmCaps,
+                param_value_size_ret,
+                ptr );
+        }
+        break;
     case CL_DEVICE_EXTENSIONS:
         {
             size_t  size = 0;
@@ -222,10 +269,9 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
 
             if( checkStringForExtension(
                     deviceExtensions.data(),
-                    CL_EXP_NEW_SVM_EXTENSION_NAME ) == false )
+                    CL_EXP_UNIFIED_SVM_EXTENSION_NAME ) == false )
             {
                 std::string newExtensions;
-                newExtensions += CL_EXP_NEW_SVM_EXTENSION_NAME;
 
                 std::string oldExtensions(deviceExtensions.data());
 
@@ -274,7 +320,7 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
             bool found = false;
             for( const auto& extension : extensions )
             {
-                if( strcmp(extension.name, CL_EXP_NEW_SVM_EXTENSION_NAME) == 0 )
+                if( strcmp(extension.name, CL_EXP_UNIFIED_SVM_EXTENSION_NAME) == 0 )
                 {
                     found = true;
                     break;
@@ -287,7 +333,7 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
                 cl_name_version& extension = extensions.back();
 
                 memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                strcpy(extension.name, CL_EXP_NEW_SVM_EXTENSION_NAME);
+                strcpy(extension.name, CL_EXP_UNIFIED_SVM_EXTENSION_NAME);
 
                 extension.version = version_cl_exp_new_svm_extension;
 
@@ -301,8 +347,7 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
             }
         }
         break;
-    // TODO
-    case CL_DEVICE_SVM_CAPABILITIES:
+    // USM aliases - pass through.
     case CL_DEVICE_HOST_MEM_CAPABILITIES_EXP:
     case CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP:
     case CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP:
@@ -347,10 +392,10 @@ cl_int CL_API_CALL clGetPlatformInfo_override(
 
             if( checkStringForExtension(
                     platformExtensions.data(),
-                    CL_EXP_NEW_SVM_EXTENSION_NAME ) == false )
+                    CL_EXP_UNIFIED_SVM_EXTENSION_NAME ) == false )
             {
                 std::string newExtensions;
-                newExtensions += CL_EXP_NEW_SVM_EXTENSION_NAME;
+                newExtensions += CL_EXP_UNIFIED_SVM_EXTENSION_NAME;
 
                 std::string oldExtensions(platformExtensions.data());
 
@@ -399,7 +444,7 @@ cl_int CL_API_CALL clGetPlatformInfo_override(
             bool found = false;
             for( const auto& extension : extensions )
             {
-                if( strcmp(extension.name, CL_EXP_NEW_SVM_EXTENSION_NAME) == 0 )
+                if( strcmp(extension.name, CL_EXP_UNIFIED_SVM_EXTENSION_NAME) == 0 )
                 {
                     found = true;
                     break;
@@ -412,7 +457,7 @@ cl_int CL_API_CALL clGetPlatformInfo_override(
                 cl_name_version& extension = extensions.back();
 
                 memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                strcpy(extension.name, CL_EXP_NEW_SVM_EXTENSION_NAME);
+                strcpy(extension.name, CL_EXP_UNIFIED_SVM_EXTENSION_NAME);
 
                 extension.version = version_cl_exp_new_svm_extension;
 
@@ -457,6 +502,17 @@ cl_int CL_API_CALL clSetKernelArgSVMPointer_override(
         arg_value);
 }
 
+void CL_API_CALL clSVMFree_override(
+    cl_context context,
+    void* ptr)
+{
+    if (isUSMPtr(context, ptr)) {
+        clMemFreeINTEL(context, ptr);
+    }
+
+    g_pNextDispatch->clSVMFree(context, ptr);
+}
+
 cl_int CL_API_CALL clEnqueueSVMMemAdviseEXP_EMU(
     cl_command_queue command_queue,
     const void* ptr,
@@ -486,7 +542,7 @@ cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
 {
     cl_context context = getContext(command_queue);
 
-    if (isUSMPtr(context, dst_ptr)) {
+    if (isUSMPtr(context, dst_ptr) || isUSMPtr(context, src_ptr)) {
         return clEnqueueMemcpyINTEL(
             command_queue,
             blocking_copy,

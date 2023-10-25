@@ -56,6 +56,7 @@ static void _init_dispatch()
     dispatch.clGetExtensionFunctionAddressForPlatform = clGetExtensionFunctionAddressForPlatform_override;
     dispatch.clGetPlatformInfo = clGetPlatformInfo_override;
     dispatch.clSetKernelArgSVMPointer = clSetKernelArgSVMPointer_override;
+    dispatch.clSVMFree = clSVMFree_override;
     dispatch.clEnqueueSVMMemcpy = clEnqueueSVMMemcpy_override;
     dispatch.clEnqueueSVMMemFill = clEnqueueSVMMemFill_override;
     dispatch.clEnqueueSVMMigrateMem = clEnqueueSVMMigrateMem_override;
