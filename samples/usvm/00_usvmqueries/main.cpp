@@ -25,14 +25,14 @@ void PrintSVMCaps(
 
 void PrintUSMCaps(
     const char* label,
-    cl_device_unified_shared_memory_capabilities_intel usmcaps )
+    cl_device_unified_shared_memory_capabilities_exp usmcaps )
 {
     printf("\t%s: %s%s%s%s\n",
         label,
-        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL                   ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL"                   : "",
-        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL            ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL"            : "",
-        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL        ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL"        : "",
-        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL" : "" );
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_EXP                   ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ACCESS_EXP"                   : "",
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_EXP            ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_EXP"            : "",
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_EXP        ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_EXP"        : "",
+        ( usmcaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_EXP ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_EXP" : "" );
 }
 
 int main(
@@ -85,47 +85,47 @@ int main(
                 nullptr );
             PrintSVMCaps( "CL_DEVICE_SVM_CAPABILITIES", svmcaps );
 
-            cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
+            cl_device_unified_shared_memory_capabilities_exp usmcaps = 0;
 
             clGetDeviceInfo(
                 devices[d](),
-                CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,
+                CL_DEVICE_HOST_MEM_CAPABILITIES_EXP,
                 sizeof(usmcaps),
                 &usmcaps,
                 nullptr );
-            PrintUSMCaps( "CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL", usmcaps );
+            PrintUSMCaps( "CL_DEVICE_HOST_MEM_CAPABILITIES_EXP", usmcaps );
 
             clGetDeviceInfo(
                 devices[d](),
-                CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL,
+                CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP,
                 sizeof(usmcaps),
                 &usmcaps,
                 nullptr );
-            PrintUSMCaps( "CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL", usmcaps );
+            PrintUSMCaps( "CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP", usmcaps );
 
             clGetDeviceInfo(
                 devices[d](),
-                CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
+                CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP,
                 sizeof(usmcaps),
                 &usmcaps,
                 nullptr );
-            PrintUSMCaps( "CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
+            PrintUSMCaps( "CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP", usmcaps );
 
             clGetDeviceInfo(
                 devices[d](),
-                CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
+                CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_EXP,
                 sizeof(usmcaps),
                 &usmcaps,
                 nullptr );
-            PrintUSMCaps( "CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
+            PrintUSMCaps( "CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_EXP", usmcaps );
 
             clGetDeviceInfo(
                 devices[d](),
-                CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL,
+                CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_EXP,
                 sizeof(usmcaps),
                 &usmcaps,
                 nullptr );
-            PrintUSMCaps( "CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL", usmcaps );
+            PrintUSMCaps( "CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_EXP", usmcaps );
 
             printf( "\n" );
         }
