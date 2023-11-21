@@ -10,11 +10,11 @@
 
 // Each of these functions should eventually move into opencl.hpp:
 
-static cl_unified_shared_memory_type_intel
+static cl_svm_mem_type_exp
 getSVM_MEM_INFO_TYPE_EXP( cl::Context& context, const void* ptr )
 {
-    cl_unified_shared_memory_type_intel type = 0;
-    clGetMemAllocInfoINTEL(
+    cl_svm_mem_type_exp type = 0;
+    clGetSVMMemInfoEXP(
         context(),
         ptr,
         CL_SVM_MEM_INFO_TYPE_EXP,
@@ -28,7 +28,7 @@ static const void*
 getSVM_MEM_INFO_BASE_PTR_EXP( cl::Context& context, const void* ptr )
 {
     const void* base = nullptr;
-    clGetMemAllocInfoINTEL(
+    clGetSVMMemInfoEXP(
         context(),
         ptr,
         CL_SVM_MEM_INFO_BASE_PTR_EXP,
@@ -42,7 +42,7 @@ static size_t
 getSVM_MEM_INFO_SIZE_EXP( cl::Context& context, const void* ptr )
 {
     size_t size = 0;
-    clGetMemAllocInfoINTEL(
+    clGetSVMMemInfoEXP(
         context(),
         ptr,
         CL_SVM_MEM_INFO_SIZE_EXP,
@@ -56,7 +56,7 @@ static cl_device_id
 getSVM_MEM_INFO_DEVICE_EXP( cl::Context& context, const void* ptr )
 {
     cl_device_id device = 0;
-    clGetMemAllocInfoINTEL(
+    clGetSVMMemInfoEXP(
         context(),
         ptr,
         CL_SVM_MEM_INFO_DEVICE_EXP,
@@ -67,7 +67,7 @@ getSVM_MEM_INFO_DEVICE_EXP( cl::Context& context, const void* ptr )
 }
 
 static const char*
-usm_type_to_string( cl_unified_shared_memory_type_intel type )
+usvm_type_to_string( cl_svm_mem_type_exp type )
 {
     switch( type )
     {
@@ -121,52 +121,54 @@ int main(
 
     cl::Context context{devices[deviceIndex]};
 
-    cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
+    cl_device_unified_shared_memory_capabilities_exp usmcaps = 0;
     cl_int errCode;
 
     errCode = clGetDeviceInfo(
         devices[deviceIndex](),
-        CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,
+        CL_DEVICE_HOST_MEM_CAPABILITIES_EXP,
         sizeof(usmcaps),
         &usmcaps,
         nullptr );
     if( errCode == CL_SUCCESS && usmcaps != 0 )
     {
         printf("\nTesting Host Allocations:\n");
-        char* ptr0 = (char*)clHostMemAllocINTEL(
+        char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             nullptr,
+            CL_MEM_SVM_HOST_EXP,
             16,
             0,
             nullptr );
         printf("Allocated Host pointer 0: ptr = %p\n", ptr0);
-        char* ptr1 = (char*)clHostMemAllocINTEL(
+        char* ptr1 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             nullptr,
+            CL_MEM_SVM_HOST_EXP,
             16,
             0,
             nullptr );
         printf("Allocated Host pointer 1: ptr = %p\n", ptr1);
 
-        cl_unified_shared_memory_type_intel type = 0;
+        cl_svm_mem_type_exp type = 0;
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1);
-        printf("Queried base pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried base pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1 + 4);
-        printf("Queried offset pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried offset pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1 + 64);
-        printf("Queried out of range pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried out of range pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0);
-        printf("Queried base pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried base pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0 + 4);
-        printf("Queried offset pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried offset pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0 + 64);
-        printf("Queried out of range pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried out of range pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         const void* base = getSVM_MEM_INFO_BASE_PTR_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: base = %p\n", base);
@@ -177,10 +179,10 @@ int main(
         cl_device_id device = getSVM_MEM_INFO_DEVICE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: device = %p\n", device);
 
-        clMemFreeINTEL(
+        clSVMFree(
             context(),
             ptr0 );
-        clMemFreeINTEL(
+        clSVMFree(
             context(),
             ptr1 );
         printf("Freed pointers and done!\n");
@@ -192,7 +194,7 @@ int main(
 
     errCode = clGetDeviceInfo(
         devices[deviceIndex](),
-        CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL,
+        CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP,
         sizeof(usmcaps),
         &usmcaps,
         nullptr );
@@ -202,42 +204,46 @@ int main(
         printf("Associated Device is: %p (%s)\n",
             devices[deviceIndex](),
             devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str());
-        char* ptr0 = (char*)clDeviceMemAllocINTEL(
+        const cl_svm_mem_properties_exp props[] = {
+            CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_mem_properties_exp)devices[deviceIndex](),
+            0,
+        };
+        char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
-            devices[deviceIndex](),
-            nullptr,
+            props,
+            CL_MEM_SVM_DEVICE_EXP,
             16,
             0,
             nullptr );
         printf("Allocated Device pointer 0: ptr = %p\n", ptr0);
-        char* ptr1 = (char*)clDeviceMemAllocINTEL(
+        char* ptr1 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
-            devices[deviceIndex](),
-            nullptr,
+            props,
+            CL_MEM_SVM_DEVICE_EXP,
             16,
             0,
             nullptr );
         printf("Allocated Device pointer 1: ptr = %p\n", ptr1);
 
-        cl_unified_shared_memory_type_intel type = 0;
+        cl_svm_mem_type_exp type = 0;
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1);
-        printf("Queried base pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried base pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1 + 4);
-        printf("Queried offset pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried offset pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1 + 64);
-        printf("Queried out of range pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried out of range pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0);
-        printf("Queried base pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried base pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0 + 4);
-        printf("Queried offset pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried offset pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0 + 64);
-        printf("Queried out of range pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried out of range pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         const void* base = getSVM_MEM_INFO_BASE_PTR_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: base = %p\n", base);
@@ -248,10 +254,10 @@ int main(
         cl_device_id device = getSVM_MEM_INFO_DEVICE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: device = %p\n", device);
 
-        clMemFreeINTEL(
+        clSVMFree(
             context(),
             ptr0 );
-        clMemFreeINTEL(
+        clSVMFree(
             context(),
             ptr1 );
         printf("Freed pointers and done!\n");
@@ -263,7 +269,7 @@ int main(
 
     errCode = clGetDeviceInfo(
         devices[deviceIndex](),
-        CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
+        CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP,
         sizeof(usmcaps),
         &usmcaps,
         nullptr );
@@ -273,42 +279,46 @@ int main(
         printf("Associated Device is: %p (%s)\n",
             devices[deviceIndex](),
             devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str());
-        char* ptr0 = (char*)clSharedMemAllocINTEL(
+        const cl_svm_mem_properties_exp props[] = {
+            CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_mem_properties_exp)devices[deviceIndex](),
+            0,
+        };
+        char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
-            devices[deviceIndex](),
-            nullptr,
+            props,
+            CL_MEM_SVM_SHARED_EXP,
             16,
             0,
             nullptr );
         printf("Allocated Shared pointer 0: ptr = %p\n", ptr0);
-        char* ptr1 = (char*)clSharedMemAllocINTEL(
+        char* ptr1 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
-            devices[deviceIndex](),
-            nullptr,
+            props,
+            CL_MEM_SVM_SHARED_EXP,
             16,
             0,
             nullptr );
         printf("Allocated Shared pointer 1: ptr = %p\n", ptr1);
 
-        cl_unified_shared_memory_type_intel type = 0;
+        cl_svm_mem_type_exp type = 0;
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1);
-        printf("Queried base pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried base pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1 + 4);
-        printf("Queried offset pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried offset pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr1 + 64);
-        printf("Queried out of range pointer 1: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried out of range pointer 1: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0);
-        printf("Queried base pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried base pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0 + 4);
-        printf("Queried offset pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried offset pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         type = getSVM_MEM_INFO_TYPE_EXP(context, ptr0 + 64);
-        printf("Queried out of range pointer 0: type = %s (%X)\n", usm_type_to_string(type), type);
+        printf("Queried out of range pointer 0: type = %s (%X)\n", usvm_type_to_string(type), type);
 
         const void* base = getSVM_MEM_INFO_BASE_PTR_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: base = %p\n", base);
@@ -319,10 +329,10 @@ int main(
         cl_device_id device = getSVM_MEM_INFO_DEVICE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: device = %p\n", device);
 
-        clMemFreeINTEL(
+        clSVMFree(
             context(),
             ptr0 );
-        clMemFreeINTEL(
+        clSVMFree(
             context(),
             ptr1 );
         printf("Freed pointers and done!\n");
