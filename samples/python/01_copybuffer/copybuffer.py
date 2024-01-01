@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019-2023 Ben Ashbaugh
+# Copyright (c) 2019-2024 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
