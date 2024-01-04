@@ -44,17 +44,32 @@ static int8 __load_b_row_major_bf16_k16(global ushort* B, int rowStart, int colS
 
     int offset = rowStart * stride + colStart + get_sub_group_local_id();
 
-// Note: this could probably use block loads?
-#define B_ROWDATA(_k) B[(rowStart + _k) * stride + colStart + get_sub_group_local_id()]
-    ret.s0 = as_int((ushort2)(B_ROWDATA( 0), B_ROWDATA( 1)));
-    ret.s1 = as_int((ushort2)(B_ROWDATA( 2), B_ROWDATA( 3)));
-    ret.s2 = as_int((ushort2)(B_ROWDATA( 4), B_ROWDATA( 5)));
-    ret.s3 = as_int((ushort2)(B_ROWDATA( 6), B_ROWDATA( 7)));
-    ret.s4 = as_int((ushort2)(B_ROWDATA( 8), B_ROWDATA( 9)));
-    ret.s5 = as_int((ushort2)(B_ROWDATA(10), B_ROWDATA(11)));
-    ret.s6 = as_int((ushort2)(B_ROWDATA(12), B_ROWDATA(13)));
-    ret.s7 = as_int((ushort2)(B_ROWDATA(14), B_ROWDATA(15)));
-#undef B_ROWDATA
+    // Note: this could probably use block loads?
+    ushort row0  = B[offset]; offset += stride;
+    ushort row1  = B[offset]; offset += stride;
+    ushort row2  = B[offset]; offset += stride;
+    ushort row3  = B[offset]; offset += stride;
+    ushort row4  = B[offset]; offset += stride;
+    ushort row5  = B[offset]; offset += stride;
+    ushort row6  = B[offset]; offset += stride;
+    ushort row7  = B[offset]; offset += stride;
+    ushort row8  = B[offset]; offset += stride;
+    ushort row9  = B[offset]; offset += stride;
+    ushort row10 = B[offset]; offset += stride;
+    ushort row11 = B[offset]; offset += stride;
+    ushort row12 = B[offset]; offset += stride;
+    ushort row13 = B[offset]; offset += stride;
+    ushort row14 = B[offset]; offset += stride;
+    ushort row15 = B[offset]; offset += stride;
+
+    ret.s0 = as_int((ushort2)(row0,  row1 ));
+    ret.s1 = as_int((ushort2)(row2,  row3 ));
+    ret.s2 = as_int((ushort2)(row4,  row5 ));
+    ret.s3 = as_int((ushort2)(row6,  row7 ));
+    ret.s4 = as_int((ushort2)(row8,  row9 ));
+    ret.s5 = as_int((ushort2)(row10, row11));
+    ret.s6 = as_int((ushort2)(row12, row13));
+    ret.s7 = as_int((ushort2)(row14, row15));
 
     return ret;
 }
