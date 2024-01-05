@@ -15,7 +15,7 @@ kernel void bfloat16_naive(global float* C, global ushort* A, global ushort* B, 
 
     float sum = 0;
     for (int k = 0; k < K; k++) {
-        sum += bfloat16_to_float(A[m * K + k]) * bfloat16_to_float(B[k * N + n]);
+        sum = fma(bfloat16_to_float(A[m * K + k]), bfloat16_to_float(B[k * N + n]), sum);
     }
 
     C[m * N + n] = sum;
