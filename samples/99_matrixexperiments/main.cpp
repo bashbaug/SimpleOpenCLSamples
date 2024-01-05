@@ -12,6 +12,7 @@
 #include <chrono>
 #include <string>
 #include <random>
+#include <vector>
 
 #include "bfloat16.hpp"
 #include "util.hpp"
@@ -22,6 +23,28 @@ bool fixedData = false;
 bool validate = false;
 int testIterations = 16;
 float threshold = 0.01f;
+
+std::string makeTestName(
+    const std::string &func,
+    int tM, int tN, int tK,
+    size_t M, size_t N, size_t K)
+{
+    std::ostringstream ret;
+    ret << func;
+    ret << "<tM:" << tM << ", tN:" << tN << ", tK:" << tK << ">";
+    ret << " (M=" << M << ", N=" << N << ", K=" << K << ")";
+    return ret.str();
+}
+
+std::string makeTestName(
+    const std::string &func,
+    size_t M, size_t N, size_t K)
+{
+    std::ostringstream ret;
+    ret << func;
+    ret << " (M=" << M << ", N=" << N << ", K=" << K << ")";
+    return ret.str();
+}
 
 template <typename T>
 static void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
@@ -100,13 +123,15 @@ static void go_naive(
     size_t M, size_t N, size_t K,
     const std::vector<float>& C_ref)
 {
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
+    printf("%80s: ", makeTestName(__FUNCTION__, M, N, K).c_str()); fflush(stdout);
 
     cl::Kernel kernel{program, "bfloat16_naive"};
     kernel.setArg(0, C);
     kernel.setArg(1, A);
     kernel.setArg(2, B);
     kernel.setArg(3, static_cast<cl_int>(K));
+
+    queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
 
     float best = 999.0f;
     for (int test = 0; test < testIterations; test++) {
@@ -118,7 +143,7 @@ static void go_naive(
         best = std::min(best, elapsed_seconds.count());
     }
     auto gops = 2.0 * M * N * K / best / 1e9;
-    printf("Finished in %f seconds (%f gops)\n", best, gops);
+    printf("Best in %f seconds (%f gops)\n", best, gops);
 
     if (validate) {
         printf("Checking results... "); fflush(stdout);
@@ -129,15 +154,17 @@ static void go_naive(
     }
 }
 
-static void go_dpas_rowmajor_m1(
+template<int tM, int tN, int tK>
+static void go_dpas_rowmajor(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
     const std::vector<float>& C_ref)
 {
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
+    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, tK, M, N, K).c_str()); fflush(stdout);
 
-    cl::Kernel kernel{program, "bfloat16_dpas_rowmajor_m1"};
+    std::string kernelName = "bfloat16_dpas_rowmajor_m" + std::to_string(tM);
+    cl::Kernel kernel{program, kernelName.c_str()};
     if (kernel()) {
         kernel.setArg(0, C);
         kernel.setArg(1, A);
@@ -147,14 +174,14 @@ static void go_dpas_rowmajor_m1(
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/tM});
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> elapsed_seconds = end - start;
             best = std::min(best, elapsed_seconds.count());
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
+        printf("Best in %f seconds (%f gops)\n", best, gops);
 
         if (validate) {
             printf("Checking results... "); fflush(stdout);
@@ -168,266 +195,36 @@ static void go_dpas_rowmajor_m1(
     }
 }
 
-static void go_dpas_rowmajor_m2(
+template<int tM, int tN, int tK>
+static void go_dpas_vnni(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
     const std::vector<float>& C_ref)
 {
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
+    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, tK, M, N, K).c_str()); fflush(stdout);
 
-    cl::Kernel kernel{program, "bfloat16_dpas_rowmajor_m2"};
+    std::string kernelName = "bfloat16_dpas_vnni_m" + std::to_string(tM);
+    cl::Kernel kernel{program, kernelName.c_str()};
     if (kernel()) {
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/2});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/tM});
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> elapsed_seconds = end - start;
             best = std::min(best, elapsed_seconds.count());
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
-            printf(" done!\n");
-        }
-    } else {
-        printf("unsupported.\n");
-    }
-}
-
-static void go_dpas_rowmajor_m4(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
-
-    cl::Kernel kernel{program, "bfloat16_dpas_rowmajor_m4"};
-    if (kernel()) {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/4});
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
-            printf(" done!\n");
-        }
-    } else {
-        printf("unsupported.\n");
-    }
-}
-
-static void go_dpas_rowmajor_m8(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
-
-    cl::Kernel kernel{program, "bfloat16_dpas_rowmajor_m8"};
-    if (kernel()) {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/8});
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
-            printf(" done!\n");
-        }
-    } else {
-        printf("unsupported.\n");
-    }
-}
-
-static void go_dpas_vnni_m1(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
-
-    cl::Kernel kernel{program, "bfloat16_dpas_vnni_m1"};
-    if (kernel()) {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M});
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
-            printf(" done!\n");
-        }
-    } else {
-        printf("unsupported.\n");
-    }
-}
-
-static void go_dpas_vnni_m2(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
-
-    cl::Kernel kernel{program, "bfloat16_dpas_vnni_m2"};
-    if (kernel()) {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/2});
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
-            printf(" done!\n");
-        }
-    } else {
-        printf("unsupported.\n");
-    }
-}
-
-static void go_dpas_vnni_m4(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
-
-    cl::Kernel kernel{program, "bfloat16_dpas_vnni_m4"};
-    if (kernel()) {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/4});
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
-            printf(" done!\n");
-        }
-    } else {
-        printf("unsupported.\n");
-    }
-}
-
-static void go_dpas_vnni_m8(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%40s (M=%zu, N = %zu, K = %zu): ", __FUNCTION__, M, N, K); fflush(stdout);
-
-    cl::Kernel kernel{program, "bfloat16_dpas_vnni_m8"};
-    if (kernel()) {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/8});
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Finished in %f seconds (%f gops)\n", best, gops);
+        printf("Best in %f seconds (%f gops)\n", best, gops);
 
         if (validate) {
             printf("Checking results... "); fflush(stdout);
@@ -513,43 +310,46 @@ int main(int argc, char** argv)
             program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
     }
 
-    std::vector<bfloat16> A(matrixSize * matrixSize);
-    std::vector<bfloat16> B(matrixSize * matrixSize);
-    std::vector<bfloat16> B_vnni(matrixSize * matrixSize);
+    const auto M = matrixSize;
+    const auto N = matrixSize;
+    const auto K = matrixSize;
 
-    std::vector<float> C(matrixSize * matrixSize);
-    std::vector<float> C_ref(matrixSize * matrixSize);
+    std::vector<bfloat16> A(M * K);
+    std::vector<bfloat16> B(K * N);
+    std::vector<bfloat16> B_vnni(K * N);
+
+    std::vector<float> C_ref(M * N);
 
     printf("Initializing source matrices...\n");
-    fill_matrix(A, matrixSize, matrixSize);
-    fill_matrix(B, matrixSize, matrixSize);
+    fill_matrix(A, M, K);
+    fill_matrix(B, K, N);
 
-    vnni_matrix(B_vnni, B, matrixSize, matrixSize, 2);
+    vnni_matrix(B_vnni, B, K, N, 2);
 
     if (validate) {
         printf("Computing reference...\n");
-        compute_reference(C_ref, A, B, matrixSize, matrixSize, matrixSize);
+        compute_reference(C_ref, A, B, M, N, K);
     }
 
     printf("Creating source buffers...\n");
     cl::Buffer Abuf{context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, A.size() * sizeof(A[0]), A.data()};
     cl::Buffer Bbuf{context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, B.size() * sizeof(B[0]), B.data()};
     cl::Buffer Bbuf_vnni{context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, B_vnni.size() * sizeof(B_vnni[0]), B_vnni.data()};
-    cl::Buffer Cbuf{context, CL_MEM_WRITE_ONLY, C.size() * sizeof(C[0])};
+    cl::Buffer Cbuf{context, CL_MEM_WRITE_ONLY, C_ref.size() * sizeof(C_ref[0])};
 
     printf("Running tests...\n");
 
-    go_naive(context, program, queue, Cbuf, Abuf, Bbuf, matrixSize, matrixSize, matrixSize, C_ref);
+    go_naive(context, program, queue, Cbuf, Abuf, Bbuf, M, N, K, C_ref);
 
-    go_dpas_rowmajor_m1(context, program, queue, Cbuf, Abuf, Bbuf, matrixSize, matrixSize, matrixSize, C_ref);
-    go_dpas_rowmajor_m2(context, program, queue, Cbuf, Abuf, Bbuf, matrixSize, matrixSize, matrixSize, C_ref);
-    go_dpas_rowmajor_m4(context, program, queue, Cbuf, Abuf, Bbuf, matrixSize, matrixSize, matrixSize, C_ref);
-    go_dpas_rowmajor_m8(context, program, queue, Cbuf, Abuf, Bbuf, matrixSize, matrixSize, matrixSize, C_ref);
+    go_dpas_rowmajor<1, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf, M, N, K, C_ref);
+    go_dpas_rowmajor<2, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf, M, N, K, C_ref);
+    go_dpas_rowmajor<4, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf, M, N, K, C_ref);
+    go_dpas_rowmajor<8, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf, M, N, K, C_ref);
 
-    go_dpas_vnni_m1(context, program, queue, Cbuf, Abuf, Bbuf_vnni, matrixSize, matrixSize, matrixSize, C_ref);
-    go_dpas_vnni_m2(context, program, queue, Cbuf, Abuf, Bbuf_vnni, matrixSize, matrixSize, matrixSize, C_ref);
-    go_dpas_vnni_m4(context, program, queue, Cbuf, Abuf, Bbuf_vnni, matrixSize, matrixSize, matrixSize, C_ref);
-    go_dpas_vnni_m8(context, program, queue, Cbuf, Abuf, Bbuf_vnni, matrixSize, matrixSize, matrixSize, C_ref);
+    go_dpas_vnni<1, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf_vnni, M, N, K, C_ref);
+    go_dpas_vnni<2, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf_vnni, M, N, K, C_ref);
+    go_dpas_vnni<4, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf_vnni, M, N, K, C_ref);
+    go_dpas_vnni<8, 8, 16>(context, program, queue, Cbuf, Abuf, Bbuf_vnni, M, N, K, C_ref);
 
     printf("Done.\n");
 
