@@ -1,4 +1,16 @@
-float bfloat16_to_float(ushort u)
+#if EMULATE_tn8 == 0
+#define mat_mul_x8  intel_sub_group_bf16_bf16_matrix_mad_k16
+#else
+#define mat_mul_x8  my_sub_group_bf16_bf16_matrix_mad_k16
+#endif
+
+#if EMULATE_tN16 == 0
+#define mat_mul_x16 intel_sub_group_bf16_bf16_matrix_mad_k16
+#else
+#define mat_mul_x16 my_sub_group_bf16_bf16_matrix_mad_k16
+#endif
+
+float bf16_to_fp32(ushort u)
 {
 #if defined(cl_intel_bfloat16_conversions)
     return intel_convert_as_bfloat16_float(u);
@@ -15,15 +27,146 @@ kernel void bfloat16_naive(global float* C, global ushort* A, global ushort* B, 
 
     float sum = 0;
     for (int k = 0; k < K; k++) {
-        sum = fma(bfloat16_to_float(A[m * K + k]), bfloat16_to_float(B[k * N + n]), sum);
+        sum = fma(bf16_to_fp32(A[m * K + k]), bf16_to_fp32(B[k * N + n]), sum);
     }
 
     C[m * N + n] = sum;
 }
 
-#if defined(cl_intel_subgroup_matrix_multiply_accumulate)
+#if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
+
+#define OVLD __attribute__((overloadable))
+
+// SIMD8 versions:
+static float  OVLD my_sub_group_bf16_bf16_matrix_mad_k16(int  a, int8 b, float  acc)
+{
+    float res = acc;
+
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 0)).x), bf16_to_fp32(as_ushort2(b.s0).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 0)).y), bf16_to_fp32(as_ushort2(b.s0).y), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 1)).x), bf16_to_fp32(as_ushort2(b.s1).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 1)).y), bf16_to_fp32(as_ushort2(b.s1).y), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 2)).x), bf16_to_fp32(as_ushort2(b.s2).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 2)).y), bf16_to_fp32(as_ushort2(b.s2).y), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 3)).x), bf16_to_fp32(as_ushort2(b.s3).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 3)).y), bf16_to_fp32(as_ushort2(b.s3).y), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 4)).x), bf16_to_fp32(as_ushort2(b.s4).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 4)).y), bf16_to_fp32(as_ushort2(b.s4).y), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 5)).x), bf16_to_fp32(as_ushort2(b.s5).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 5)).y), bf16_to_fp32(as_ushort2(b.s5).y), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 6)).x), bf16_to_fp32(as_ushort2(b.s6).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 6)).y), bf16_to_fp32(as_ushort2(b.s6).y), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 7)).x), bf16_to_fp32(as_ushort2(b.s7).x), res);
+    res = fma(bf16_to_fp32(as_ushort2(sub_group_broadcast(a, 7)).y), bf16_to_fp32(as_ushort2(b.s7).y), res);
+
+    return res;
+}
+
+static float2 OVLD my_sub_group_bf16_bf16_matrix_mad_k16(int2 a, int8 b, float2 acc)
+{
+    float2 res;
+
+    res.s0 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s0, b, acc.s0);
+    res.s1 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s1, b, acc.s1);
+
+    return res;
+}
+
+static float4 OVLD my_sub_group_bf16_bf16_matrix_mad_k16(int4 a, int8 b, float4 acc)
+{
+    float4 res;
+
+    res.s0 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s0, b, acc.s0);
+    res.s1 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s1, b, acc.s1);
+    res.s2 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s2, b, acc.s2);
+    res.s3 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s3, b, acc.s3);
+
+    return res;
+}
+
+static float8 OVLD my_sub_group_bf16_bf16_matrix_mad_k16(int8 a, int8 b, float8 acc)
+{
+    float8 res;
+
+    res.s0 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s0, b, acc.s0);
+    res.s1 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s1, b, acc.s1);
+    res.s2 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s2, b, acc.s2);
+    res.s3 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s3, b, acc.s3);
+    res.s4 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s4, b, acc.s4);
+    res.s5 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s5, b, acc.s5);
+    res.s6 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s6, b, acc.s6);
+    res.s7 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s7, b, acc.s7);
+
+    return res;
+}
+
+// SIMD16 versions:
+static float  OVLD my_sub_group_bf16_bf16_matrix_mad_k16(short  a, int8 b, float  acc)
+{
+    float res = acc;
+
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  0)), bf16_to_fp32(as_ushort2(b.s0).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  1)), bf16_to_fp32(as_ushort2(b.s0).y), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  2)), bf16_to_fp32(as_ushort2(b.s1).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  3)), bf16_to_fp32(as_ushort2(b.s1).y), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  4)), bf16_to_fp32(as_ushort2(b.s2).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  5)), bf16_to_fp32(as_ushort2(b.s2).y), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  6)), bf16_to_fp32(as_ushort2(b.s3).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  7)), bf16_to_fp32(as_ushort2(b.s3).y), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  8)), bf16_to_fp32(as_ushort2(b.s4).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a,  9)), bf16_to_fp32(as_ushort2(b.s4).y), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a, 10)), bf16_to_fp32(as_ushort2(b.s5).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a, 11)), bf16_to_fp32(as_ushort2(b.s5).y), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a, 12)), bf16_to_fp32(as_ushort2(b.s6).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a, 13)), bf16_to_fp32(as_ushort2(b.s6).y), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a, 14)), bf16_to_fp32(as_ushort2(b.s7).x), res);
+    res = fma(bf16_to_fp32(sub_group_broadcast(a, 15)), bf16_to_fp32(as_ushort2(b.s7).y), res);
+
+    return res;
+}
+
+static float2 OVLD my_sub_group_bf16_bf16_matrix_mad_k16(short2 a, int8 b, float2 acc)
+{
+    float2 res;
+
+    res.s0 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s0, b, acc.s0);
+    res.s1 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s1, b, acc.s1);
+
+    return res;
+}
+
+static float4 OVLD my_sub_group_bf16_bf16_matrix_mad_k16(short4 a, int8 b, float4 acc)
+{
+    float4 res;
+
+    res.s0 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s0, b, acc.s0);
+    res.s1 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s1, b, acc.s1);
+    res.s2 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s2, b, acc.s2);
+    res.s3 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s3, b, acc.s3);
+
+    return res;
+}
+
+static float8 OVLD my_sub_group_bf16_bf16_matrix_mad_k16(short8 a, int8 b, float8 acc)
+{
+    float8 res;
+
+    res.s0 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s0, b, acc.s0);
+    res.s1 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s1, b, acc.s1);
+    res.s2 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s2, b, acc.s2);
+    res.s3 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s3, b, acc.s3);
+    res.s4 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s4, b, acc.s4);
+    res.s5 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s5, b, acc.s5);
+    res.s6 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s6, b, acc.s6);
+    res.s7 = my_sub_group_bf16_bf16_matrix_mad_k16(a.s7, b, acc.s7);
+
+    return res;
+}
+
+#undef OVLD
 
 // M rows x K columns
+// This is the SIMD8 version, where each work-item loads two values.
 static int __load_a_row_major_bf16_k16_m1_x8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int ret;
@@ -32,10 +175,11 @@ static int __load_a_row_major_bf16_k16_m1_x8(global ushort* A, int rowStart, int
     int offset_ui = rowStart * stride / 2 + colStart / 2;
     ret = intel_sub_group_block_read(A_ui + offset_ui);
 
-    return ret; 
+    return ret;
 }
 
 // M rows x K columns
+// This is the SIMD8 version, where each work-item loads two values.
 static int2 __load_a_row_major_bf16_k16_m2_x8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int2 ret;
@@ -46,10 +190,11 @@ static int2 __load_a_row_major_bf16_k16_m2_x8(global ushort* A, int rowStart, in
     ret.s0 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
     ret.s1 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
 
-    return ret; 
+    return ret;
 }
 
 // M rows x K columns
+// This is the SIMD8 version, where each work-item loads two values.
 static int4 __load_a_row_major_bf16_k16_m4_x8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int4 ret;
@@ -66,6 +211,7 @@ static int4 __load_a_row_major_bf16_k16_m4_x8(global ushort* A, int rowStart, in
 }
 
 // M rows x K columns
+// This is the SIMD8 version, where each work-item loads two values.
 static int8 __load_a_row_major_bf16_k16_m8_x8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int8 ret;
@@ -82,7 +228,66 @@ static int8 __load_a_row_major_bf16_k16_m8_x8(global ushort* A, int rowStart, in
     ret.s6 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
     ret.s7 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
 
-    return ret; 
+    return ret;
+}
+
+// M rows x K columns
+// This is the SIMD16 version, where each work-item loads one values.
+static short __load_a_row_major_bf16_k16_m1_x16(global ushort* A, int rowStart, int colStart, int stride)
+{
+    ushort ret;
+
+    int offset = rowStart * stride + colStart;
+    ret = intel_sub_group_block_read_us(A + offset);
+
+    return as_short(ret);
+}
+
+// M rows x K columns
+// This is the SIMD16 version, where each work-item loads one values.
+static short2 __load_a_row_major_bf16_k16_m2_x16(global ushort* A, int rowStart, int colStart, int stride)
+{
+    ushort2 ret;
+
+    int offset = rowStart * stride + colStart;
+    ret.s0 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s1 = intel_sub_group_block_read_us(A + offset); offset += stride;
+
+    return as_short2(ret);
+}
+
+// M rows x K columns
+// This is the SIMD16 version, where each work-item loads one values.
+static short4 __load_a_row_major_bf16_k16_m4_x16(global ushort* A, int rowStart, int colStart, int stride)
+{
+    ushort4 ret;
+
+    int offset = rowStart * stride + colStart;
+    ret.s0 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s1 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s2 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s3 = intel_sub_group_block_read_us(A + offset); offset += stride;
+
+    return as_short4(ret);
+}
+
+// M rows x K columns
+// This is the SIMD16 version, where each work-item loads one values.
+static short8 __load_a_row_major_bf16_k16_m8_x16(global ushort* A, int rowStart, int colStart, int stride)
+{
+    ushort8 ret;
+
+    int offset = rowStart * stride + colStart;
+    ret.s0 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s1 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s2 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s3 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s4 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s5 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s6 = intel_sub_group_block_read_us(A + offset); offset += stride;
+    ret.s7 = intel_sub_group_block_read_us(A + offset); offset += stride;
+
+    return as_short8(ret);
 }
 
 // K rows x N columns:
@@ -198,7 +403,7 @@ static void __store_c_row_major_fp32_m8(global float* C, float8 v, int rowStart,
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_rowmajor_m1(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_rowmajor_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1);
@@ -208,7 +413,7 @@ kernel void bfloat16_dpas_rowmajor_m1(global float* C, global ushort* A, global 
     for (int k = 0; k < K; k += 16) {
         int     aData = __load_a_row_major_bf16_k16_m1_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m1(C, sum, m, n, N);
@@ -216,7 +421,7 @@ kernel void bfloat16_dpas_rowmajor_m1(global float* C, global ushort* A, global 
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_rowmajor_m2(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_rowmajor_m2_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1) * 2;
@@ -226,7 +431,7 @@ kernel void bfloat16_dpas_rowmajor_m2(global float* C, global ushort* A, global 
     for (int k = 0; k < K; k += 16) {
         int2    aData = __load_a_row_major_bf16_k16_m2_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m2(C, sum, m, n, N);
@@ -234,7 +439,7 @@ kernel void bfloat16_dpas_rowmajor_m2(global float* C, global ushort* A, global 
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_rowmajor_m4(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_rowmajor_m4_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1) * 4;
@@ -244,7 +449,7 @@ kernel void bfloat16_dpas_rowmajor_m4(global float* C, global ushort* A, global 
     for (int k = 0; k < K; k += 16) {
         int4    aData = __load_a_row_major_bf16_k16_m4_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m4(C, sum, m, n, N);
@@ -252,7 +457,7 @@ kernel void bfloat16_dpas_rowmajor_m4(global float* C, global ushort* A, global 
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_rowmajor_m8(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_rowmajor_m8_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1) * 8;
@@ -262,7 +467,79 @@ kernel void bfloat16_dpas_rowmajor_m8(global float* C, global ushort* A, global 
     for (int k = 0; k < K; k += 16) {
         int8    aData = __load_a_row_major_bf16_k16_m8_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m8(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_rowmajor_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1);
+    int n = get_group_id(0) * get_local_size(0);
+
+    float sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short   aData = __load_a_row_major_bf16_k16_m1_x16(A, m, k, K);
+        int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m1(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_rowmajor_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 2;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float2 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short2  aData = __load_a_row_major_bf16_k16_m2_x16(A, m, k, K);
+        int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m2(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_rowmajor_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 4;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float4 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short4  aData = __load_a_row_major_bf16_k16_m4_x16(A, m, k, K);
+        int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m4(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_rowmajor_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 8;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float8 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short8  aData = __load_a_row_major_bf16_k16_m8_x16(A, m, k, K);
+        int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
@@ -270,7 +547,7 @@ kernel void bfloat16_dpas_rowmajor_m8(global float* C, global ushort* A, global 
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_vnni_m1(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_vnni_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1);
@@ -280,7 +557,7 @@ kernel void bfloat16_dpas_vnni_m1(global float* C, global ushort* A, global usho
     for (int k = 0; k < K; k += 16) {
         int     aData = __load_a_row_major_bf16_k16_m1_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m1(C, sum, m, n, N);
@@ -288,7 +565,7 @@ kernel void bfloat16_dpas_vnni_m1(global float* C, global ushort* A, global usho
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_vnni_m2(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_vnni_m2_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1) * 2;
@@ -298,7 +575,7 @@ kernel void bfloat16_dpas_vnni_m2(global float* C, global ushort* A, global usho
     for (int k = 0; k < K; k += 16) {
         int2    aData = __load_a_row_major_bf16_k16_m2_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m2(C, sum, m, n, N);
@@ -306,7 +583,7 @@ kernel void bfloat16_dpas_vnni_m2(global float* C, global ushort* A, global usho
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_vnni_m4(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_vnni_m4_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1) * 4;
@@ -316,7 +593,7 @@ kernel void bfloat16_dpas_vnni_m4(global float* C, global ushort* A, global usho
     for (int k = 0; k < K; k += 16) {
         int4    aData = __load_a_row_major_bf16_k16_m4_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m4(C, sum, m, n, N);
@@ -324,7 +601,7 @@ kernel void bfloat16_dpas_vnni_m4(global float* C, global ushort* A, global usho
 
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void bfloat16_dpas_vnni_m8(global float* C, global ushort* A, global ushort* B, int K)
+kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     int m = get_group_id(1) * 8;
@@ -334,10 +611,82 @@ kernel void bfloat16_dpas_vnni_m8(global float* C, global ushort* A, global usho
     for (int k = 0; k < K; k += 16) {
         int8    aData = __load_a_row_major_bf16_k16_m8_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
-        sum = intel_sub_group_bf16_bf16_matrix_mad_k16(aData, bData, sum);
+        sum = mat_mul_x8(aData, bData, sum);
     }
 
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
 
-#endif // defined(cl_intel_subgroup_matrix_multiply_accumulate)
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_vnni_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1);
+    int n = get_group_id(0) * get_local_size(0);
+
+    float sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short   aData = __load_a_row_major_bf16_k16_m1_x16(A, m, k, K);
+        int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m1(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_vnni_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 2;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float2 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short2  aData = __load_a_row_major_bf16_k16_m2_x16(A, m, k, K);
+        int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m2(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_vnni_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 4;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float4 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short4  aData = __load_a_row_major_bf16_k16_m4_x16(A, m, k, K);
+        int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m4(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_vnni_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 8;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float8 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short8  aData = __load_a_row_major_bf16_k16_m8_x16(A, m, k, K);
+        int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    __store_c_row_major_fp32_m8(C, sum, m, n, N);
+}
+
+#endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
