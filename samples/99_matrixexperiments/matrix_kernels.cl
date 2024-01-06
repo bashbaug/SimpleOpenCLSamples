@@ -401,6 +401,8 @@ static void __store_c_row_major_fp32_m8(global float* C, float8 v, int rowStart,
     intel_sub_group_block_write(C_ui + offset, v_ui.s7); offset += stride;
 }
 
+#if HAS_SIMD8
+
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
@@ -472,6 +474,8 @@ kernel void bfloat16_dpas_rowmajor_m8_n8(global float* C, global ushort* A, glob
 
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
+
+#endif // HAS_SIMD8
 
 __attribute__((intel_reqd_sub_group_size(16)))
 __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -545,6 +549,8 @@ kernel void bfloat16_dpas_rowmajor_m8_n16(global float* C, global ushort* A, glo
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
 
+#if HAS_SIMD8
+
 __attribute__((intel_reqd_sub_group_size(8)))
 __attribute__((reqd_work_group_size(8, 1, 1)))
 kernel void bfloat16_dpas_vnni_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
@@ -616,6 +622,8 @@ kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global u
 
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
+
+#endif // HAS_SIMD8
 
 __attribute__((intel_reqd_sub_group_size(16)))
 __attribute__((reqd_work_group_size(16, 1, 1)))

@@ -304,18 +304,21 @@ int main(int argc, char** argv)
     printf("Running on device: %s\n",
         device.getInfo<CL_DEVICE_NAME>().c_str() );
 
+    auto minSubGroupSize = findMinSubGroupSize(device);
+
+    bool has_simd8 = minSubGroupSize == 8;
     bool emulate_tN8 = true;
     bool emulate_tN16 = true;
     if (!emulate && checkDeviceForExtension(device, "cl_intel_subgroup_matrix_multiply_accumulate")) {
-        auto minSubGroupSize = findMinSubGroupSize(device);
         printf("Found support for cl_intel_subgroup_matrix_multiply_accumulate, min sub-group size is: %zu\n", minSubGroupSize);
         switch(minSubGroupSize) {
-            case 8:  emulate_tN8 = false; break;
+            case 8: emulate_tN8 = false; break;
             case 16: emulate_tN16 = false; break;
             default: break;
         }
     }
 
+    buildOptions += " -DHAS_SIMD8=" + std::to_string(has_simd8);
     buildOptions += " -DEMULATE_tN8=" + std::to_string(emulate_tN8);
     buildOptions += " -DEMULATE_tN16=" + std::to_string(emulate_tN16);
 
