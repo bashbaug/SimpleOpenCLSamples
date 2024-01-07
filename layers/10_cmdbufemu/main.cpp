@@ -27,6 +27,14 @@
 
 #include "emulate.h"
 
+// Enhanced error checking can be used to catch additional errors when
+// commands are recorded into a command buffer, but relies on tricky
+// use of user events that may not work properly with some implementations.
+// Disabling enhanced error checkgin may enable command buffer emulation
+// to function properly on more implementations.
+
+const bool g_cEnhancedErrorChecking = false;
+
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
 static cl_int CL_API_CALL

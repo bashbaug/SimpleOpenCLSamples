@@ -1224,9 +1224,13 @@ typedef struct _cl_command_buffer_khr
                 properties,
                 properties + numProperties );
 
+            cmdbuf->TestQueues.reserve(num_queues);
+            cmdbuf->BlockingEvents.reserve(num_queues);
+
             for( auto queue : cmdbuf->Queues )
             {
                 g_pNextDispatch->clRetainCommandQueue(queue);
+                cmdbuf->setupTestQueue(queue);
             }
         }
 
@@ -1236,6 +1240,19 @@ typedef struct _cl_command_buffer_khr
     ~_cl_command_buffer_khr()
     {
         for( auto queue : Queues )
+        {
+            g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
+
+        for( auto event : BlockingEvents )
+        {
+            g_pNextDispatch->clSetUserEventStatus(
+                event,
+                -1 );
+            g_pNextDispatch->clReleaseEvent(event);
+        }
+
+        for( auto queue : TestQueues )
         {
             g_pNextDispatch->clReleaseCommandQueue(queue);
         }
@@ -1264,7 +1281,20 @@ typedef struct _cl_command_buffer_khr
 
     cl_command_queue    getQueue() const
     {
-        return Queues[0];
+        if( Queues.size() > 0 )
+        {
+            return Queues[0];
+        }
+        return nullptr;
+    }
+
+    cl_command_queue    getTestQueue() const
+    {
+        if( TestQueues.size() > 0 )
+        {
+            return TestQueues[0];
+        }
+        return nullptr;
     }
 
     cl_int  getInfo(
@@ -1460,6 +1490,23 @@ typedef struct _cl_command_buffer_khr
             return CL_INVALID_OPERATION;
         }
 
+        for( auto event : BlockingEvents )
+        {
+            g_pNextDispatch->clSetUserEventStatus(
+                event,
+                -1 );
+            g_pNextDispatch->clReleaseEvent(event);
+        }
+
+        BlockingEvents.clear();
+
+        for( auto queue : TestQueues )
+        {
+            g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
+
+        TestQueues.clear();
+
         State = CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR;
         return CL_SUCCESS;
     }
@@ -1569,8 +1616,83 @@ private:
     cl_command_buffer_flags_khr Flags;
     std::atomic<uint32_t> RefCount;
 
+    std::vector<cl_command_queue>   TestQueues;
+    std::vector<cl_event>   BlockingEvents;
+
     std::vector<std::unique_ptr<Command>> Commands;
     std::atomic<uint32_t> NextSyncPoint;
+
+    void setupTestQueue(cl_command_queue src)
+    {
+        if( g_cEnhancedErrorChecking )
+        {
+            cl_command_queue testQueue = nullptr;
+
+            cl_context context = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                src,
+                CL_QUEUE_CONTEXT,
+                sizeof(context),
+                &context,
+                nullptr );
+
+            cl_device_id device = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                src,
+                CL_QUEUE_DEVICE,
+                sizeof(device),
+                &device,
+                nullptr );
+
+            size_t propsSize = 0;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                src,
+                CL_QUEUE_PROPERTIES_ARRAY,
+                0,
+                nullptr,
+                &propsSize );
+            if (propsSize != 0) {
+                size_t numProps = propsSize / sizeof(cl_queue_properties);
+                std::vector<cl_queue_properties> props(numProps);
+                g_pNextDispatch->clGetCommandQueueInfo(
+                    src,
+                    CL_QUEUE_PROPERTIES_ARRAY,
+                    propsSize,
+                    props.data(),
+                    nullptr );
+                testQueue =  g_pNextDispatch->clCreateCommandQueueWithProperties(
+                    context,
+                    device,
+                    props.data(),
+                    nullptr );
+            } else {
+                cl_command_queue_properties props = 0;
+                g_pNextDispatch->clGetCommandQueueInfo(
+                    src,
+                    CL_QUEUE_PROPERTIES,
+                    sizeof(props),
+                    &props,
+                    nullptr );
+                testQueue = g_pNextDispatch->clCreateCommandQueue(
+                    context,
+                    device,
+                    props,
+                    nullptr );
+            }
+
+            cl_event blockingEvent = g_pNextDispatch->clCreateUserEvent(
+                context,
+                nullptr );
+            g_pNextDispatch->clEnqueueBarrierWithWaitList(
+                testQueue,
+                1,
+                &blockingEvent,
+                nullptr );
+
+            TestQueues.push_back(testQueue);
+            BlockingEvents.push_back(blockingEvent);
+        }
+    }
 
     _cl_command_buffer_khr(cl_command_buffer_flags_khr flags) :
         Magic(cMagic),
@@ -1784,6 +1906,23 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     {
         return errorCode;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyBuffer(
+                testQueue,
+                src_buffer,
+                dst_buffer,
+                src_offset,
+                dst_offset,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
+
 
     cmdbuf->addCommand(
         CopyBuffer::create(
@@ -1832,6 +1971,26 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
             mutable_handle) )
     {
         return errorCode;
+    }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyBufferRect(
+                testQueue,
+                src_buffer,
+                dst_buffer,
+                src_origin,
+                dst_origin,
+                region,
+                src_row_pitch,
+                src_slice_pitch,
+                dst_row_pitch,
+                dst_slice_pitch,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
     }
 
     cmdbuf->addCommand(
@@ -1882,6 +2041,22 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     {
         return errorCode;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyBufferToImage(
+                testQueue,
+                src_buffer,
+                dst_image,
+                src_offset,
+                dst_origin,
+                region,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         CopyBufferToImage::create(
@@ -1926,6 +2101,22 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
             mutable_handle) )
     {
         return errorCode;
+    }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyImage(
+                testQueue,
+                src_image,
+                dst_image,
+                src_origin,
+                dst_origin,
+                region,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
     }
 
     cmdbuf->addCommand(
@@ -1972,6 +2163,23 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     {
         return errorCode;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyImageToBuffer(
+                testQueue,
+                src_image,
+                dst_buffer,
+                src_origin,
+                region,
+                dst_offset,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
+
 
     cmdbuf->addCommand(
         CopyImageToBuffer::create(
@@ -2017,6 +2225,22 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     {
         return errorCode;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueFillBuffer(
+                testQueue,
+                buffer,
+                pattern,
+                pattern_size,
+                offset,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         FillBuffer::create(
@@ -2061,6 +2285,21 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     {
         return errorCode;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueFillImage(
+                testQueue,
+                image,
+                fill_color,
+                origin,
+                region,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         FillImage::create(
@@ -2103,6 +2342,21 @@ cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
     {
         return errorCode;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueSVMMemcpy(
+                testQueue,
+                CL_FALSE,
+                dst_ptr,
+                src_ptr,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         SVMMemcpy::create(
@@ -2144,6 +2398,21 @@ cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
             mutable_handle) )
     {
         return errorCode;
+    }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueSVMMemFill(
+                testQueue,
+                dst_ptr,
+                pattern,
+                pattern_size,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
     }
 
     cmdbuf->addCommand(
@@ -2189,6 +2458,22 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
             mutable_handle) )
     {
         return errorCode;
+    }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueNDRangeKernel(
+                testQueue,
+                kernel,
+                work_dim,
+                global_work_offset,
+                global_work_size,
+                local_work_size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
     }
 
     cl_int errorCode = CL_SUCCESS;

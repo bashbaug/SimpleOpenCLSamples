@@ -9,6 +9,10 @@
 
 #include <map>
 
+extern const bool g_cEnhancedErrorChecking;
+
+extern const struct _cl_icd_dispatch* g_pNextDispatch;
+
 struct SLayerContext
 {
     typedef std::map<cl_event, cl_event> CEventMap;
@@ -16,8 +20,6 @@ struct SLayerContext
 };
 
 SLayerContext& getLayerContext(void);
-
-extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Emulated Functions
