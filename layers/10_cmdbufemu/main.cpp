@@ -30,7 +30,7 @@
 // Enhanced error checking can be used to catch additional errors when
 // commands are recorded into a command buffer, but relies on tricky
 // use of user events that may not work properly with some implementations.
-// Disabling enhanced error checkgin may enable command buffer emulation
+// Disabling enhanced error checking may enable command buffer emulation
 // to function properly on more implementations.
 
 const bool g_cEnhancedErrorChecking = false;
