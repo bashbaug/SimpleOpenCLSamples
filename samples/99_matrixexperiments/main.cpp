@@ -64,7 +64,7 @@ static void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
     if (fixedData) {
         for (size_t r = 0; r < numRows; r++) {
             for (size_t c = 0; c < numCols; c++) {
-                M[r * numCols + c] = r + c;
+                M[r * numCols + c] = static_cast<float>(r + c);
             }
         }
     } else {
