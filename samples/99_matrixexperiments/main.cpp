@@ -20,6 +20,7 @@
 
 using test_clock = std::chrono::high_resolution_clock;
 
+bool identityData = false;
 bool fixedData = false;
 bool validate = false;
 bool emulate = false;
@@ -61,10 +62,11 @@ static size_t findMinSubGroupSize(cl::Device& device)
 template <typename T>
 static void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
 {
-    if (fixedData) {
+    if (identityData) {
+        std::generate(std::begin(M), std::end(M), [&]{ return 1.0f; });
+    } else if (fixedData) {
         for (size_t r = 0; r < numRows; r++) {
             for (size_t c = 0; c < numCols; c++) {
-                //M[r * numCols + c] = 1.0f;
                 M[r * numCols + c] = static_cast<float>(r + c);
             }
         }
@@ -298,6 +300,49 @@ static void go_dpas_blockread_rowmajor(
     }
 }
 
+template<int tM, int tN, int tK>
+static void go_dpas_blockread_vnni(
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
+    size_t M, size_t N, size_t K,
+    const std::vector<float>& C_ref)
+{
+    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, tK, M, N, K).c_str()); fflush(stdout);
+
+    std::string kernelName = "bfloat16_dpas_blockread_vnni";
+    kernelName += "_m" + std::to_string(tM);
+    kernelName += "_n" + std::to_string(tN);
+    cl::Kernel kernel{program, kernelName.c_str()};
+    if (kernel()) {
+        kernel.setArg(0, C);
+        kernel.setArg(1, A);
+        kernel.setArg(2, B);
+        kernel.setArg(3, static_cast<cl_int>(K));
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/tM});
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> elapsed_seconds = end - start;
+            best = std::min(best, elapsed_seconds.count());
+        }
+        auto gops = 2.0 * M * N * K / best / 1e9;
+        printf("Best in %f seconds (%f gops)\n", best, gops);
+
+        if (validate) {
+            printf("Checking results... "); fflush(stdout);
+            std::vector<float> C_check(C_ref.size());
+            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
+            check_results(C_check, C_ref);
+            printf(" done!\n");
+        }
+    } else {
+        printf("unsupported.\n");
+    }
+}
+
 int main(int argc, char** argv)
 {
     int platformIndex = 0;
@@ -316,6 +361,7 @@ int main(int argc, char** argv)
         op.add<popl::Value<size_t>>("m", "matrixsize", "Matrix Size", matrixSize, &matrixSize);
         op.add<popl::Value<int>>("i", "iterations", "Test Iterations", testIterations, &testIterations);
         op.add<popl::Switch>("", "validate", "Validate Results", &validate);
+        op.add<popl::Switch>("", "identity", "Use Identity Data", &identityData);
         op.add<popl::Switch>("", "fixed", "Use Fixed Data", &fixedData);
         op.add<popl::Switch>("", "emulate", "Unconditionally Emulate dpas", &emulate);
         op.add<popl::Value<float>>("", "threshold", "Local Error Threshold", threshold, &threshold);
@@ -446,6 +492,11 @@ int main(int argc, char** argv)
     go_dpas_blockread_rowmajor<2, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     go_dpas_blockread_rowmajor<4, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     go_dpas_blockread_rowmajor<8, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+
+    go_dpas_blockread_vnni<1, 16, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_blockread_vnni<2, 16, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_blockread_vnni<4, 16, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_blockread_vnni<8, 16, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
 
     printf("Done.\n");
 

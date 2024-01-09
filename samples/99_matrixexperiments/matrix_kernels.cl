@@ -752,6 +752,8 @@ ushort2 __builtin_IB_subgroup_block_read_flat_u16_m2k16v1(long baseoffset, int w
 ushort4 __builtin_IB_subgroup_block_read_flat_u16_m4k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort8 __builtin_IB_subgroup_block_read_flat_u16_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 
+uint8 __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+
 void __builtin_IB_subgroup_block_write_flat_u32_m1k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint  data);
 void __builtin_IB_subgroup_block_write_flat_u32_m2k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint2 data);
 void __builtin_IB_subgroup_block_write_flat_u32_m4k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint4 data);
@@ -772,6 +774,11 @@ ushort4 intel_subgroup_block_read_u16_m4k16(const __global void *base_address, i
 ushort8 intel_subgroup_block_read_u16_m8k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u16_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+
+uint8 intel_subgroup_block_read_u32_m8k16(const __global void* base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
 
 void intel_subgroup_block_write_u32_m1k16v1(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
@@ -861,6 +868,82 @@ kernel void bfloat16_dpas_blockread_rowmajor_m8_n16(global float* C, global usho
     for (int k = 0; k < K; k += 16) {
         short8  aData = as_short8(intel_subgroup_block_read_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    intel_subgroup_block_write_u32_m8k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_blockread_vnni_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int M = get_global_size(1);
+    const int N = get_global_size(0);
+    int m = get_group_id(1);
+    int n = get_group_id(0) * get_local_size(0);
+
+    float sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short   aData = as_short(intel_subgroup_block_read_u16_m1k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    intel_subgroup_block_write_u32_m1k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_blockread_vnni_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int M = get_global_size(1) * 2;
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 2;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float2 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short2  aData = as_short2(intel_subgroup_block_read_u16_m2k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    intel_subgroup_block_write_u32_m2k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_blockread_vnni_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int M = get_global_size(1) * 4;
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 4;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float4 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short4  aData = as_short4(intel_subgroup_block_read_u16_m4k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        sum = mat_mul_x16(aData, bData, sum);
+    }
+
+    intel_subgroup_block_write_u32_m4k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
+}
+
+__attribute__((intel_reqd_sub_group_size(16)))
+__attribute__((reqd_work_group_size(16, 1, 1)))
+kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
+{
+    const int M = get_global_size(1) * 8;
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 8;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float8 sum = 0;
+    for (int k = 0; k < K; k += 16) {
+        short8  aData = as_short8(intel_subgroup_block_read_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
         sum = mat_mul_x16(aData, bData, sum);
     }
 
