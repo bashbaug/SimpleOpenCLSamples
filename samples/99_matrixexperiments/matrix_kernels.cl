@@ -1,15 +1,15 @@
 #define OVLD __attribute__((overloadable))
 
-#if EMULATE_tn8 == 0
-#define mat_mul_x8  intel_sub_group_bf16_bf16_matrix_mad_k16
-#else
+#if EMULATE_tN8
 #define mat_mul_x8  my_sub_group_bf16_bf16_matrix_mad_k16
+#else
+#define mat_mul_x8  intel_sub_group_bf16_bf16_matrix_mad_k16
 #endif
 
-#if EMULATE_tN16 == 0
-#define mat_mul_x16 intel_sub_group_bf16_bf16_matrix_mad_k16
-#else
+#if EMULATE_tN16
 #define mat_mul_x16 my_sub_group_bf16_bf16_matrix_mad_k16
+#else
+#define mat_mul_x16 intel_sub_group_bf16_bf16_matrix_mad_k16
 #endif
 
 float bf16_to_fp32(ushort u)
