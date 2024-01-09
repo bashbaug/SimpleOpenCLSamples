@@ -4,7 +4,7 @@
 
 add_opencl_sample(
     TEST
-    NUMBER 05
+    NUMBER 99
     TARGET matrixexperiments
     VERSION 120
     SOURCES main.cpp
