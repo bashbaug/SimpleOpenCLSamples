@@ -1,5 +1,8 @@
 #define OVLD __attribute__((overloadable))
 
+// For all bfloat16 kernels we have tK == 16:
+#define tK 16
+
 #if EMULATE_tN8
 #define mat_mul_x8  my_sub_group_bf16_bf16_matrix_mad_k16
 #else
@@ -24,8 +27,8 @@ float bf16_to_fp32(ushort u)
 kernel void bfloat16_naive(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
-    int m = get_global_id(1);
-    int n = get_global_id(0);
+    const int m = get_global_id(1);
+    const int n = get_global_id(0);
 
     float sum = 0;
     for (int k = 0; k < K; k++) {
@@ -404,16 +407,19 @@ static void __store_c_row_major_fp32_m8(global float* C, float8 v, int rowStart,
 
 #if HAS_SIMD8
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+// For SIMD8 kernels, tN == 8:
+#define tN 8
+
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 1;
     const int N = get_global_size(0);
-    int m = get_group_id(1);
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int     aData = __load_a_row_major_bf16_k16_m1_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -422,16 +428,16 @@ kernel void bfloat16_dpas_rowmajor_m1_n8(global float* C, global ushort* A, glob
     __store_c_row_major_fp32_m1(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m2_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 2;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 2;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float2 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int2    aData = __load_a_row_major_bf16_k16_m2_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -440,16 +446,16 @@ kernel void bfloat16_dpas_rowmajor_m2_n8(global float* C, global ushort* A, glob
     __store_c_row_major_fp32_m2(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m4_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 4;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 4;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float4 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int4    aData = __load_a_row_major_bf16_k16_m4_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -458,16 +464,16 @@ kernel void bfloat16_dpas_rowmajor_m4_n8(global float* C, global ushort* A, glob
     __store_c_row_major_fp32_m4(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m8_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 8;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 8;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float8 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int8    aData = __load_a_row_major_bf16_k16_m8_x8(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -476,17 +482,13 @@ kernel void bfloat16_dpas_rowmajor_m8_n8(global float* C, global ushort* A, glob
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m8x2_n8x1(global float* C, global ushort* A, global ushort* B, int K)
 {
-    #define tM 8
-    #define tN 8
-    #define tK 16
-
     #define MM 2
     #define NN 1
 
+    const int tM = 8;
     const int N = get_global_size(0) * NN;
     const int m = get_group_id(1) * tM * MM;
     const int n = get_group_id(0) * tN * NN;
@@ -522,25 +524,17 @@ kernel void bfloat16_dpas_rowmajor_m8x2_n8x1(global float* C, global ushort* A, 
         }
     }
 
-    #undef tM
-    #undef tN
-    #undef tK
-
     #undef MM
     #undef NN
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m8x1_n8x2(global float* C, global ushort* A, global ushort* B, int K)
 {
-    #define tM 8
-    #define tN 8
-    #define tK 16
-
     #define MM 1
     #define NN 2
 
+    const int tM = 8;
     const int N = get_global_size(0) * NN;
     const int m = get_group_id(1) * tM * MM;
     const int n = get_group_id(0) * tN * NN;
@@ -575,26 +569,17 @@ kernel void bfloat16_dpas_rowmajor_m8x1_n8x2(global float* C, global ushort* A, 
             __store_c_row_major_fp32_m8(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
         }
     }
-
-    #undef tM
-    #undef tN
-    #undef tK
-
     #undef MM
     #undef NN
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m8x2_n8x2(global float* C, global ushort* A, global ushort* B, int K)
 {
-    #define tM 8
-    #define tN 8
-    #define tK 16
-
     #define MM 2
     #define NN 2
 
+    const int tM = 8;
     const int N = get_global_size(0) * NN;
     const int m = get_group_id(1) * tM * MM;
     const int n = get_group_id(0) * tN * NN;
@@ -630,26 +615,27 @@ kernel void bfloat16_dpas_rowmajor_m8x2_n8x2(global float* C, global ushort* A, 
         }
     }
 
-    #undef tM
-    #undef tN
-    #undef tK
-
     #undef MM
     #undef NN
 }
 
+#undef tN
+
 #endif // HAS_SIMD8
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+// For SIMD16 kernels, tN == 16:
+#define tN 16
+
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 1;
     const int N = get_global_size(0);
-    int m = get_group_id(1);
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * get_local_size(0);
 
     float sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short   aData = __load_a_row_major_bf16_k16_m1_x16(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -658,16 +644,16 @@ kernel void bfloat16_dpas_rowmajor_m1_n16(global float* C, global ushort* A, glo
     __store_c_row_major_fp32_m1(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 2;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 2;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tK;
+    const int n = get_group_id(0) * get_local_size(0);
 
     float2 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short2  aData = __load_a_row_major_bf16_k16_m2_x16(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -676,16 +662,16 @@ kernel void bfloat16_dpas_rowmajor_m2_n16(global float* C, global ushort* A, glo
     __store_c_row_major_fp32_m2(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 4;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 4;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * get_local_size(0);
 
     float4 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short4  aData = __load_a_row_major_bf16_k16_m4_x16(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -694,16 +680,16 @@ kernel void bfloat16_dpas_rowmajor_m4_n16(global float* C, global ushort* A, glo
     __store_c_row_major_fp32_m4(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 8;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 8;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * get_local_size(0);
 
     float8 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short8  aData = __load_a_row_major_bf16_k16_m8_x16(A, m, k, K);
         int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -712,18 +698,23 @@ kernel void bfloat16_dpas_rowmajor_m8_n16(global float* C, global ushort* A, glo
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
 
+#undef tN
+
 #if HAS_SIMD8
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+// For SIMD8 kernels, tN == 8:
+#define tN 8
+
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 1;
     const int N = get_global_size(0);
-    int m = get_group_id(1);
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int     aData = __load_a_row_major_bf16_k16_m1_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -732,16 +723,16 @@ kernel void bfloat16_dpas_vnni_m1_n8(global float* C, global ushort* A, global u
     __store_c_row_major_fp32_m1(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m2_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 2;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 2;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float2 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int2    aData = __load_a_row_major_bf16_k16_m2_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -750,16 +741,16 @@ kernel void bfloat16_dpas_vnni_m2_n8(global float* C, global ushort* A, global u
     __store_c_row_major_fp32_m2(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m4_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 4;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 4;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float4 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int4    aData = __load_a_row_major_bf16_k16_m4_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -768,16 +759,16 @@ kernel void bfloat16_dpas_vnni_m4_n8(global float* C, global ushort* A, global u
     __store_c_row_major_fp32_m4(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 8;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 8;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float8 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int8    aData = __load_a_row_major_bf16_k16_m8_x8(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x8(aData, bData, sum);
@@ -786,55 +777,161 @@ kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global u
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(8)))
-__attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m8x2_n8x1(global float* C, global ushort* A, global ushort* B, int K)
 {
-    #define tM 8
     #define MM 2
+    #define NN 1
 
-    const int N = get_global_size(0);
-    int m = get_group_id(1) * tM * MM;
-    int n = get_group_id(0) * get_local_size(0);
+    const int tM = 8;
+    const int N = get_global_size(0) * NN;
+    const int m = get_group_id(1) * tM * MM;
+    const int n = get_group_id(0) * tN * NN;
 
-    float8 sum[MM];
+    float8 sum[MM][NN];
     for (int mm = 0; mm < MM; mm++) {
-        sum[mm] = 0;
+        for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = 0;
+        }
     }
 
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         int8    aData[MM];
         for (int mm = 0; mm < MM; mm++) {
             aData[mm] = __load_a_row_major_bf16_k16_m8_x8(A, m + mm * tM, k, K);
         }
 
-        int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
+        int8    bData[NN];
+        for (int nn = 0; nn < NN; nn++) {
+            bData[nn] = __load_b_vnni_bf16_k16(B, k, n + nn * tN, N);
+        }
 
         for (int mm = 0; mm < MM; mm++) {
-            sum[mm] = mat_mul_x8(aData[mm], bData, sum[mm]);
+            for (int nn = 0; nn < NN; nn++) {
+                sum[mm][nn] = mat_mul_x8(aData[mm], bData[nn], sum[mm][nn]);
+            }
         }
     }
 
     for (int mm = 0; mm < MM; mm++) {
-        __store_c_row_major_fp32_m8(C, sum[mm], m + mm * tM, n, N);
+        for (int nn = 0; nn < NN; nn++) {
+            __store_c_row_major_fp32_m8(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
+        }
     }
 
-    #undef tM
     #undef MM
+    #undef NN
 }
+
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
+kernel void bfloat16_dpas_vnni_m8x1_n8x2(global float* C, global ushort* A, global ushort* B, int K)
+{
+    #define MM 1
+    #define NN 2
+
+    const int tM = 8;
+    const int N = get_global_size(0) * NN;
+    const int m = get_group_id(1) * tM * MM;
+    const int n = get_group_id(0) * tN * NN;
+
+    float8 sum[MM][NN];
+    for (int mm = 0; mm < MM; mm++) {
+        for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = 0;
+        }
+    }
+
+    for (int k = 0; k < K; k += tK) {
+        int8    aData[MM];
+        for (int mm = 0; mm < MM; mm++) {
+            aData[mm] = __load_a_row_major_bf16_k16_m8_x8(A, m + mm * tM, k, K);
+        }
+
+        int8    bData[NN];
+        for (int nn = 0; nn < NN; nn++) {
+            bData[nn] = __load_b_vnni_bf16_k16(B, k, n + nn * tN, N);
+        }
+
+        for (int mm = 0; mm < MM; mm++) {
+            for (int nn = 0; nn < NN; nn++) {
+                sum[mm][nn] = mat_mul_x8(aData[mm], bData[nn], sum[mm][nn]);
+            }
+        }
+    }
+
+    for (int mm = 0; mm < MM; mm++) {
+        for (int nn = 0; nn < NN; nn++) {
+            __store_c_row_major_fp32_m8(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
+        }
+    }
+
+    #undef MM
+    #undef NN
+}
+
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
+kernel void bfloat16_dpas_vnni_m8x2_n8x2(global float* C, global ushort* A, global ushort* B, int K)
+{
+    #define MM 2
+    #define NN 2
+
+    const int tM = 8;
+    const int N = get_global_size(0) * NN;
+    const int m = get_group_id(1) * tM * MM;
+    const int n = get_group_id(0) * tN * NN;
+
+    float8 sum[MM][NN];
+    for (int mm = 0; mm < MM; mm++) {
+        for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = 0;
+        }
+    }
+
+    for (int k = 0; k < K; k += tK) {
+        int8    aData[MM];
+        for (int mm = 0; mm < MM; mm++) {
+            aData[mm] = __load_a_row_major_bf16_k16_m8_x8(A, m + mm * tM, k, K);
+        }
+
+        int8    bData[NN];
+        for (int nn = 0; nn < NN; nn++) {
+            bData[nn] = __load_b_vnni_bf16_k16(B, k, n + nn * tN, N);
+        }
+
+        for (int mm = 0; mm < MM; mm++) {
+            for (int nn = 0; nn < NN; nn++) {
+                sum[mm][nn] = mat_mul_x8(aData[mm], bData[nn], sum[mm][nn]);
+            }
+        }
+    }
+
+    for (int mm = 0; mm < MM; mm++) {
+        for (int nn = 0; nn < NN; nn++) {
+            __store_c_row_major_fp32_m8(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
+        }
+    }
+
+    #undef MM
+    #undef NN
+}
+
+#undef tN
 
 #endif // HAS_SIMD8
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+// For SIMD16 kernels, tN == 16:
+#define tN 16
+
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 1;
     const int N = get_global_size(0);
-    int m = get_group_id(1);
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short   aData = __load_a_row_major_bf16_k16_m1_x16(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -843,16 +940,16 @@ kernel void bfloat16_dpas_vnni_m1_n16(global float* C, global ushort* A, global 
     __store_c_row_major_fp32_m1(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 2;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 2;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float2 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short2  aData = __load_a_row_major_bf16_k16_m2_x16(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -861,16 +958,16 @@ kernel void bfloat16_dpas_vnni_m2_n16(global float* C, global ushort* A, global 
     __store_c_row_major_fp32_m2(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 4;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 4;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float4 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short4  aData = __load_a_row_major_bf16_k16_m4_x16(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -879,16 +976,16 @@ kernel void bfloat16_dpas_vnni_m4_n16(global float* C, global ushort* A, global 
     __store_c_row_major_fp32_m4(C, sum, m, n, N);
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_vnni_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 8;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 8;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float8 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short8  aData = __load_a_row_major_bf16_k16_m8_x16(A, m, k, K);
         int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
         sum = mat_mul_x16(aData, bData, sum);
@@ -897,7 +994,12 @@ kernel void bfloat16_dpas_vnni_m8_n16(global float* C, global ushort* A, global 
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
 
+#undef tN
+
 #ifdef cl_intel_subgroup_extended_block_read
+
+// All of the block read kernels are SIMD16 kernels, tN == 16:
+#define tN 16
 
 // Note for 2D block reads:
 //  - the tile width and height is encoded into the function name.
@@ -997,17 +1099,17 @@ void intel_subgroup_block_write_u32_m8k16v1(__global void* base_address, int wid
     __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_rowmajor_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
+    const int tM = 1;
     const int M = get_global_size(1);
     const int N = get_global_size(0);
-    int m = get_group_id(1);
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short   aData = as_short(intel_subgroup_block_read_u16_m1k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1016,17 +1118,17 @@ kernel void bfloat16_dpas_blockread_rowmajor_m1_n16(global float* C, global usho
     intel_subgroup_block_write_u32_m1k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_rowmajor_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
-    const int M = get_global_size(1) * 2;
+    const int tM = 2;
+    const int M = get_global_size(1) * tM;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 2;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float2 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short2  aData = as_short2(intel_subgroup_block_read_u16_m2k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1035,17 +1137,17 @@ kernel void bfloat16_dpas_blockread_rowmajor_m2_n16(global float* C, global usho
     intel_subgroup_block_write_u32_m2k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_rowmajor_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
-    const int M = get_global_size(1) * 4;
+    const int tM = 4;
+    const int M = get_global_size(1) * tM;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 4;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float4 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short4  aData = as_short4(intel_subgroup_block_read_u16_m4k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1054,17 +1156,17 @@ kernel void bfloat16_dpas_blockread_rowmajor_m4_n16(global float* C, global usho
     intel_subgroup_block_write_u32_m4k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_rowmajor_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
-    const int M = get_global_size(1) * 8;
+    const int tM = 8;
+    const int M = get_global_size(1) * tM;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 8;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float8 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short8  aData = as_short8(intel_subgroup_block_read_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1073,17 +1175,17 @@ kernel void bfloat16_dpas_blockread_rowmajor_m8_n16(global float* C, global usho
     intel_subgroup_block_write_u32_m8k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_vnni_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
-    const int M = get_global_size(1);
+    const int tM = 1;
+    const int M = get_global_size(1) * tM;
     const int N = get_global_size(0);
-    int m = get_group_id(1);
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short   aData = as_short(intel_subgroup_block_read_u16_m1k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1092,17 +1194,17 @@ kernel void bfloat16_dpas_blockread_vnni_m1_n16(global float* C, global ushort* 
     intel_subgroup_block_write_u32_m1k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_vnni_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
-    const int M = get_global_size(1) * 2;
+    const int tM = 2;
+    const int M = get_global_size(1) * tM;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 2;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float2 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short2  aData = as_short2(intel_subgroup_block_read_u16_m2k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1111,17 +1213,17 @@ kernel void bfloat16_dpas_blockread_vnni_m2_n16(global float* C, global ushort* 
     intel_subgroup_block_write_u32_m2k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_vnni_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
-    const int M = get_global_size(1) * 4;
+    const int tM = 4;
+    const int M = get_global_size(1) * tM;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 4;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float4 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short4  aData = as_short4(intel_subgroup_block_read_u16_m4k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1130,17 +1232,17 @@ kernel void bfloat16_dpas_blockread_vnni_m4_n16(global float* C, global ushort* 
     intel_subgroup_block_write_u32_m4k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
 }
 
-__attribute__((intel_reqd_sub_group_size(16)))
-__attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(tN))) __attribute__((reqd_work_group_size(tN, 1, 1)))
 kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
-    const int M = get_global_size(1) * 8;
+    const int tM = 8;
+    const int M = get_global_size(1) * tM;
     const int N = get_global_size(0);
-    int m = get_group_id(1) * 8;
-    int n = get_group_id(0) * get_local_size(0);
+    const int m = get_group_id(1) * tM;
+    const int n = get_group_id(0) * tN;
 
     float8 sum = 0;
-    for (int k = 0; k < K; k += 16) {
+    for (int k = 0; k < K; k += tK) {
         short8  aData = as_short8(intel_subgroup_block_read_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
         int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
         sum = mat_mul_x16(aData, bData, sum);
@@ -1148,9 +1250,12 @@ kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* 
 
     intel_subgroup_block_write_u32_m8k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
 }
+
+#undef tN
 
 #endif // cl_intel_subgroup_extended_block_read
 
 #endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
 
 #undef OVLD
+#undef tK

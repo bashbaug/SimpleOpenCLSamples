@@ -593,6 +593,7 @@ int main(int argc, char** argv)
 
     go_dpas_vnni_x<8, 8, 16, 2, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     go_dpas_vnni_x<8, 8, 16, 1, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_vnni_x<8, 8, 16, 2, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
 
     go_dpas_rowmajor<1, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     go_dpas_rowmajor<2, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
