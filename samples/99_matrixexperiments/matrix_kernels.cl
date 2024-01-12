@@ -476,6 +476,41 @@ kernel void bfloat16_dpas_rowmajor_m8_n8(global float* C, global ushort* A, glob
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
 }
 
+__attribute__((intel_reqd_sub_group_size(8)))
+__attribute__((reqd_work_group_size(8, 1, 1)))
+kernel void bfloat16_dpas_rowmajor_m8x2_n8x1(global float* C, global ushort* A, global ushort* B, int K)
+{
+    #define MM 2
+
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 8 * MM;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float8 sum[MM];
+    for (int mm = 0; mm < MM; mm++) {
+        sum[mm] = 0;
+    }
+
+    for (int k = 0; k < K; k += 16) {
+        int8    aData[MM];
+        for (int mm = 0; mm < MM; mm++) {
+            aData[mm] = __load_a_row_major_bf16_k16_m8_x8(A, m + mm * 8, k, K);
+        }
+
+        int8    bData = __load_b_row_major_bf16_k16(B, k, n, N);
+
+        for (int mm = 0; mm < MM; mm++) {
+            sum[mm] = mat_mul_x8(aData[mm], bData, sum[mm]);
+        }
+    }
+
+    for (int mm = 0; mm < MM; mm++) {
+        __store_c_row_major_fp32_m8(C, sum[mm], m + mm * 8, n, N);
+    }
+
+    #undef MM
+}
+
 #endif // HAS_SIMD8
 
 __attribute__((intel_reqd_sub_group_size(16)))
@@ -622,6 +657,41 @@ kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global u
     }
 
     __store_c_row_major_fp32_m8(C, sum, m, n, N);
+}
+
+__attribute__((intel_reqd_sub_group_size(8)))
+__attribute__((reqd_work_group_size(8, 1, 1)))
+kernel void bfloat16_dpas_vnni_m8x2_n8x1(global float* C, global ushort* A, global ushort* B, int K)
+{
+    #define MM 2
+
+    const int N = get_global_size(0);
+    int m = get_group_id(1) * 8 * MM;
+    int n = get_group_id(0) * get_local_size(0);
+
+    float8 sum[MM];
+    for (int mm = 0; mm < MM; mm++) {
+        sum[mm] = 0;
+    }
+
+    for (int k = 0; k < K; k += 16) {
+        int8    aData[MM];
+        for (int mm = 0; mm < MM; mm++) {
+            aData[mm] = __load_a_row_major_bf16_k16_m8_x8(A, m + mm * 8, k, K);
+        }
+
+        int8    bData = __load_b_vnni_bf16_k16(B, k, n, N);
+
+        for (int mm = 0; mm < MM; mm++) {
+            sum[mm] = mat_mul_x8(aData[mm], bData, sum[mm]);
+        }
+    }
+
+    for (int mm = 0; mm < MM; mm++) {
+        __store_c_row_major_fp32_m8(C, sum[mm], m + mm * 8, n, N);
+    }
+
+    #undef MM
 }
 
 #endif // HAS_SIMD8

@@ -29,6 +29,16 @@ float threshold = 0.01f;
 
 std::string makeTestName(
     const std::string &func,
+    size_t M, size_t N, size_t K)
+{
+    std::ostringstream ret;
+    ret << func;
+    ret << " (M=" << M << ", N=" << N << ", K=" << K << ")";
+    return ret.str();
+}
+
+std::string makeTestName(
+    const std::string &func,
     int tM, int tN, int tK,
     size_t M, size_t N, size_t K)
 {
@@ -41,10 +51,13 @@ std::string makeTestName(
 
 std::string makeTestName(
     const std::string &func,
+    int tM, int tN, int tK,
+    int MM, int NN,
     size_t M, size_t N, size_t K)
 {
     std::ostringstream ret;
     ret << func;
+    ret << "<tM:" << tM << "x" << MM << ", tN:" << tN << "x" << NN << ", tK:" << tK << ">";
     ret << " (M=" << M << ", N=" << N << ", K=" << K << ")";
     return ret.str();
 }
@@ -112,24 +125,28 @@ static void compute_reference(
 }
 
 template <typename T>
-int check_results(const std::vector<T>& C,
-                  const std::vector<T>& C_ref)
+void check_results(
+    size_t M,
+    size_t N,
+    const std::vector<T>& C,
+    const std::vector<T>& C_ref)
 {
     float err = 0.f;
-    for (int i = 0; i < C.size(); ++i) {
-        auto localErr = std::fabs(C[i] - C_ref[i]) /
-                        std::max(std::fabs(C[i]),
-                                 std::fabs(C_ref[i]));
-        err = std::max(localErr, err);
-        if (localErr >= threshold) {
-            std::cerr << "Error at index " << i << " (local error " << localErr
-                      << "): Wanted " << C_ref[i] << ", got " << C[i]
-                      << std::endl;
-            break;
+    for (size_t m = 0; m < M; m++) {
+        for (size_t n = 0; n < N; n++) {
+            auto index = m * N + n;
+            auto localErr = std::fabs(C[index] - C_ref[index]) /
+                            std::max(std::fabs(C[index]),
+                                    std::fabs(C_ref[index]));
+            err = std::max(localErr, err);
+            if (localErr >= threshold) {
+                std::cerr << "Error at m = " << m << ", n = " << n
+                          << ": (local error " << localErr << "): Wanted "
+                          << C_ref[index] << ", got " << C[index] << std::endl;
+                return;
+            }
         }
     }
-
-    return err < 0.001f;
 }
 
 static void go_naive(
@@ -164,7 +181,7 @@ static void go_naive(
         printf("Checking results... "); fflush(stdout);
         std::vector<float> C_check(C_ref.size());
         queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-        check_results(C_check, C_ref);
+        check_results(M, N, C_check, C_ref);
         printf(" done!\n");
     }
 }
@@ -204,7 +221,52 @@ static void go_dpas_rowmajor(
             printf("Checking results... "); fflush(stdout);
             std::vector<float> C_check(C_ref.size());
             queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
+            check_results(M, N, C_check, C_ref);
+            printf(" done!\n");
+        }
+    } else {
+        printf("unsupported.\n");
+    }
+}
+
+template<int tM, int tN, int tK, int MM, int NN>
+static void go_dpas_rowmajor_x(
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
+    size_t M, size_t N, size_t K,
+    const std::vector<float>& C_ref)
+{
+    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, tK, MM, NN, M, N, K).c_str()); fflush(stdout);
+
+    std::string kernelName = "bfloat16_dpas_rowmajor";
+    kernelName += "_m" + std::to_string(tM);
+    kernelName += "x" + std::to_string(MM);
+    kernelName += "_n" + std::to_string(tN);
+    kernelName += "x" + std::to_string(NN);
+    cl::Kernel kernel{program, kernelName.c_str()};
+    if (kernel()) {
+        kernel.setArg(0, C);
+        kernel.setArg(1, A);
+        kernel.setArg(2, B);
+        kernel.setArg(3, static_cast<cl_int>(K));
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N/NN, M/tM/MM});
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> elapsed_seconds = end - start;
+            best = std::min(best, elapsed_seconds.count());
+        }
+        auto gops = 2.0 * M * N * K / best / 1e9;
+        printf("Best in %f seconds (%f gops)\n", best, gops);
+
+        if (validate) {
+            printf("Checking results... "); fflush(stdout);
+            std::vector<float> C_check(C_ref.size());
+            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
+            check_results(M, N, C_check, C_ref);
             printf(" done!\n");
         }
     } else {
@@ -249,7 +311,54 @@ static void go_dpas_vnni(
             printf("Checking results... "); fflush(stdout);
             std::vector<float> C_check(C_ref.size());
             queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
+            check_results(M, N, C_check, C_ref);
+            printf(" done!\n");
+        }
+    } else {
+        printf("unsupported.\n");
+    }
+}
+
+template<int tM, int tN, int tK, int MM, int NN>
+static void go_dpas_vnni_x(
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
+    size_t M, size_t N, size_t K,
+    const std::vector<float>& C_ref)
+{
+    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, tK, MM, NN, M, N, K).c_str()); fflush(stdout);
+
+    std::string kernelName = "bfloat16_dpas_vnni";
+    kernelName += "_m" + std::to_string(tM);
+    kernelName += "x" + std::to_string(MM);
+    kernelName += "_n" + std::to_string(tN);
+    kernelName += "x" + std::to_string(NN);
+    cl::Kernel kernel{program, kernelName.c_str()};
+    if (kernel()) {
+        kernel.setArg(0, C);
+        kernel.setArg(1, A);
+        kernel.setArg(2, B);
+        kernel.setArg(3, static_cast<cl_int>(K));
+
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N/NN, M/tM/MM});
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> elapsed_seconds = end - start;
+            best = std::min(best, elapsed_seconds.count());
+        }
+        auto gops = 2.0 * M * N * K / best / 1e9;
+        printf("Best in %f seconds (%f gops)\n", best, gops);
+
+        if (validate) {
+            printf("Checking results... "); fflush(stdout);
+            std::vector<float> C_check(C_ref.size());
+            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
+            check_results(M, N, C_check, C_ref);
             printf(" done!\n");
         }
     } else {
@@ -292,7 +401,7 @@ static void go_dpas_blockread_rowmajor(
             printf("Checking results... "); fflush(stdout);
             std::vector<float> C_check(C_ref.size());
             queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
+            check_results(M, N, C_check, C_ref);
             printf(" done!\n");
         }
     } else {
@@ -335,7 +444,7 @@ static void go_dpas_blockread_vnni(
             printf("Checking results... "); fflush(stdout);
             std::vector<float> C_check(C_ref.size());
             queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(C_check, C_ref);
+            check_results(M, N, C_check, C_ref);
             printf(" done!\n");
         }
     } else {
@@ -473,10 +582,14 @@ int main(int argc, char** argv)
     go_dpas_rowmajor<4, 8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     go_dpas_rowmajor<8, 8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
 
+    go_dpas_rowmajor_x<8, 8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+
     go_dpas_vnni<1, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     go_dpas_vnni<2, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     go_dpas_vnni<4, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     go_dpas_vnni<8, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+
+    go_dpas_vnni_x<8, 8, 16, 2, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
 
     go_dpas_rowmajor<1, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     go_dpas_rowmajor<2, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
