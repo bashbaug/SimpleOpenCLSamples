@@ -230,7 +230,7 @@ static void go_dpas_rowmajor(
 }
 
 template<int tM, int tN, int tK, int MM, int NN>
-static void go_dpas_rowmajor_x(
+static void go_dpas_rowmajor_tiled(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -238,10 +238,10 @@ static void go_dpas_rowmajor_x(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, tK, MM, NN, M, N, K).c_str()); fflush(stdout);
 
-    std::string kernelName = "bfloat16_dpas_rowmajor";
+    std::string kernelName = "bfloat16_dpas_rowmajor_tiled";
     kernelName += "_m" + std::to_string(tM);
-    kernelName += "x" + std::to_string(MM);
     kernelName += "_n" + std::to_string(tN);
+    kernelName += "_" + std::to_string(MM);
     kernelName += "x" + std::to_string(NN);
     cl::Kernel kernel{program, kernelName.c_str()};
     if (kernel()) {
@@ -320,7 +320,7 @@ static void go_dpas_vnni(
 }
 
 template<int tM, int tN, int tK, int MM, int NN>
-static void go_dpas_vnni_x(
+static void go_dpas_vnni_tiled(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -328,10 +328,10 @@ static void go_dpas_vnni_x(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, tK, MM, NN, M, N, K).c_str()); fflush(stdout);
 
-    std::string kernelName = "bfloat16_dpas_vnni";
+    std::string kernelName = "bfloat16_dpas_vnni_tiled";
     kernelName += "_m" + std::to_string(tM);
-    kernelName += "x" + std::to_string(MM);
     kernelName += "_n" + std::to_string(tN);
+    kernelName += "_" + std::to_string(MM);
     kernelName += "x" + std::to_string(NN);
     cl::Kernel kernel{program, kernelName.c_str()};
     if (kernel()) {
@@ -582,18 +582,24 @@ int main(int argc, char** argv)
     go_dpas_rowmajor<4, 8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     go_dpas_rowmajor<8, 8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
 
-    go_dpas_rowmajor_x<8, 8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-    go_dpas_rowmajor_x<8, 8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-    go_dpas_rowmajor_x<8, 8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+    go_dpas_rowmajor_tiled<8, 8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+    go_dpas_rowmajor_tiled<8, 8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+    go_dpas_rowmajor_tiled<8, 8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+    go_dpas_rowmajor_tiled<8, 8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+    go_dpas_rowmajor_tiled<8, 8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
+    go_dpas_rowmajor_tiled<8, 8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
 
     go_dpas_vnni<1, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     go_dpas_vnni<2, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     go_dpas_vnni<4, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     go_dpas_vnni<8, 8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
 
-    go_dpas_vnni_x<8, 8, 16, 2, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-    go_dpas_vnni_x<8, 8, 16, 1, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-    go_dpas_vnni_x<8, 8, 16, 2, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_vnni_tiled<8, 8, 16, 2, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_vnni_tiled<8, 8, 16, 1, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_vnni_tiled<8, 8, 16, 2, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_vnni_tiled<8, 8, 16, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_vnni_tiled<8, 8, 16, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    go_dpas_vnni_tiled<8, 8, 16, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
 
     go_dpas_rowmajor<1, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     go_dpas_rowmajor<2, 16, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
