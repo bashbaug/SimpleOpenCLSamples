@@ -24,6 +24,7 @@ bool identityData = false;
 bool fixedData = false;
 bool validate = false;
 bool emulate = false;
+bool wallclock = false;
 int testIterations = 16;
 float threshold = 0.01f;
 
@@ -149,6 +150,13 @@ void check_results(
     }
 }
 
+static float hw_time(cl::Event& event)
+{
+    auto ns = event.getProfilingInfo<CL_PROFILING_COMMAND_END>() -
+              event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    return ns / 1e9;
+}
+
 static void go_naive(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
@@ -167,12 +175,15 @@ static void go_naive(
 
     float best = 999.0f;
     for (int test = 0; test < testIterations; test++) {
+        cl::Event event;
         auto start = test_clock::now();
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M});
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+            cl::NDRange{N, M}, cl::NullRange, nullptr, &event);
         queue.finish();
         auto end = test_clock::now();
-        std::chrono::duration<float> elapsed_seconds = end - start;
-        best = std::min(best, elapsed_seconds.count());
+        std::chrono::duration<float> sw_time = end - start;
+        auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+        best = std::min(best, elapsed);
     }
     auto gops = 2.0 * M * N * K / best / 1e9;
     printf("Best in %f seconds (%f gops)\n", best, gops);
@@ -207,12 +218,15 @@ static void go_dpas_rowmajor(
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
+            cl::Event event;
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/tM});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+            best = std::min(best, elapsed);
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
         printf("Best in %f seconds (%f gops)\n", best, gops);
@@ -252,12 +266,15 @@ static void go_dpas_rowmajor_tiled(
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
+            cl::Event event;
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N/NN, M/tM/MM});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+            best = std::min(best, elapsed);
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
         printf("Best in %f seconds (%f gops)\n", best, gops);
@@ -297,12 +314,15 @@ static void go_dpas_vnni(
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
+            cl::Event event;
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/tM});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+            best = std::min(best, elapsed);
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
         printf("Best in %f seconds (%f gops)\n", best, gops);
@@ -344,12 +364,15 @@ static void go_dpas_vnni_tiled(
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
+            cl::Event event;
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N/NN, M/tM/MM});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+            best = std::min(best, elapsed);
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
         printf("Best in %f seconds (%f gops)\n", best, gops);
@@ -387,12 +410,15 @@ static void go_dpas_blockread_rowmajor(
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
+            cl::Event event;
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/tM});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+            best = std::min(best, elapsed);
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
         printf("Best in %f seconds (%f gops)\n", best, gops);
@@ -430,12 +456,15 @@ static void go_dpas_blockread_vnni(
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
+            cl::Event event;
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange{N, M/tM});
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
-            std::chrono::duration<float> elapsed_seconds = end - start;
-            best = std::min(best, elapsed_seconds.count());
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+            best = std::min(best, elapsed);
         }
         auto gops = 2.0 * M * N * K / best / 1e9;
         printf("Best in %f seconds (%f gops)\n", best, gops);
@@ -473,6 +502,7 @@ int main(int argc, char** argv)
         op.add<popl::Switch>("", "identity", "Use Identity Data", &identityData);
         op.add<popl::Switch>("", "fixed", "Use Fixed Data", &fixedData);
         op.add<popl::Switch>("", "emulate", "Unconditionally Emulate dpas", &emulate);
+        op.add<popl::Switch>("", "wallclock", "Measure Wallclock Time", &wallclock);
         op.add<popl::Value<float>>("", "threshold", "Local Error Threshold", threshold, &threshold);
         bool printUsage = false;
         try {
@@ -525,11 +555,12 @@ int main(int argc, char** argv)
     printf("\tTest Iterations: %d\n", testIterations);
     printf("\tValidating data?: %s\n", validate ? "true" : "false");
     printf("\tFixed data?: %s\n", fixedData ? "true" : "false");
+    printf("\tWallclock time?: %s\n", wallclock ? "true" : "false");
     printf("\tEmulate dpas for tN=8?: %s\n", emulate_tN8 ? "true" : "false");
     printf("\tEmulate dpas for tN=16?: %s\n", emulate_tN16 ? "true" : "false");
 
     cl::Context context{device};
-    cl::CommandQueue queue{context, device};
+    cl::CommandQueue queue{context, device, CL_QUEUE_PROFILING_ENABLE};
 
     printf("Reading program source from file: %s\n", fileName.c_str() );
     std::string kernelString = readStringFromFile(fileName.c_str());
