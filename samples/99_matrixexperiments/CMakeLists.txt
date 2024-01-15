@@ -8,4 +8,4 @@ add_opencl_sample(
     TARGET matrixexperiments
     VERSION 120
     SOURCES main.cpp
-    KERNELS matrix_helpers.cl matrix_kernels.cl)
+    KERNELS matrix_helpers.cl matrix_kernels.cl matrix_kernel_tiled.cl)
