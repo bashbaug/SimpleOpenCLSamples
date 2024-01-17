@@ -8,6 +8,8 @@
 
 #include <CL/opencl.hpp>
 
+#include <algorithm>
+
 #define CASE_TO_STRING(_e) case _e: return #_e;
 
 const char* mem_object_type_to_string(cl_mem_object_type mem_object_type)
@@ -199,6 +201,13 @@ int main(
         {
             std::vector<cl::ImageFormat> imageFormats;
             context.getSupportedImageFormats( imageAccess, imageType, &imageFormats );
+
+            std::sort(std::begin(imageFormats), std::end(imageFormats),
+                [](cl::ImageFormat a, cl::ImageFormat b) {
+                    return a.image_channel_order < b.image_channel_order ||
+                        (a.image_channel_order == b.image_channel_data_type &&
+                         a.image_channel_data_type < b.image_channel_data_type);
+                });
 
             printf("\nFor image access %s (%04X), image type %s (%04X):\n",
                 mem_flags_to_string(imageAccess),
