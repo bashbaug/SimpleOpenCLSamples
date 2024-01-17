@@ -218,7 +218,7 @@ kernel void bfloat16_dpas_rowmajor_m2_n16(global float* C, global ushort* A, glo
     const int tM = 2;
     const int tN = 16;
     const int N = get_global_size(0);
-    const int m = get_group_id(1) * tK;
+    const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * get_local_size(0);
 
     float2 sum = 0;
