@@ -188,7 +188,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
 {
     const int tM = 8;
     const int tN = 16;
-    const int M = get_global_size(1) * tM;
+    const int M = get_global_size(1) * tM * MM;
     const int N = get_global_size(0) * NN;
     const int m = get_group_id(1) * tM * MM;
     const int n = get_group_id(0) * tN * NN;
@@ -220,7 +220,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
-            intel_subgroup_block_write_u32_m8k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[mm][nn]));
+            intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[mm][nn]));
         }
     }
 }
@@ -230,7 +230,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
 {
     const int tM = 8;
     const int tN = 16;
-    const int M = get_global_size(1) * tM;
+    const int M = get_global_size(1) * tM * MM;
     const int N = get_global_size(0) * NN;
     const int m = get_group_id(1) * tM * MM;
     const int n = get_group_id(0) * tN * NN;
@@ -262,7 +262,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
-            intel_subgroup_block_write_u32_m8k16v1(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[mm][nn]));
+            intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[mm][nn]));
         }
     }
 }

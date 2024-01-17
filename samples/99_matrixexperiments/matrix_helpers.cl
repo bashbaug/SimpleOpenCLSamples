@@ -464,19 +464,19 @@ uint8 intel_subgroup_block_read_u32_m8k16(const __global void* base_address, int
     return __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
 
-void intel_subgroup_block_write_u32_m1k16v1(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
+void intel_subgroup_block_write_u32_m1k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m2k16v1(__global void* base_address, int width, int height, int pitch, int2 coord, uint2 data)
+void intel_subgroup_block_write_u32_m2k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint2 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m4k16v1(__global void* base_address, int width, int height, int pitch, int2 coord, uint4 data)
+void intel_subgroup_block_write_u32_m4k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint4 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m8k16v1(__global void* base_address, int width, int height, int pitch, int2 coord, uint8 data)
+void intel_subgroup_block_write_u32_m8k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint8 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }

@@ -174,7 +174,7 @@ static void go_naive(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -222,7 +222,7 @@ static void go_dpas_rowmajor(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -276,7 +276,7 @@ static void go_dpas_rowmajor_tiled(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -324,7 +324,7 @@ static void go_dpas_vnni(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -378,7 +378,7 @@ static void go_dpas_vnni_tiled(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -426,7 +426,7 @@ static void go_dpas_blockread_rowmajor(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -480,7 +480,7 @@ static void go_dpas_blockread_rowmajor_tiled(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -528,7 +528,7 @@ static void go_dpas_blockread_vnni(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
@@ -582,7 +582,7 @@ static void go_dpas_blockread_vnni_tiled(
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
 
-        queue.enqueueFillBuffer(C, 0, 0, C_ref.size());
+        queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
 
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
