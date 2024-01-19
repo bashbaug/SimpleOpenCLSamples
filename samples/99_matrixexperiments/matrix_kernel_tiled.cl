@@ -10,6 +10,17 @@
 #error "NN is undefined!  This should be defined as the number of matrix tiles in the N dimension."
 #endif
 
+#if !defined(cl_intel_split_work_group_barrier) || defined(NO_SPLIT_BARRIERS)
+#if !defined(cl_intel_split_work_group_barrier)
+#warning "Unexpected: cl_intel_split_work_group_barrier is not supported?"
+#endif
+#define split_barrier_arrive()
+#define split_barrier_wait()
+#else
+#define split_barrier_arrive()  intel_work_group_barrier_arrive(0)
+#define split_barrier_wait()    intel_work_group_barrier_wait(0)
+#endif
+
 #define MM_KERNEL_NAMEX(PREFIX, tM, tN, MM, NN) PREFIX ## _m ## tM ## _n ## tN ## _ ## MM ## x ## NN
 #define MM_KERNEL_NAME(PREFIX, tM, tN, MM, NN)  MM_KERNEL_NAMEX(PREFIX, tM, tN, MM, NN)
 
@@ -36,6 +47,8 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
         }
     }
 
+    split_barrier_arrive();
+
     for (int k = 0; k < K; k += tK) {
         int8    aData[MM];
         for (int mm = 0; mm < MM; mm++) {
@@ -52,7 +65,12 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
                 sum[mm][nn] = mat_mul_sg8(aData[mm], bData[nn], sum[mm][nn]);
             }
         }
+
+        split_barrier_wait();
+        split_barrier_arrive();
     }
+
+    split_barrier_wait();
 
     for (int nn = 0; nn < NN; nn++) {
         for (int mm = 0; mm < MM; mm++) {
@@ -77,6 +95,8 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
         }
     }
 
+    split_barrier_arrive();
+
     for (int k = 0; k < K; k += tK) {
         int8    aData[MM];
         for (int mm = 0; mm < MM; mm++) {
@@ -93,7 +113,12 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
                 sum[mm][nn] = mat_mul_sg8(aData[mm], bData[nn], sum[mm][nn]);
             }
         }
+
+        split_barrier_wait();
+        split_barrier_arrive();
     }
+
+    split_barrier_wait();
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -120,6 +145,8 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
         }
     }
 
+    split_barrier_arrive();
+
     for (int k = 0; k < K; k += tK) {
         short8  aData[MM];
         for (int mm = 0; mm < MM; mm++) {
@@ -136,7 +163,12 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
                 sum[mm][nn] = mat_mul_sg16(aData[mm], bData[nn], sum[mm][nn]);
             }
         }
+
+        split_barrier_wait();
+        split_barrier_arrive();
     }
+
+    split_barrier_wait();
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -161,6 +193,8 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
         }
     }
 
+    split_barrier_arrive();
+
     for (int k = 0; k < K; k += tK) {
         short8  aData[MM];
         for (int mm = 0; mm < MM; mm++) {
@@ -177,7 +211,12 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
                 sum[mm][nn] = mat_mul_sg16(aData[mm], bData[nn], sum[mm][nn]);
             }
         }
+
+        split_barrier_wait();
+        split_barrier_arrive();
     }
+
+    split_barrier_wait();
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -205,6 +244,8 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
         }
     }
 
+    split_barrier_arrive();
+
     for (int k = 0; k < K; k += tK) {
         short8  aData[MM];
         //if (MM % 2 == 0) {
@@ -229,7 +270,12 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
                 sum[mm][nn] = mat_mul_sg16(aData[mm], bData[nn], sum[mm][nn]);
             }
         }
+
+        split_barrier_wait();
+        split_barrier_arrive();
     }
+
+    split_barrier_wait();
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -255,6 +301,8 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
         }
     }
 
+    split_barrier_arrive();
+
     for (int k = 0; k < K; k += tK) {
         short8  aData[MM];
         //if (MM % 2 == 0) {
@@ -279,7 +327,12 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
                 sum[mm][nn] = mat_mul_sg16(aData[mm], bData[nn], sum[mm][nn]);
             }
         }
+
+        split_barrier_wait();
+        split_barrier_arrive();
     }
+
+    split_barrier_wait();
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
