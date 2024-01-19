@@ -9,6 +9,13 @@ float bf16_to_fp32(ushort u)
 
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short)
 
+inline int compute_m(const int num_sgs, const int tM, const int MM)
+{
+    const int m_start = get_group_id(1) * num_sgs;
+    const int m_index = num_sgs > 1 ? m_start + get_sub_group_id() : m_start;
+    return m_index * tM * MM;
+}
+
 // Emulated SIMD8 dpas:
 __attribute__((overloadable))
 float  emu_sub_group_bf16_bf16_matrix_mad_k16(int  a, int8 b, float  acc)

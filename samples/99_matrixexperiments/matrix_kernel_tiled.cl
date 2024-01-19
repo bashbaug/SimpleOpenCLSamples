@@ -13,15 +13,20 @@
 #define MM_KERNEL_NAMEX(PREFIX, tM, tN, MM, NN) PREFIX ## _m ## tM ## _n ## tN ## _ ## MM ## x ## NN
 #define MM_KERNEL_NAME(PREFIX, tM, tN, MM, NN)  MM_KERNEL_NAMEX(PREFIX, tM, tN, MM, NN)
 
+#if !defined(SGS_PER_WG)
+// Launch four subgroups per work-group, to maximize cache reuse.
+#define SGS_PER_WG 4
+#endif
+
 #if HAS_SIMD8
 
-__attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, SGS_PER_WG, 1)))
 kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int tM = 8;
     const int tN = 8;
     const int N = get_global_size(0) * NN;
-    const int m = get_group_id(1) * tM * MM;
+    const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
     float8 sum[MM][NN];
@@ -56,13 +61,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
     }
 }
 
-__attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, SGS_PER_WG, 1)))
 kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int tM = 8;
     const int tN = 8;
     const int N = get_global_size(0) * NN;
-    const int m = get_group_id(1) * tM * MM;
+    const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
     float8 sum[MM][NN];
@@ -99,13 +104,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
 
 #endif // HAS_SIMD8
 
-__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, SGS_PER_WG, 1)))
 kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int tM = 8;
     const int tN = 16;
     const int N = get_global_size(0) * NN;
-    const int m = get_group_id(1) * tM * MM;
+    const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
     float8 sum[MM][NN];
@@ -140,13 +145,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
     }
 }
 
-__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, SGS_PER_WG, 1)))
 kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int tM = 8;
     const int tN = 16;
     const int N = get_global_size(0) * NN;
-    const int m = get_group_id(1) * tM * MM;
+    const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
     float8 sum[MM][NN];
@@ -183,14 +188,14 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
 
 #ifdef cl_intel_subgroup_extended_block_read
 
-__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, SGS_PER_WG, 1)))
 kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int tM = 8;
     const int tN = 16;
     const int M = get_global_size(1) * tM * MM;
     const int N = get_global_size(0) * NN;
-    const int m = get_group_id(1) * tM * MM;
+    const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
     float8 sum[MM][NN];
@@ -233,14 +238,14 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
     }
 }
 
-__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
+__attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, SGS_PER_WG, 1)))
 kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int tM = 8;
     const int tN = 16;
     const int M = get_global_size(1) * tM * MM;
     const int N = get_global_size(0) * NN;
-    const int m = get_group_id(1) * tM * MM;
+    const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
     float8 sum[MM][NN];
