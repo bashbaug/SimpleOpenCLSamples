@@ -221,7 +221,7 @@ int8 load_a_rowmajor_d16_m8_k16_sg8(global ushort* A, int rowStart, int colStart
 // The first tile is returned the first components of the return value, the the next tile, etc.
 int16 load_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colStart, int stride)
 {
-    int16 ret;
+    uint16 ret;
 
     global uint* A_ui = (global uint*)A;
     int offset_ui = rowStart * stride / 2 + colStart / 2;
@@ -235,7 +235,7 @@ int16 load_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colSt
     ret.s6e = intel_sub_group_block_read2(A_ui + offset_ui); offset_ui += stride / 2;
     ret.s7f = intel_sub_group_block_read2(A_ui + offset_ui); offset_ui += stride / 2;
 
-    return ret;
+    return as_int16(ret);
 }
 
 // M rows x K columns
@@ -302,7 +302,7 @@ short8 load_a_rowmajor_d16_m8_k16_sg16(global ushort* A, int rowStart, int colSt
 // The first tile is returned the first components of the return value, the the next tile, etc.
 short16 load_a_rowmajor_d16_m8_k16v2_sg16(global ushort* A, int rowStart, int colStart, int stride)
 {
-    short16 ret;
+    ushort16 ret;
 
     int offset = rowStart * stride + colStart;
     ret.s08 = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
@@ -314,7 +314,7 @@ short16 load_a_rowmajor_d16_m8_k16v2_sg16(global ushort* A, int rowStart, int co
     ret.s6e = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
     ret.s7f = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
 
-    return ret;
+    return as_short16(ret);
 }
 
 // K rows x N columns:
