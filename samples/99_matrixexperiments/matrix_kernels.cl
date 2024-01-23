@@ -513,6 +513,12 @@ kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* 
 
 // Tiled matrix multiplication kernels, generated from a template:
 
+#define MM 1
+#define NN 1
+#include "matrix_kernel_tiled.cl"
+#undef MM
+#undef NN
+
 #define MM 2
 #define NN 1
 #include "matrix_kernel_tiled.cl"

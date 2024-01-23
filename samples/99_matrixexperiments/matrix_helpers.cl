@@ -9,6 +9,8 @@ float bf16_to_fp32(ushort u)
 
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short)
 
+typedef global ushort* global_aligned_ushort_ptr __attribute__((align_value(4)));
+
 inline int compute_m(const int num_sgs, const int tM, const int MM)
 {
     const int m_start = get_group_id(1) * num_sgs;
@@ -157,7 +159,7 @@ int  load_a_rowmajor_d16_m1_k16_sg8(global ushort* A, int rowStart, int colStart
     int ret;
 
     global uint* A_ui = (global uint*)A;
-    int offset_ui = rowStart * stride / 2 + colStart / 2;
+    uint offset_ui = rowStart * stride / 2 + colStart / 2;
     ret = intel_sub_group_block_read(A_ui + offset_ui);
 
     return ret;
@@ -170,7 +172,7 @@ int2 load_a_rowmajor_d16_m2_k16_sg8(global ushort* A, int rowStart, int colStart
     int2 ret;
 
     global uint* A_ui = (global uint*)A;
-    int offset_ui = rowStart * stride / 2 + colStart / 2;
+    uint offset_ui = rowStart * stride / 2 + colStart / 2;
 
     ret.s0 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
     ret.s1 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
@@ -185,7 +187,7 @@ int4 load_a_rowmajor_d16_m4_k16_sg8(global ushort* A, int rowStart, int colStart
     int4 ret;
 
     global uint* A_ui = (global uint*)A;
-    int offset_ui = rowStart * stride / 2 + colStart / 2;
+    uint offset_ui = rowStart * stride / 2 + colStart / 2;
 
     ret.s0 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
     ret.s1 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
@@ -202,7 +204,7 @@ int8 load_a_rowmajor_d16_m8_k16_sg8(global ushort* A, int rowStart, int colStart
     int8 ret;
 
     global uint* A_ui = (global uint*)A;
-    int offset_ui = rowStart * stride / 2 + colStart / 2;
+    uint offset_ui = rowStart * stride / 2 + colStart / 2;
 
     ret.s0 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
     ret.s1 = intel_sub_group_block_read(A_ui + offset_ui); offset_ui += stride / 2;
@@ -224,7 +226,7 @@ int16 load_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colSt
     uint16 ret;
 
     global uint* A_ui = (global uint*)A;
-    int offset_ui = rowStart * stride / 2 + colStart / 2;
+    uint offset_ui = rowStart * stride / 2 + colStart / 2;
 
     ret.s08 = intel_sub_group_block_read2(A_ui + offset_ui); offset_ui += stride / 2;
     ret.s19 = intel_sub_group_block_read2(A_ui + offset_ui); offset_ui += stride / 2;
@@ -244,7 +246,7 @@ short load_a_rowmajor_d16_m1_k16_sg16(global ushort* A, int rowStart, int colSta
 {
     ushort ret;
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
     ret = intel_sub_group_block_read_us(A + offset);
 
     return as_short(ret);
@@ -256,7 +258,7 @@ short2 load_a_rowmajor_d16_m2_k16_sg16(global ushort* A, int rowStart, int colSt
 {
     ushort2 ret;
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
     ret.s0 = intel_sub_group_block_read_us(A + offset); offset += stride;
     ret.s1 = intel_sub_group_block_read_us(A + offset); offset += stride;
 
@@ -269,7 +271,7 @@ short4 load_a_rowmajor_d16_m4_k16_sg16(global ushort* A, int rowStart, int colSt
 {
     ushort4 ret;
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
     ret.s0 = intel_sub_group_block_read_us(A + offset); offset += stride;
     ret.s1 = intel_sub_group_block_read_us(A + offset); offset += stride;
     ret.s2 = intel_sub_group_block_read_us(A + offset); offset += stride;
@@ -284,7 +286,7 @@ short8 load_a_rowmajor_d16_m8_k16_sg16(global ushort* A, int rowStart, int colSt
 {
     ushort8 ret;
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
     ret.s0 = intel_sub_group_block_read_us(A + offset); offset += stride;
     ret.s1 = intel_sub_group_block_read_us(A + offset); offset += stride;
     ret.s2 = intel_sub_group_block_read_us(A + offset); offset += stride;
@@ -304,15 +306,15 @@ short16 load_a_rowmajor_d16_m8_k16v2_sg16(global ushort* A, int rowStart, int co
 {
     ushort16 ret;
 
-    int offset = rowStart * stride + colStart;
-    ret.s08 = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
-    ret.s19 = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
-    ret.s2a = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
-    ret.s3b = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
-    ret.s4c = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
-    ret.s5d = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
-    ret.s6e = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
-    ret.s7f = intel_sub_group_block_read_us2(A + offset); offset += stride / 2;
+    uint offset = rowStart * stride + colStart;
+    ret.s08 = intel_sub_group_block_read_us2(A + offset); offset += stride;
+    ret.s19 = intel_sub_group_block_read_us2(A + offset); offset += stride;
+    ret.s2a = intel_sub_group_block_read_us2(A + offset); offset += stride;
+    ret.s3b = intel_sub_group_block_read_us2(A + offset); offset += stride;
+    ret.s4c = intel_sub_group_block_read_us2(A + offset); offset += stride;
+    ret.s5d = intel_sub_group_block_read_us2(A + offset); offset += stride;
+    ret.s6e = intel_sub_group_block_read_us2(A + offset); offset += stride;
+    ret.s7f = intel_sub_group_block_read_us2(A + offset); offset += stride;
 
     return as_short16(ret);
 }
@@ -324,7 +326,7 @@ int8 load_b_rowmajor_d16_k16_nx(global ushort* B, int rowStart, int colStart, in
 {
     int8 ret;
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
 
     ushort row0  = intel_sub_group_block_read_us(B + offset); offset += stride;
     ushort row1  = intel_sub_group_block_read_us(B + offset); offset += stride;
@@ -363,7 +365,7 @@ int8 load_b_vnni_d16_k16_nx(global ushort* B, int rowStart, int colStart, int st
     int8 ret;
 
     global uint* B_ui = (global uint*)B;
-    int offset_ui = rowStart / 2 * stride + colStart;
+    uint offset_ui = rowStart / 2 * stride + colStart;
 
     ret.s0 = intel_sub_group_block_read(B_ui + offset_ui); offset_ui += stride;
     ret.s1 = intel_sub_group_block_read(B_ui + offset_ui); offset_ui += stride;
@@ -382,7 +384,7 @@ void store_c_rowmajor_fp32_m1_nx(global float* C, float v, int rowStart, int col
     global uint* C_ui = (global uint*)C;
     uint v_ui = as_uint(v);
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
 
     intel_sub_group_block_write(C_ui + offset, v_ui); offset += stride;
 }
@@ -392,7 +394,7 @@ void store_c_rowmajor_fp32_m2_nx(global float* C, float2 v, int rowStart, int co
     global uint* C_ui = (global uint*)C;
     uint2 v_ui = as_uint2(v);
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
 
     intel_sub_group_block_write(C_ui + offset, v_ui.s0); offset += stride;
     intel_sub_group_block_write(C_ui + offset, v_ui.s1); offset += stride;
@@ -403,7 +405,7 @@ void store_c_rowmajor_fp32_m4_nx(global float* C, float4 v, int rowStart, int co
     global uint* C_ui = (global uint*)C;
     uint4 v_ui = as_uint4(v);
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
 
     intel_sub_group_block_write(C_ui + offset, v_ui.s0); offset += stride;
     intel_sub_group_block_write(C_ui + offset, v_ui.s1); offset += stride;
@@ -416,7 +418,7 @@ void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int co
     global uint* C_ui = (global uint*)C;
     uint8 v_ui = as_uint8(v);
 
-    int offset = rowStart * stride + colStart;
+    uint offset = rowStart * stride + colStart;
 
     intel_sub_group_block_write(C_ui + offset, v_ui.s0); offset += stride;
     intel_sub_group_block_write(C_ui + offset, v_ui.s1); offset += stride;

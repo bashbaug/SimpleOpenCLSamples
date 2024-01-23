@@ -36,7 +36,7 @@
 #if HAS_SIMD8
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, SGS_PER_WG, 1)))
-kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
+kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global float* C, global_aligned_ushort_ptr A, global_aligned_ushort_ptr B, int K)
 {
     const int tM = 8;
     const int tN = 8;
@@ -55,9 +55,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
 
     for (int k = 0; k < K; k += tK * KK) {
         int8    aData[KK][MM];
-        for (int kk = 0; kk < KK; kk++) {
-            for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg8(A, m + mm * tM, k + kk * tK, K);
+        if (KK % 2 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm++) {
+                    int16   aTemp = load_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, k + kk * tK, K);
+                    aData[kk + 0][mm] = aTemp.lo;
+                    aData[kk + 1][mm] = aTemp.hi;
+                }
+            }
+        } else {
+            for (int kk = 0; kk < KK; kk++) {
+                for (int mm = 0; mm < MM; mm++) {
+                    aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg8(A, m + mm * tM, k + kk * tK, K);
+                }
             }
         }
 
@@ -90,7 +100,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
 }
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, SGS_PER_WG, 1)))
-kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
+kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float* C, global_aligned_ushort_ptr A, global_aligned_ushort_ptr B, int K)
 {
     const int tM = 8;
     const int tN = 8;
@@ -109,9 +119,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
 
     for (int k = 0; k < K; k += tK * KK) {
         int8    aData[KK][MM];
-        for (int kk = 0; kk < KK; kk++) {
-            for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg8(A, m + mm * tM, k + kk * tK, K);
+        if (KK % 2 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm++) {
+                    int16   aTemp = load_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, k + kk * tK, K);
+                    aData[kk + 0][mm] = aTemp.lo;
+                    aData[kk + 1][mm] = aTemp.hi;
+                }
+            }
+        } else {
+            for (int kk = 0; kk < KK; kk++) {
+                for (int mm = 0; mm < MM; mm++) {
+                    aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg8(A, m + mm * tM, k + kk * tK, K);
+                }
             }
         }
 
@@ -146,7 +166,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
 #endif // HAS_SIMD8
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, SGS_PER_WG, 1)))
-kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
+kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global float* C, global_aligned_ushort_ptr A, global_aligned_ushort_ptr B, int K)
 {
     const int tM = 8;
     const int tN = 16;
@@ -165,9 +185,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
 
     for (int k = 0; k < K; k += tK * KK) {
         short8  aData[KK][MM];
-        for (int kk = 0; kk < KK; kk++) {
-            for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg16(A, m + mm * tM, k + kk * tK, K);
+        if (KK % 2 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm++) {
+                    short16 aTemp = load_a_rowmajor_d16_m8_k16v2_sg16(A, m + mm * tM, k + kk * tK, K);
+                    aData[kk + 0][mm] = aTemp.lo;
+                    aData[kk + 1][mm] = aTemp.hi;
+                }
+            }
+        } else {
+            for (int kk = 0; kk < KK; kk++) {
+                for (int mm = 0; mm < MM; mm++) {
+                    aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg16(A, m + mm * tM, k + kk * tK, K);
+                }
             }
         }
 
@@ -200,7 +230,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, SGS_PER_WG, 1)))
-kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
+kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float* C, global_aligned_ushort_ptr A, global_aligned_ushort_ptr B, int K)
 {
     const int tM = 8;
     const int tN = 16;
@@ -219,9 +249,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
 
     for (int k = 0; k < K; k += tK * KK) {
         short8  aData[KK][MM];
-        for (int kk = 0; kk < KK; kk++) {
-            for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg16(A, m + mm * tM, k + kk * tK, K);
+        if (KK % 2 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm++) {
+                    short16 aTemp = load_a_rowmajor_d16_m8_k16v2_sg16(A, m + mm * tM, k + kk * tK, K);
+                    aData[kk + 0][mm] = aTemp.lo;
+                    aData[kk + 1][mm] = aTemp.hi;
+                }
+            }
+        } else {
+            for (int kk = 0; kk < KK; kk++) {
+                for (int mm = 0; mm < MM; mm++) {
+                    aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg16(A, m + mm * tM, k + kk * tK, K);
+                }
             }
         }
 
