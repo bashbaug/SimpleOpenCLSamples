@@ -650,16 +650,27 @@ int main(int argc, char** argv)
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+    if (platformIndex >= platforms.size()) {
+        printf("Requested platform index is %d, but only %zu platforms were found.\n",
+            platformIndex, platforms.size());
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 
     std::vector<cl::Device> devices;
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+    if (deviceIndex >= devices.size()) {
+        printf("Requested device index is %d, but only %zu devices were found.\n",
+            deviceIndex, devices.size());
+    }
 
     cl::Device& device = devices[deviceIndex];
-    printf("Running on device: %s\n",
-        device.getInfo<CL_DEVICE_NAME>().c_str() );
+    printf("Running on device: %s (%uCUs, %uMHz)\n",
+        device.getInfo<CL_DEVICE_NAME>().c_str(),
+        device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(),
+        device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>());
 
     auto minSubGroupSize = findMinSubGroupSize(device);
 
