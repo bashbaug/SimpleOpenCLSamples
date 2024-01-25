@@ -1359,26 +1359,18 @@ typedef struct _cl_command_buffer_khr
     cl_int  checkRecordErrors(
                 cl_command_queue queue,
                 cl_uint num_sync_points_in_wait_list,
-                const cl_sync_point_khr* sync_point_wait_list,
-                cl_mutable_command_khr* mutable_handle )
+                const cl_sync_point_khr* sync_point_wait_list )
     {
         if( State != CL_COMMAND_BUFFER_STATE_RECORDING_KHR )
         {
             return CL_INVALID_OPERATION;
         }
-        if( queue != NULL )
+        if( queue != nullptr )
         {
             return CL_INVALID_COMMAND_QUEUE;
         }
-// TODO: Change this to a runtime check?
-#if !defined(cl_khr_command_buffer_mutable_dispatch)
-        if( mutable_handle != NULL )
-        {
-            return CL_INVALID_VALUE;
-        }
-#endif // !defined(cl_khr_command_buffer_mutable_dispatch)
-        if( ( sync_point_wait_list == NULL && num_sync_points_in_wait_list > 0 ) ||
-            ( sync_point_wait_list != NULL && num_sync_points_in_wait_list == 0 ) )
+        if( ( sync_point_wait_list == nullptr && num_sync_points_in_wait_list > 0 ) ||
+            ( sync_point_wait_list != nullptr && num_sync_points_in_wait_list == 0 ) )
         {
             return CL_INVALID_SYNC_POINT_WAIT_LIST_KHR;
         }
@@ -1741,10 +1733,13 @@ cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -1779,10 +1774,13 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -1828,10 +1826,13 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -1877,10 +1878,13 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -1922,10 +1926,13 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -1967,10 +1974,13 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -2012,10 +2022,13 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -2056,10 +2069,13 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -2098,10 +2114,13 @@ cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -2140,10 +2159,13 @@ cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
     }
 
     cmdbuf->addCommand(
@@ -2185,11 +2207,16 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
     if( cl_int errorCode = cmdbuf->checkRecordErrors(
             command_queue,
             num_sync_points_in_wait_list,
-            sync_point_wait_list,
-            mutable_handle) )
+            sync_point_wait_list) )
     {
         return errorCode;
     }
+#if !defined(cl_khr_command_buffer_mutable_dispatch)
+    if( mutable_handle != nullptr )
+    {
+        return CL_INVALID_VALUE;
+    }
+#endif // cl_khr_command_buffer_mutable_dispatch
 
     cl_int errorCode = CL_SUCCESS;
     auto command = NDRangeKernel::create(
