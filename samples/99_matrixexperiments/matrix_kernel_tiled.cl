@@ -398,9 +398,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
         }
 
         int8    bData[KK][NN];
-        for (int kk = 0; kk < KK; kk++) {
-            for (int nn = 0; nn < NN; nn++) {
-                bData[kk][nn] = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
+        if (KK % 2 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int nn = 0; nn < NN; nn++) {
+                    int16 bTemp = as_int16(intel_subgroup_block_read_u32_m16k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
+                    bData[kk + 0][nn] = bTemp.lo;
+                    bData[kk + 1][nn] = bTemp.hi;
+                }
+            }
+        } else {
+            for (int kk = 0; kk < KK; kk++) {
+                for (int nn = 0; nn < NN; nn++) {
+                    bData[kk][nn] = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
+                }
             }
         }
 
