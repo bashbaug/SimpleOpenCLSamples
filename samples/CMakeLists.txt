@@ -32,7 +32,7 @@ function(add_opencl_sample)
         target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_HPP_ENABLE_EXCEPTIONS)
     endif()
     if (WIN32)
-        target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS)
+        target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
     endif()
 
     set_target_properties(${OPENCL_SAMPLE_TARGET} PROPERTIES FOLDER "Samples/${OPENCL_SAMPLE_CATEGORY}/${OPENCL_SAMPLE_NUMBER}_${OPENCL_SAMPLE_TARGET}")
