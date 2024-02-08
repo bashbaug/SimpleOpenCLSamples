@@ -674,6 +674,8 @@ int main(int argc, char** argv)
         device.getInfo<CL_DEVICE_NAME>().c_str(),
         device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(),
         device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>());
+    printf("Running on drivers: %s\n",
+        device.getInfo<CL_DRIVER_VERSION>().c_str());
 
     auto minSubGroupSize = findMinSubGroupSize(device);
 
