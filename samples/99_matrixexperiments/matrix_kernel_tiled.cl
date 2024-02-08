@@ -44,6 +44,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
     const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
+    // Initial prefetch:
+    const int init_k = 0;
+    for (int kk = 0; kk < KK; kk+=2) {
+        for (int mm = 0; mm < MM; mm++) {
+            prefetch_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, init_k + kk * tK, K);
+        }
+    }
+    for (int kk = 0; kk < KK; kk++) {
+        for (int nn = 0; nn < NN; nn+=4) {
+            prefetch_b_rowmajor_d16_k16_n8v4_sg8(B, init_k + kk * tK, n + nn * tN, N);
+        }
+    }
+
     float8 sum[MM][NN];
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -54,6 +67,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
     split_barrier_arrive();
 
     for (int k = 0; k < K; k += tK * KK) {
+        // Next prefetch:
+        const int next_k = k + tK * KK;
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm++) {
+                prefetch_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, next_k + kk * tK, K);
+            }
+        }
+        for (int kk = 0; kk < KK; kk++) {
+            for (int nn = 0; nn < NN; nn+=4) {
+                prefetch_b_rowmajor_d16_k16_n8v4_sg8(B, next_k + kk * tK, n + nn * tN, N);
+            }
+        }
+
         int8    aData[KK][MM];
         if (KK % 2 == 0) {
             for (int kk = 0; kk < KK; kk+=2) {
@@ -108,6 +134,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
     const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
+    // Initial prefetch:
+    const int init_k = 0;
+    for (int kk = 0; kk < KK; kk+=2) {
+        for (int mm = 0; mm < MM; mm++) {
+            prefetch_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, init_k + kk * tK, K);
+        }
+    }
+    for (int kk = 0; kk < KK; kk++) {
+        for (int nn = 0; nn < NN; nn+=2) {
+            prefetch_b_vnni_d16_k16_n8v2_sg8(B, init_k + kk * tK, n + nn * tN, N);
+        }
+    }
+
     float8 sum[MM][NN];
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -118,6 +157,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
     split_barrier_arrive();
 
     for (int k = 0; k < K; k += tK * KK) {
+        // Next prefetch:
+        const int next_k = k + tK * KK;
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm++) {
+                prefetch_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, next_k + kk * tK, K);
+            }
+        }
+        for (int kk = 0; kk < KK; kk++) {
+            for (int nn = 0; nn < NN; nn+=2) {
+                prefetch_b_vnni_d16_k16_n8v2_sg8(B, next_k + kk * tK, n + nn * tN, N);
+            }
+        }
+
         int8    aData[KK][MM];
         if (KK % 2 == 0) {
             for (int kk = 0; kk < KK; kk+=2) {
@@ -174,6 +226,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
     const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
+    // Initial prefetch:
+    const int init_k = 0;
+    for (int kk = 0; kk < KK; kk+=2) {
+        for (int mm = 0; mm < MM; mm+=2) {
+            prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(A, m + mm * tM, init_k + kk * tK, K);
+        }
+    }
+    for (int kk = 0; kk < KK; kk++) {
+        for (int nn = 0; nn < NN; nn+=2) {
+            prefetch_b_rowmajor_d16_k16_n16v2_sg16(B, init_k + kk * tK, n + nn * tN, N);
+        }
+    }
+
     float8 sum[MM][NN];
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -184,6 +249,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
     split_barrier_arrive();
 
     for (int k = 0; k < K; k += tK * KK) {
+        // Next prefetch:
+        const int next_k = k + tK * KK;
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm+=2) {
+                prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(A, m + mm * tM, next_k + kk * tK, K);
+            }
+        }
+        for (int kk = 0; kk < KK; kk++) {
+            for (int nn = 0; nn < NN; nn+=2) {
+                prefetch_b_rowmajor_d16_k16_n16v2_sg16(B, next_k + kk * tK, n + nn * tN, N);
+            }
+        }
+
         short8  aData[KK][MM];
         if (KK % 2 == 0) {
             for (int kk = 0; kk < KK; kk+=2) {
@@ -238,6 +316,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
     const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
+    // Initial prefetch:
+    const int init_k = 0;
+    for (int kk = 0; kk < KK; kk+=2) {
+        for (int mm = 0; mm < MM; mm+=2) {
+            prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(A, m + mm * tM, init_k + kk * tK, K);
+        }
+    }
+    for (int kk = 0; kk < KK; kk+=2) {
+        for (int nn = 0; nn < NN; nn++) {
+            prefetch_b_vnni_d16_k16v2_n16_sg16(B, init_k + kk * tK, n + nn * tN, N);
+        }
+    }
+
     float8 sum[MM][NN];
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
@@ -248,6 +339,19 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
     split_barrier_arrive();
 
     for (int k = 0; k < K; k += tK * KK) {
+        // Next prefetch:
+        const int next_k = k + tK * KK;
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm+=2) {
+                prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(A, m + mm * tM, next_k + kk * tK, K);
+            }
+        }
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int nn = 0; nn < NN; nn++) {
+                prefetch_b_vnni_d16_k16v2_n16_sg16(B, next_k + kk * tK, n + nn * tN, N);
+            }
+        }
+
         short8  aData[KK][MM];
         if (KK % 2 == 0) {
             for (int kk = 0; kk < KK; kk+=2) {

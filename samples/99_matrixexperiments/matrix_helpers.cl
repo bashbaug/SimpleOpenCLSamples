@@ -240,6 +240,15 @@ int16 load_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colSt
     return as_int16(ret);
 }
 
+// M rows x K columns x V tiles (in the K dimension)
+void prefetch_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colStart, int stride)
+{
+#if defined(PREFETCH_DEFAULT)
+    uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
+    prefetch(A + offset, 1);
+#endif // defined(PREFETCH_DEFAULT)
+}
+
 // M rows x K columns
 // This is the SIMD16 version, where each work-item loads one value.
 short load_a_rowmajor_d16_m1_k16_sg16(global ushort* A, int rowStart, int colStart, int stride)
@@ -319,6 +328,15 @@ short16 load_a_rowmajor_d16_m8_k16v2_sg16(global ushort* A, int rowStart, int co
     return as_short16(ret);
 }
 
+// M rows x K columns x V tiles (in the M and K dimensions)
+void prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(global ushort* A, int rowStart, int colStart, int stride)
+{
+#if defined(PREFETCH_DEFAULT)
+    uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
+    prefetch(A + offset, 1);
+#endif // defined(PREFETCH_DEFAULT)
+}
+
 // K rows x N columns:
 // Each work-item loads K values and converts to VNNI.
 // Stride is in units of elements.
@@ -377,6 +395,45 @@ int8 load_b_vnni_d16_k16_nx(global ushort* B, int rowStart, int colStart, int st
     ret.s7 = intel_sub_group_block_read(B_ui + offset_ui); offset_ui += stride;
 
     return ret;
+}
+
+// K rows x N columns x V tiles (in the N dimension)
+void prefetch_b_rowmajor_d16_k16_n8v4_sg8(global ushort* B, int rowStart, int colStart, int stride)
+{
+#if defined(PREFETCH_DEFAULT)
+    uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
+    prefetch(B + offset, 1);    offset += 8 * stride;
+    prefetch(B + offset, 1);    offset += 8 * stride;
+#endif // defined(PREFETCH_DEFAULT)
+}
+
+// K rows x N columns x V tiles (in the N dimension)
+void prefetch_b_rowmajor_d16_k16_n16v2_sg16(global ushort* B, int rowStart, int colStart, int stride)
+{
+#if defined(PREFETCH_DEFAULT)
+    uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
+    prefetch(B + offset, 1);
+#endif // defined(PREFETCH_DEFAULT)
+}
+
+// K rows x N columns x V tiles (in the N dimension)
+void prefetch_b_vnni_d16_k16_n8v2_sg8(global ushort* B, int rowStart, int colStart, int stride)
+{
+#if defined(PREFETCH_DEFAULT)
+    global uint* B_ui = (global uint*)B;
+    uint offset_ui = colStart + (rowStart / 2 + get_sub_group_local_id()) * stride;
+    prefetch(B_ui + offset_ui, 1);
+#endif // defined(PREFETCH_DEFAULT)
+}
+
+// K rows x N columns x V tiles (in the K dimension)
+void prefetch_b_vnni_d16_k16v2_n16_sg16(global ushort* B, int rowStart, int colStart, int stride)
+{
+#if defined(PREFETCH_DEFAULT)
+    global uint* B_ui = (global uint*)B;
+    uint offset_ui = colStart + (rowStart / 2 + get_sub_group_local_id()) * stride;
+    prefetch(B_ui + offset_ui, 1);
+#endif // defined(PREFETCH_DEFAULT)
 }
 
 void store_c_rowmajor_fp32_m1_nx(global float* C, float v, int rowStart, int colStart, int stride)
