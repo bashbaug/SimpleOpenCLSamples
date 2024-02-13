@@ -769,6 +769,7 @@ int main(int argc, char** argv)
         bfloat16_dpas_rowmajor_tiled<8, 8, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
         bfloat16_dpas_rowmajor_tiled<8, 8, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
         bfloat16_dpas_rowmajor_tiled<8, 8, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
+        bfloat16_dpas_rowmajor_tiled<8, 8, 8, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     if (mask & 0x8) {
@@ -786,6 +787,7 @@ int main(int argc, char** argv)
         bfloat16_dpas_vnni_tiled<8, 8, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_vnni_tiled<8, 8, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_vnni_tiled<8, 8, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+        bfloat16_dpas_vnni_tiled<8, 8, 8, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     }
 
     if (mask & 0x20) {
@@ -803,6 +805,7 @@ int main(int argc, char** argv)
         bfloat16_dpas_rowmajor_tiled<8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
         bfloat16_dpas_rowmajor_tiled<8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
         bfloat16_dpas_rowmajor_tiled<8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
+        bfloat16_dpas_rowmajor_tiled<8, 16, 8, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     if (mask & 0x80) {
@@ -820,6 +823,7 @@ int main(int argc, char** argv)
         bfloat16_dpas_vnni_tiled<8, 16, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_vnni_tiled<8, 16, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_vnni_tiled<8, 16, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+        bfloat16_dpas_vnni_tiled<8, 16, 8, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     }
 
     if (mask & 0x200) {
@@ -837,6 +841,7 @@ int main(int argc, char** argv)
         bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
         bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
         bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
+        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 8, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     if (mask & 0x800) {
@@ -854,6 +859,7 @@ int main(int argc, char** argv)
         bfloat16_dpas_blockread_vnni_tiled<8, 16, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_blockread_vnni_tiled<8, 16, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_blockread_vnni_tiled<8, 16, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+        bfloat16_dpas_blockread_vnni_tiled<8, 16, 8, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
     }
 
     printf("Done.\n");
