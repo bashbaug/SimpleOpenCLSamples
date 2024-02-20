@@ -819,131 +819,7 @@ struct NDRangeKernel : Command
         const size_t* global_work_offset,
         const size_t* global_work_size,
         const size_t* local_work_size,
-        cl_int& errorCode)
-    {
-        errorCode = CL_SUCCESS;
-
-        ptrdiff_t numProperties = 0;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-        cl_mutable_dispatch_fields_khr mutableFields = g_MutableDispatchCaps;
-        cl_mutable_dispatch_asserts_khr mutableAsserts = 0;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
-
-        if( properties )
-        {
-            const cl_ndrange_kernel_command_properties_khr* check = properties;
-            bool found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR = false;
-            bool found_CL_MUTABLE_DISPATCH_ASSERTS_KHR = false;
-            while( errorCode == CL_SUCCESS && check[0] != 0 )
-            {
-                cl_int  property = (cl_int)check[0];
-                switch( property )
-                {
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-                case CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR:
-                    if( found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR )
-                    {
-                        errorCode = CL_INVALID_VALUE;
-                        return nullptr;
-                    }
-                    else
-                    {
-                        found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR = true;
-                        mutableFields = ((const cl_mutable_dispatch_fields_khr*)(check + 1))[0];
-                        check += 2;
-                    }
-                    break;
-                case CL_MUTABLE_DISPATCH_ASSERTS_KHR:
-                    if( found_CL_MUTABLE_DISPATCH_ASSERTS_KHR )
-                    {
-                        errorCode = CL_INVALID_VALUE;
-                        return nullptr;
-                    }
-                    else
-                    {
-                        found_CL_MUTABLE_DISPATCH_ASSERTS_KHR = true;
-                        mutableAsserts = ((const cl_mutable_dispatch_asserts_khr*)(check + 1))[0];
-                        check += 2;
-                    }
-                    break;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
-                default:
-                    errorCode = CL_INVALID_VALUE;
-                    return nullptr;
-                }
-            }
-            numProperties = check - properties + 1;
-        }
-
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-        if( local_work_size == nullptr )
-        {
-            // The current spec says that the behavior of this assertion is
-            // undefined when the local work size is NULL, but it seems safest
-            // to return an error in this case.
-            // Note, this currently only checks the per-command asserts, and
-            // does not currently check the global command buffer asserts!
-            if( mutableAsserts & CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR )
-            {
-                errorCode = CL_INVALID_WORK_GROUP_SIZE;
-                return nullptr;
-            }
-        }
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
-
-        auto command = std::unique_ptr<NDRangeKernel>(
-            new NDRangeKernel(cmdbuf, queue));
-
-        command->original_kernel = kernel;
-        command->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
-        command->work_dim = work_dim;
-
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-        command->mutableFields = mutableFields;
-        command->mutableAsserts = mutableAsserts;
-        command->numWorkGroups = getNumWorkGroups(
-            work_dim,
-            global_work_size,
-            local_work_size );
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
-
-        command->properties.reserve(numProperties);
-        command->properties.insert(
-            command->properties.begin(),
-            properties,
-            properties + numProperties );
-
-        if( global_work_offset )
-        {
-            command->global_work_offset.reserve(work_dim);
-            command->global_work_offset.insert(
-                command->global_work_offset.begin(),
-                global_work_offset,
-                global_work_offset + work_dim);
-        }
-
-        if( global_work_size )
-        {
-            command->global_work_size.reserve(work_dim);
-            command->global_work_size.insert(
-                command->global_work_size.begin(),
-                global_work_size,
-                global_work_size + work_dim);
-        }
-
-        if( local_work_size )
-        {
-            command->local_work_size.reserve(work_dim);
-            command->local_work_size.insert(
-                command->local_work_size.begin(),
-                local_work_size,
-                local_work_size + work_dim);
-        }
-
-        g_pNextDispatch->clRetainKernel(command->original_kernel);
-
-        return command;
-    }
+        cl_int& errorCode);
 
     ~NDRangeKernel()
     {
@@ -1062,7 +938,6 @@ struct NDRangeKernel : Command
                 const cl_mutable_dispatch_asserts_khr mutableAssertsCmdBuf,
                 const cl_mutable_dispatch_config_khr* dispatchConfig )
     {
-        //CL_INVALID_OPERATION if values of local_work_size and/or global_work_size result in an increase to the number of work-groups in the ND-range.
         //CL_INVALID_OPERATION if the values of local_work_size and/or global_work_size result in a change to work-group uniformity.
         if( dispatchConfig->work_dim != 0 && dispatchConfig->work_dim != work_dim )
         {
@@ -1242,7 +1117,9 @@ private:
         const size_t* global_work_size,
         const size_t* local_work_size )
     {
-        if( work_dim == 0 || global_work_size == nullptr )
+        if( work_dim == 0 || 
+            global_work_size == nullptr ||
+            local_work_size == nullptr )
         {
             return 1;
         }
@@ -1386,6 +1263,13 @@ typedef struct _cl_command_buffer_khr
     {
         return Queues[0];
     }
+
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    cl_mutable_dispatch_asserts_khr getMutableDispatchAsserts() const
+    {
+        return MutableDispatchAsserts;
+    }
+#endif
 
     cl_int  getInfo(
                 cl_command_buffer_info_khr param_name,
@@ -1706,9 +1590,9 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// We need to define the mutable command constructor separately and after the
-// definition of a command buffer because we will call into the command buffer
-// to get the queue if the passed-in queue is NULL.
+// These functions need to be defined separately and after the definition of a
+// command buffer because they call into the command buffer.
+
 _cl_mutable_command_khr::_cl_mutable_command_khr(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue queue,
@@ -1717,6 +1601,138 @@ _cl_mutable_command_khr::_cl_mutable_command_khr(
     Type(type),
     CmdBuf(cmdbuf),
     Queue(queue ? queue : cmdbuf->getQueue()) {}
+
+std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
+    const cl_ndrange_kernel_command_properties_khr* properties,
+    cl_command_buffer_khr cmdbuf,
+    cl_command_queue queue,
+    cl_kernel kernel,
+    cl_uint work_dim,
+    const size_t* global_work_offset,
+    const size_t* global_work_size,
+    const size_t* local_work_size,
+    cl_int& errorCode)
+{
+    errorCode = CL_SUCCESS;
+
+    ptrdiff_t numProperties = 0;
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    cl_mutable_dispatch_fields_khr mutableFields = g_MutableDispatchCaps;
+    cl_mutable_dispatch_asserts_khr mutableAsserts = 0;
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
+    if( properties )
+    {
+        const cl_ndrange_kernel_command_properties_khr* check = properties;
+        bool found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR = false;
+        bool found_CL_MUTABLE_DISPATCH_ASSERTS_KHR = false;
+        while( errorCode == CL_SUCCESS && check[0] != 0 )
+        {
+            cl_int  property = (cl_int)check[0];
+            switch( property )
+            {
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+            case CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR:
+                if( found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR )
+                {
+                    errorCode = CL_INVALID_VALUE;
+                    return nullptr;
+                }
+                else
+                {
+                    found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR = true;
+                    mutableFields = ((const cl_mutable_dispatch_fields_khr*)(check + 1))[0];
+                    check += 2;
+                }
+                break;
+            case CL_MUTABLE_DISPATCH_ASSERTS_KHR:
+                if( found_CL_MUTABLE_DISPATCH_ASSERTS_KHR )
+                {
+                    errorCode = CL_INVALID_VALUE;
+                    return nullptr;
+                }
+                else
+                {
+                    found_CL_MUTABLE_DISPATCH_ASSERTS_KHR = true;
+                    mutableAsserts = ((const cl_mutable_dispatch_asserts_khr*)(check + 1))[0];
+                    check += 2;
+                }
+                break;
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+            default:
+                errorCode = CL_INVALID_VALUE;
+                return nullptr;
+            }
+        }
+        numProperties = check - properties + 1;
+    }
+
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    if( local_work_size == nullptr )
+    {
+        const auto mutableAssertsCmdBuf = cmdbuf->getMutableDispatchAsserts();
+        if( mutableAssertsCmdBuf & CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR ||
+            mutableAsserts & CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR )
+        {
+            errorCode = CL_INVALID_WORK_GROUP_SIZE;
+            return nullptr;
+        }
+    }
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
+    auto command = std::unique_ptr<NDRangeKernel>(
+        new NDRangeKernel(cmdbuf, queue));
+
+    command->original_kernel = kernel;
+    command->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
+    command->work_dim = work_dim;
+
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+    command->mutableFields = mutableFields;
+    command->mutableAsserts = mutableAsserts;
+    command->numWorkGroups = getNumWorkGroups(
+        work_dim,
+        global_work_size,
+        local_work_size );
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
+    command->properties.reserve(numProperties);
+    command->properties.insert(
+        command->properties.begin(),
+        properties,
+        properties + numProperties );
+
+    if( global_work_offset )
+    {
+        command->global_work_offset.reserve(work_dim);
+        command->global_work_offset.insert(
+            command->global_work_offset.begin(),
+            global_work_offset,
+            global_work_offset + work_dim);
+    }
+
+    if( global_work_size )
+    {
+        command->global_work_size.reserve(work_dim);
+        command->global_work_size.insert(
+            command->global_work_size.begin(),
+            global_work_size,
+            global_work_size + work_dim);
+    }
+
+    if( local_work_size )
+    {
+        command->local_work_size.reserve(work_dim);
+        command->local_work_size.insert(
+            command->local_work_size.begin(),
+            local_work_size,
+            local_work_size + work_dim);
+    }
+
+    g_pNextDispatch->clRetainKernel(command->original_kernel);
+
+    return command;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //
