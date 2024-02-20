@@ -173,6 +173,10 @@ int main(
         NULL );
     printf("\tMutable Dispatch Capabilities:\n");
     PrintMutableDispatchCapabilities(mutableCaps);
+    if (!(mutableCaps & CL_MUTABLE_DISPATCH_GLOBAL_SIZE_KHR)) {
+        printf("Device does not support modifying the global work size, exiting.\n");
+        return -1;
+    }
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
