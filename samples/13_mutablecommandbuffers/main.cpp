@@ -175,7 +175,7 @@ int main(
     PrintMutableDispatchCapabilities(mutableCaps);
 
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
