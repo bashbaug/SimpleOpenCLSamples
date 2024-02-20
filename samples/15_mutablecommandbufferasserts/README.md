@@ -14,7 +14,7 @@ This sample requires the OpenCL Extension Loader to get the extension APIs for c
 
 This sample demonstrates how to pass mutable dispatch assertions when command buffer is created or when an ND-range kernel command is recorded into a command buffer.
 
-```c
+```
 CL_COMMAND_BUFFER_MUTABLE_DISPATCH_ASSERTS_KHR
 CL_MUTABLE_DISPATCH_ASSERTS_KHR
 CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR
