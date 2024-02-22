@@ -120,6 +120,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
 
     for (int nn = 0; nn < NN; nn++) {
         for (int mm = 0; mm < MM; mm++) {
+            sum[mm][nn] = activation(sum[mm][nn]);
             store_c_rowmajor_fp32_m8_nx(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
         }
     }
@@ -210,6 +211,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = activation(sum[mm][nn]);
             store_c_rowmajor_fp32_m8_nx(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
         }
     }
@@ -302,6 +304,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = activation(sum[mm][nn]);
             store_c_rowmajor_fp32_m8_nx(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
         }
     }
@@ -392,6 +395,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = activation(sum[mm][nn]);
             store_c_rowmajor_fp32_m8_nx(C, sum[mm][nn], m + mm * tM, n + nn * tN, N);
         }
     }
@@ -485,6 +489,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = activation(sum[mm][nn]);
             intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[mm][nn]));
         }
     }
@@ -586,6 +591,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
 
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
+            sum[mm][nn] = activation(sum[mm][nn]);
             intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[mm][nn]));
         }
     }

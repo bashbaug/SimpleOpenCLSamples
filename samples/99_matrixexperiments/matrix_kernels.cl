@@ -23,6 +23,7 @@ kernel void bfloat16_naive(global float* C, global ushort* A, global ushort* B, 
         sum = fma(bf16_to_fp32(A[m * K + k]), bf16_to_fp32(B[k * N + n]), sum);
     }
 
+    sum = activation(sum);
     C[m * N + n] = sum;
 }
 
@@ -51,6 +52,7 @@ kernel void bfloat16_dpas_rowmajor_m1_n8(global float* C, global ushort* A, glob
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m1_nx(C, sum, m, n, N);
 }
 
@@ -70,6 +72,7 @@ kernel void bfloat16_dpas_rowmajor_m2_n8(global float* C, global ushort* A, glob
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m2_nx(C, sum, m, n, N);
 }
 
@@ -89,6 +92,7 @@ kernel void bfloat16_dpas_rowmajor_m4_n8(global float* C, global ushort* A, glob
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m4_nx(C, sum, m, n, N);
 }
 
@@ -108,6 +112,7 @@ kernel void bfloat16_dpas_rowmajor_m8_n8(global float* C, global ushort* A, glob
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m8_nx(C, sum, m, n, N);
 }
 
@@ -129,6 +134,7 @@ kernel void bfloat16_dpas_vnni_m1_n8(global float* C, global ushort* A, global u
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m1_nx(C, sum, m, n, N);
 }
 
@@ -148,6 +154,7 @@ kernel void bfloat16_dpas_vnni_m2_n8(global float* C, global ushort* A, global u
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m2_nx(C, sum, m, n, N);
 }
 
@@ -167,6 +174,7 @@ kernel void bfloat16_dpas_vnni_m4_n8(global float* C, global ushort* A, global u
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m4_nx(C, sum, m, n, N);
 }
 
@@ -186,6 +194,7 @@ kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global u
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m8_nx(C, sum, m, n, N);
 }
 
@@ -209,6 +218,7 @@ kernel void bfloat16_dpas_rowmajor_m1_n16(global float* C, global ushort* A, glo
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m1_nx(C, sum, m, n, N);
 }
 
@@ -228,6 +238,7 @@ kernel void bfloat16_dpas_rowmajor_m2_n16(global float* C, global ushort* A, glo
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m2_nx(C, sum, m, n, N);
 }
 
@@ -247,6 +258,7 @@ kernel void bfloat16_dpas_rowmajor_m4_n16(global float* C, global ushort* A, glo
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m4_nx(C, sum, m, n, N);
 }
 
@@ -266,6 +278,7 @@ kernel void bfloat16_dpas_rowmajor_m8_n16(global float* C, global ushort* A, glo
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m8_nx(C, sum, m, n, N);
 }
 
@@ -287,6 +300,7 @@ kernel void bfloat16_dpas_vnni_m1_n16(global float* C, global ushort* A, global 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m1_nx(C, sum, m, n, N);
 }
 
@@ -306,6 +320,7 @@ kernel void bfloat16_dpas_vnni_m2_n16(global float* C, global ushort* A, global 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m2_nx(C, sum, m, n, N);
 }
 
@@ -325,6 +340,7 @@ kernel void bfloat16_dpas_vnni_m4_n16(global float* C, global ushort* A, global 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m4_nx(C, sum, m, n, N);
 }
 
@@ -344,6 +360,7 @@ kernel void bfloat16_dpas_vnni_m8_n16(global float* C, global ushort* A, global 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m8_nx(C, sum, m, n, N);
 }
 
@@ -366,6 +383,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m1_n16(global float* C, global usho
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m1k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
 }
 
@@ -386,6 +404,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m2_n16(global float* C, global usho
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m2k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
 }
 
@@ -406,6 +425,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m4_n16(global float* C, global usho
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m4k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
 }
 
@@ -426,6 +446,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m8_n16(global float* C, global usho
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
 }
 
@@ -446,6 +467,7 @@ kernel void bfloat16_dpas_blockread_vnni_m1_n16(global float* C, global ushort* 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m1k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
 }
 
@@ -466,6 +488,7 @@ kernel void bfloat16_dpas_blockread_vnni_m2_n16(global float* C, global ushort* 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m2k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
 }
 
@@ -486,6 +509,7 @@ kernel void bfloat16_dpas_blockread_vnni_m4_n16(global float* C, global ushort* 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m4k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
 }
 
@@ -506,6 +530,7 @@ kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* 
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
 }
 
