@@ -7,6 +7,50 @@ float bf16_to_fp32(ushort u)
 #endif
 }
 
+__attribute__((overloadable))
+float activation(float f)
+{
+#if defined(ACTIVATION_RELU)
+    return fmax(f, 0);
+#else   // identity
+    return f;
+#endif
+}
+
+__attribute__((overloadable))
+float2 activation(float2 f)
+{
+    float2 res;
+    res.s0 = activation(f.s0);
+    res.s1 = activation(f.s1);
+    return res;
+}
+
+__attribute__((overloadable))
+float4 activation(float4 f)
+{
+    float4 res;
+    res.s0 = activation(f.s0);
+    res.s1 = activation(f.s1);
+    res.s2 = activation(f.s2);
+    res.s3 = activation(f.s3);
+    return res;
+}
+
+float8 activation(float8 f)
+{
+    float8 res;
+    res.s0 = activation(f.s0);
+    res.s1 = activation(f.s1);
+    res.s2 = activation(f.s2);
+    res.s3 = activation(f.s3);
+    res.s4 = activation(f.s4);
+    res.s5 = activation(f.s5);
+    res.s6 = activation(f.s6);
+    res.s7 = activation(f.s7);
+    return res;
+}
+
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short)
 
 typedef global ushort* global_aligned_ushort_ptr __attribute__((align_value(4)));

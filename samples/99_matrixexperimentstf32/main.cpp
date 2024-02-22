@@ -10,12 +10,13 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <random>
 #include <vector>
 
-#include "bfloat16.hpp"
 #include "util.hpp"
 
 using test_clock = std::chrono::high_resolution_clock;
@@ -74,37 +75,40 @@ static size_t findMinSubGroupSize(cl::Device& device)
     return 0;
 }
 
+float to_tf32(float f)
+{
+    union {
+        uint32_t u;
+        float f;
+    } value;
+
+    value.f = f;
+    value.u &= 0xFFFFE000;
+
+    // Be careful not to convert NAN to INF:
+    if (std::isnan(f) && !std::isnan(value.f)) {
+        value.u |= 0x00002000;
+    }
+
+    return value.f;
+}
+
 template <typename T>
 static void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
 {
     if (identityData) {
-        std::generate(std::begin(M), std::end(M), [&]{ return 1.0f; });
+        std::generate(std::begin(M), std::end(M), [&]{ return to_tf32(1.0f); });
     } else if (fixedData) {
         for (size_t r = 0; r < numRows; r++) {
             for (size_t c = 0; c < numCols; c++) {
-                M[r * numCols + c] = static_cast<float>(r + c);
+                M[r * numCols + c] = to_tf32(static_cast<float>(r) + static_cast<float>(c) / 64.0f);
             }
         }
     } else {
         std::random_device dev;
         std::mt19937 rng(dev());
         std::uniform_real_distribution<float> dist(-1.0, 1.0);
-        std::generate(std::begin(M), std::end(M), [&]{ return dist(rng); });
-    }
-}
-
-template <typename T>
-static void vnni_matrix(
-    std::vector<T> &dst, const std::vector<T> &src,
-    size_t numRows, size_t numCols, size_t factor)
-{
-    for (size_t r = 0; r < numRows / factor; r++) {
-        for (size_t c = 0; c < numCols; c++) {
-            for (size_t k = 0; k < factor; k++) {
-                dst[r * numCols * factor + c * factor + k] =
-                    src[(r * factor + k) * numCols + c];
-            }
-        }
+        std::generate(std::begin(M), std::end(M), [&]{ return to_tf32(dist(rng)); });
     }
 }
 
@@ -158,7 +162,7 @@ static float hw_time(cl::Event& event)
     return ns / 1e9f;
 }
 
-static void bfloat16_naive(
+static void tf32_naive(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -166,7 +170,7 @@ static void bfloat16_naive(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, M, N, K).c_str()); fflush(stdout);
 
-    cl::Kernel kernel{program, "bfloat16_naive"};
+    cl::Kernel kernel{program, "tf32_naive"};
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
@@ -205,7 +209,7 @@ static void bfloat16_naive(
 }
 
 template<int tM, int tN>
-static void bfloat16_dpas_rowmajor(
+static void tf32_dpas_rowmajor(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -213,7 +217,7 @@ static void bfloat16_dpas_rowmajor(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, M, N, K).c_str()); fflush(stdout);
 
-    std::string kernelName = "bfloat16_dpas_rowmajor";
+    std::string kernelName = "tf32_dpas_rowmajor";
     kernelName += "_m" + std::to_string(tM);
     kernelName += "_n" + std::to_string(tN);
     cl::Kernel kernel{program, kernelName.c_str()};
@@ -255,7 +259,7 @@ static void bfloat16_dpas_rowmajor(
 }
 
 template<int tM, int tN, int MM, int NN>
-static void bfloat16_dpas_rowmajor_tiled(
+static void tf32_dpas_rowmajor_tiled(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -263,7 +267,7 @@ static void bfloat16_dpas_rowmajor_tiled(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, MM, NN, M, N, K).c_str()); fflush(stdout);
 
-    std::string kernelName = "bfloat16_dpas_rowmajor_tiled";
+    std::string kernelName = "tf32_dpas_rowmajor_tiled";
     kernelName += "_m" + std::to_string(tM);
     kernelName += "_n" + std::to_string(tN);
     kernelName += "_" + std::to_string(MM);
@@ -311,7 +315,7 @@ static void bfloat16_dpas_rowmajor_tiled(
 }
 
 template<int tM, int tN>
-static void bfloat16_dpas_vnni(
+static void tf32_dpas_blockread_rowmajor(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -319,7 +323,7 @@ static void bfloat16_dpas_vnni(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, M, N, K).c_str()); fflush(stdout);
 
-    std::string kernelName = "bfloat16_dpas_vnni";
+    std::string kernelName = "tf32_dpas_blockread_rowmajor";
     kernelName += "_m" + std::to_string(tM);
     kernelName += "_n" + std::to_string(tN);
     cl::Kernel kernel{program, kernelName.c_str()};
@@ -361,7 +365,7 @@ static void bfloat16_dpas_vnni(
 }
 
 template<int tM, int tN, int MM, int NN>
-static void bfloat16_dpas_vnni_tiled(
+static void tf32_dpas_blockread_rowmajor_tiled(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -369,219 +373,7 @@ static void bfloat16_dpas_vnni_tiled(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, MM, NN, M, N, K).c_str()); fflush(stdout);
 
-    std::string kernelName = "bfloat16_dpas_vnni_tiled";
-    kernelName += "_m" + std::to_string(tM);
-    kernelName += "_n" + std::to_string(tN);
-    kernelName += "_" + std::to_string(MM);
-    kernelName += "x" + std::to_string(NN);
-    cl::Kernel kernel{program, kernelName.c_str()};
-    if (kernel() == nullptr) {
-        printf("unsupported.\n");
-    } else if (tM * MM > M) {
-        printf("M is too small.\n");
-    } else if (tN * NN > N) {
-        printf("N is too small.\n");
-    } else {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        if (!skipinit) {
-            queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
-        }
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            cl::Event event;
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> sw_time = end - start;
-            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
-            best = std::min(best, elapsed);
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Best in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(M, N, C_check, C_ref);
-            printf(" done!\n");
-        }
-    }
-}
-
-template<int tM, int tN>
-static void bfloat16_dpas_blockread_rowmajor(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, M, N, K).c_str()); fflush(stdout);
-
-    std::string kernelName = "bfloat16_dpas_blockread_rowmajor";
-    kernelName += "_m" + std::to_string(tM);
-    kernelName += "_n" + std::to_string(tN);
-    cl::Kernel kernel{program, kernelName.c_str()};
-    if (kernel() == nullptr) {
-        printf("unsupported.\n");
-    } else {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        if (!skipinit) {
-            queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
-        }
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            cl::Event event;
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> sw_time = end - start;
-            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
-            best = std::min(best, elapsed);
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Best in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(M, N, C_check, C_ref);
-            printf(" done!\n");
-        }
-    }
-}
-
-template<int tM, int tN, int MM, int NN>
-static void bfloat16_dpas_blockread_rowmajor_tiled(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, MM, NN, M, N, K).c_str()); fflush(stdout);
-
-    std::string kernelName = "bfloat16_dpas_blockread_rowmajor_tiled";
-    kernelName += "_m" + std::to_string(tM);
-    kernelName += "_n" + std::to_string(tN);
-    kernelName += "_" + std::to_string(MM);
-    kernelName += "x" + std::to_string(NN);
-    cl::Kernel kernel{program, kernelName.c_str()};
-    if (kernel() == nullptr) {
-        printf("unsupported.\n");
-    } else if (tM * MM > M) {
-        printf("M is too small.\n");
-    } else if (tN * NN > N) {
-        printf("N is too small.\n");
-    } else {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        if (!skipinit) {
-            queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
-        }
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            cl::Event event;
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> sw_time = end - start;
-            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
-            best = std::min(best, elapsed);
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Best in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(M, N, C_check, C_ref);
-            printf(" done!\n");
-        }
-    }
-}
-
-template<int tM, int tN>
-static void bfloat16_dpas_blockread_vnni(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, M, N, K).c_str()); fflush(stdout);
-
-    std::string kernelName = "bfloat16_dpas_blockread_vnni";
-    kernelName += "_m" + std::to_string(tM);
-    kernelName += "_n" + std::to_string(tN);
-    cl::Kernel kernel{program, kernelName.c_str()};
-    if (kernel() == nullptr) {
-        printf("unsupported.\n");
-    } else {
-        kernel.setArg(0, C);
-        kernel.setArg(1, A);
-        kernel.setArg(2, B);
-        kernel.setArg(3, static_cast<cl_int>(K));
-
-        if (!skipinit) {
-            queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
-        }
-
-        float best = 999.0f;
-        for (int test = 0; test < testIterations; test++) {
-            cl::Event event;
-            auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
-            queue.finish();
-            auto end = test_clock::now();
-            std::chrono::duration<float> sw_time = end - start;
-            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
-            best = std::min(best, elapsed);
-        }
-        auto gops = 2.0 * M * N * K / best / 1e9;
-        printf("Best in %f seconds (%f gops)\n", best, gops);
-
-        if (validate) {
-            printf("Checking results... "); fflush(stdout);
-            std::vector<float> C_check(C_ref.size());
-            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
-            check_results(M, N, C_check, C_ref);
-            printf(" done!\n");
-        }
-    }
-}
-
-template<int tM, int tN, int MM, int NN>
-static void bfloat16_dpas_blockread_vnni_tiled(
-    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
-    size_t M, size_t N, size_t K,
-    const std::vector<float>& C_ref)
-{
-    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, MM, NN, M, N, K).c_str()); fflush(stdout);
-
-    std::string kernelName = "bfloat16_dpas_blockread_vnni_tiled";
+    std::string kernelName = "tf32_dpas_blockread_rowmajor_tiled";
     kernelName += "_m" + std::to_string(tM);
     kernelName += "_n" + std::to_string(tN);
     kernelName += "_" + std::to_string(MM);
@@ -633,7 +425,7 @@ int main(int argc, char** argv)
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    std::string fileName("matrix_kernels.cl");
+    std::string fileName("matrix_kernels_tf32.cl");
     std::string buildOptions;
     size_t matrixSize = 512;
 
@@ -665,7 +457,7 @@ int main(int argc, char** argv)
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: matrixexperiments [options]\n"
+                "Usage: matrixexperimentstf32 [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }
@@ -699,20 +491,18 @@ int main(int argc, char** argv)
 
     auto minSubGroupSize = findMinSubGroupSize(device);
 
-    bool has_simd8 = minSubGroupSize == 8;
-    bool emulate_tN8 = true;
     bool emulate_tN16 = true;
     if (!emulate && checkDeviceForExtension(device, "cl_intel_subgroup_matrix_multiply_accumulate")) {
         printf("Found support for cl_intel_subgroup_matrix_multiply_accumulate, min sub-group size is: %zu\n", minSubGroupSize);
         switch(minSubGroupSize) {
-            case 8: emulate_tN8 = false; break;
             case 16: emulate_tN16 = false; break;
             default: break;
         }
     }
 
-    buildOptions += " -DHAS_SIMD8=" + std::to_string(has_simd8);
-    buildOptions += " -DEMULATE_tN8=" + std::to_string(emulate_tN8);
+    printf("NOTE: dpas is unconditionally emulated, currently!\n");
+    emulate_tN16 = true;
+
     buildOptions += " -DEMULATE_tN16=" + std::to_string(emulate_tN16);
 
     printf("Config:\n");
@@ -720,7 +510,6 @@ int main(int argc, char** argv)
     printf("\tValidating data?: %s\n", validate ? "true" : "false");
     printf("\tFixed data?: %s\n", fixedData ? "true" : "false");
     printf("\tWallclock time?: %s\n", wallclock ? "true" : "false");
-    printf("\tEmulate dpas for tN=8?: %s\n", emulate_tN8 ? "true" : "false");
     printf("\tEmulate dpas for tN=16?: %s\n", emulate_tN16 ? "true" : "false");
 
     cl::Context context{device};
@@ -745,17 +534,14 @@ int main(int argc, char** argv)
     const auto N = matrixSize;
     const auto K = matrixSize;
 
-    std::vector<bfloat16> A_vec(M * K);
-    std::vector<bfloat16> B_vec(K * N);
-    std::vector<bfloat16> Bvnni_vec(K * N);
+    std::vector<float> A_vec(M * K);
+    std::vector<float> B_vec(K * N);
 
     std::vector<float> C_ref(M * N);
 
     printf("Initializing source matrices...\n");
     fill_matrix(A_vec, M, K);
     fill_matrix(B_vec, K, N);
-
-    vnni_matrix(Bvnni_vec, B_vec, K, N, 2);
 
     if (validate) {
         printf("Computing reference...\n");
@@ -765,121 +551,40 @@ int main(int argc, char** argv)
     printf("Creating source buffers...\n");
     cl::Buffer A{context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, A_vec.size() * sizeof(A_vec[0]), A_vec.data()};
     cl::Buffer B{context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, B_vec.size() * sizeof(B_vec[0]), B_vec.data()};
-    cl::Buffer Bvnni{context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Bvnni_vec.size() * sizeof(Bvnni_vec[0]), Bvnni_vec.data()};
     cl::Buffer C{context, CL_MEM_WRITE_ONLY, C_ref.size() * sizeof(C_ref[0])};
 
     printf("Running tests...\n");
 
     if (mask & 0x1) {
-        bfloat16_naive(context, program, queue, C, A, B, M, N, K, C_ref);
-    }
-
-    if (mask & 0x2) {
-        bfloat16_dpas_rowmajor<1, 8>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor<2, 8>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor<4, 8>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor<8, 8>(context, program, queue, C, A, B, M, N, K, C_ref);
-    }
-
-    if (mask & 0x4) {
-        bfloat16_dpas_rowmajor_tiled<8, 8, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 8, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 8, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 8, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 8, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 8, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 8, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 8, 8, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-    }
-
-    if (mask & 0x8) {
-        bfloat16_dpas_vnni<1, 8>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni<2, 8>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni<4, 8>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni<8, 8>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-    }
-
-    if (mask & 0x10) {
-        bfloat16_dpas_vnni_tiled<8, 8, 1, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 8, 2, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 8, 1, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 8, 2, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 8, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 8, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 8, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 8, 8, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+        tf32_naive(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     if (mask & 0x20) {
-        bfloat16_dpas_rowmajor<1, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor<2, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor<4, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor<8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_rowmajor<1, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_rowmajor<2, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_rowmajor<4, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_rowmajor<8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     if (mask & 0x40) {
-        bfloat16_dpas_rowmajor_tiled<8, 16, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_rowmajor_tiled<8, 16, 8, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-    }
-
-    if (mask & 0x80) {
-        bfloat16_dpas_vnni<1, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni<2, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni<4, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni<8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-    }
-
-    if (mask & 0x100) {
-        bfloat16_dpas_vnni_tiled<8, 16, 1, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 16, 2, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 16, 1, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 16, 2, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 16, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 16, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 16, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_vnni_tiled<8, 16, 8, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+        tf32_dpas_rowmajor_tiled<8, 16, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_rowmajor_tiled<8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_rowmajor_tiled<8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_rowmajor_tiled<8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     if (mask & 0x200) {
-        bfloat16_dpas_blockread_rowmajor<1, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor<2, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor<4, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor<8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor<1, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor<2, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor<4, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor<8, 16>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     if (mask & 0x400) {
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_tiled<8, 16, 8, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-    }
-
-    if (mask & 0x800) {
-        bfloat16_dpas_blockread_vnni<1, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni<2, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni<4, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni<8, 16>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-    }
-
-    if (mask & 0x1000) {
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 1, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 2, 1>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 1, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 2, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
-        bfloat16_dpas_blockread_vnni_tiled<8, 16, 8, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor_tiled<8, 16, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor_tiled<8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor_tiled<8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        tf32_dpas_blockread_rowmajor_tiled<8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     printf("Done.\n");
