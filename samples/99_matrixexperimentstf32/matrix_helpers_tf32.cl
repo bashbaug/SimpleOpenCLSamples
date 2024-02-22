@@ -136,7 +136,7 @@ float4 load_a_rowmajor_d32_m8_k8_sg16(global float* A, int rowStart, int colStar
 }
 
 // M rows x K columns x V tiles (in the M and K dimensions)
-void prefetch_a_rowmajor_d16_m8v2_k8v2_sg16(global float* A, int rowStart, int colStart, int stride)
+void prefetch_a_rowmajor_d32_m8v2_k8v2_sg16(global float* A, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
@@ -166,7 +166,7 @@ float8 load_b_rowmajor_d32_k8_nx(global float* B, int rowStart, int colStart, in
 }
 
 // K rows x N columns x V tiles (in the K and N dimensions)
-void prefetch_b_rowmajor_d32_k8v2_n16v2_sg16(global float* B, int rowStart, int colStart, int stride)
+void prefetch_b_rowmajor_d32_k8v2_n8v2_sg16(global float* B, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;

@@ -213,6 +213,24 @@ kernel void tf32_dpas_blockread_rowmajor_m8_n16(global float* C, global float* A
 #undef MM
 #undef NN
 
+#define MM 4
+#define NN 2
+#include "matrix_kernel_tiled_tf32.cl"
+#undef MM
+#undef NN
+
+#define MM 2
+#define NN 4
+#include "matrix_kernel_tiled_tf32.cl"
+#undef MM
+#undef NN
+
+#define MM 4
+#define NN 4
+#include "matrix_kernel_tiled_tf32.cl"
+#undef MM
+#undef NN
+
 #endif // defined(cl_intel_subgroups) && defined(cl_intel_required_subgroup_size)
 
 #undef tK
