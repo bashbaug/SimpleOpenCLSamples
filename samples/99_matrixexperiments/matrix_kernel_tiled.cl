@@ -466,12 +466,46 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
         prefetch_k += tK * KK;
 
         short8  aData[KK][MM];
-        if (KK % 2 == 0) {
+        if (KK % 2 == 0 & MM % 4 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm+=4) {
+                    ushort8 tmp[2][4];
+                    intel_subgroup_block_read_u16_m32k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                    for (int tkk = 0; tkk < 2; tkk++) {
+                        for (int tmm = 0; tmm < 4; tmm++) {
+                            aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
+                        }
+                    }
+                }
+            }
+        } else if (KK % 2 == 0 & MM % 2 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm+=2) {
+                    ushort8 tmp[2][2];
+                    intel_subgroup_block_read_u16_m16k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                    for (int tkk = 0; tkk < 2; tkk++) {
+                        for (int tmm = 0; tmm < 2; tmm++) {
+                            aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
+                        }
+                    }
+                }
+            }
+        } else if (KK % 2 == 0) {
             for (int kk = 0; kk < KK; kk+=2) {
                 for (int mm = 0; mm < MM; mm++) {
                     short16 aTemp = as_short16(intel_subgroup_block_read_u16_m8k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
                     aData[kk + 0][mm] = aTemp.lo;
                     aData[kk + 1][mm] = aTemp.hi;
+                }
+            }
+        } else if (MM % 4 == 0) {
+            for (int kk = 0; kk < KK; kk++) {
+                for (int mm = 0; mm < MM; mm+=4) {
+                    ushort8 tmp[4];
+                    intel_subgroup_block_read_u16_m32k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                    for (int tmm = 0; tmm < 4; tmm++) {
+                        aData[kk][mm + tmm] = as_short8(tmp[tmm]);
+                    }
                 }
             }
         } else {
@@ -562,12 +596,46 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
         prefetch_k += tK * KK;
 
         short8  aData[KK][MM];
-        if (KK % 2 == 0) {
+        if (KK % 2 == 0 & MM % 4 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm+=4) {
+                    ushort8 tmp[2][4];
+                    intel_subgroup_block_read_u16_m32k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                    for (int tkk = 0; tkk < 2; tkk++) {
+                        for (int tmm = 0; tmm < 4; tmm++) {
+                            aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
+                        }
+                    }
+                }
+            }
+        } else if (KK % 2 == 0 & MM % 2 == 0) {
+            for (int kk = 0; kk < KK; kk+=2) {
+                for (int mm = 0; mm < MM; mm+=2) {
+                    ushort8 tmp[2][2];
+                    intel_subgroup_block_read_u16_m16k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                    for (int tkk = 0; tkk < 2; tkk++) {
+                        for (int tmm = 0; tmm < 2; tmm++) {
+                            aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
+                        }
+                    }
+                }
+            }
+        } else if (KK % 2 == 0) {
             for (int kk = 0; kk < KK; kk+=2) {
                 for (int mm = 0; mm < MM; mm++) {
                     short16 aTemp = as_short16(intel_subgroup_block_read_u16_m8k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
                     aData[kk + 0][mm] = aTemp.lo;
                     aData[kk + 1][mm] = aTemp.hi;
+                }
+            }
+        } else if (MM % 4 == 0) {
+            for (int kk = 0; kk < KK; kk++) {
+                for (int mm = 0; mm < MM; mm+=4) {
+                    ushort8 tmp[4];
+                    intel_subgroup_block_read_u16_m32k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                    for (int tmm = 0; tmm < 4; tmm++) {
+                        aData[kk][mm + tmm] = as_short8(tmp[tmm]);
+                    }
                 }
             }
         } else {

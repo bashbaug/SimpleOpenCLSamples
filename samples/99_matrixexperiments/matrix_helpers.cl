@@ -580,13 +580,20 @@ void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int co
 //      - tile width: subgroup size (16)
 //      - number of tiles: 1
 
-// Define additional "non-vector" block read and writes.  These are supported by the hardware but are not in the headers:
+typedef ushort __attribute__((ext_vector_type(32))) ushort32;
+typedef ushort __attribute__((ext_vector_type(64))) ushort64;
+
+// Define block reads and writes.  These are supported by the hardware but are not in the headers:
 
 ushort   __builtin_IB_subgroup_block_read_flat_u16_m1k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort2  __builtin_IB_subgroup_block_read_flat_u16_m2k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort4  __builtin_IB_subgroup_block_read_flat_u16_m4k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort8  __builtin_IB_subgroup_block_read_flat_u16_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort16 __builtin_IB_subgroup_block_read_flat_u16_m16k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+ushort32 __builtin_IB_subgroup_block_read_flat_u16_m32k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+
+ushort32 __builtin_IB_subgroup_block_read_flat_u16_m16k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+ushort64 __builtin_IB_subgroup_block_read_flat_u16_m32k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 
 uint8  __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 uint16 __builtin_IB_subgroup_block_read_flat_u32_m16k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
@@ -615,6 +622,35 @@ ushort8  intel_subgroup_block_read_u16_m8k16(const __global void *base_address, 
 ushort16 intel_subgroup_block_read_u16_m16k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u16_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+void intel_subgroup_block_read_u16_m32k16(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[4])
+{
+    ushort32 tmp = __builtin_IB_subgroup_block_read_flat_u16_m32k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+    dst[0] = tmp.lo.lo;
+    dst[1] = tmp.lo.hi;
+    dst[2] = tmp.hi.lo;
+    dst[3] = tmp.hi.hi;
+}
+
+void intel_subgroup_block_read_u16_m16k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[2][2])
+{
+    ushort32 tmp = __builtin_IB_subgroup_block_read_flat_u16_m16k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+    dst[0][0] = tmp.lo.lo;
+    dst[0][1] = tmp.lo.hi;
+    dst[1][0] = tmp.hi.lo;
+    dst[1][1] = tmp.hi.hi;
+}
+void intel_subgroup_block_read_u16_m32k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[2][4])
+{
+    ushort64 tmp = __builtin_IB_subgroup_block_read_flat_u16_m32k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+    dst[0][0] = tmp.lo.lo.lo;
+    dst[0][1] = tmp.lo.lo.hi;
+    dst[0][2] = tmp.lo.hi.lo;
+    dst[0][3] = tmp.lo.hi.hi;
+    dst[1][0] = tmp.hi.lo.lo;
+    dst[1][1] = tmp.hi.lo.hi;
+    dst[1][2] = tmp.hi.hi.lo;
+    dst[1][3] = tmp.hi.hi.hi;
 }
 
 uint8 intel_subgroup_block_read_u32_m8k16(const __global void* base_address, int width, int height, int pitch, int2 coord)
