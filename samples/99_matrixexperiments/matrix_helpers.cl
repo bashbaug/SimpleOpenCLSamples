@@ -290,7 +290,7 @@ void prefetch_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int co
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(A + offset) % 4 == 0);
-    prefetch(A + offset, 8);
+    prefetch(A + offset, 1);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -379,7 +379,7 @@ void prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(global ushort* A, int rowStart, int
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(A + offset) % 4 == 0);
-    prefetch(A + offset, 8);
+    prefetch(A + offset, 1);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -449,9 +449,9 @@ void prefetch_b_rowmajor_d16_k16_n8v4_sg8(global ushort* B, int rowStart, int co
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(B + offset) % 4 == 0);
-    prefetch(B + offset, 8);    offset += 8 * stride;
+    prefetch(B + offset, 1);    offset += 8 * stride;
     __builtin_assume((ulong)(B + offset) % 4 == 0);
-    prefetch(B + offset, 8);    offset += 8 * stride;
+    prefetch(B + offset, 1);    offset += 8 * stride;
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -461,7 +461,7 @@ void prefetch_b_rowmajor_d16_k16_n16v2_sg16(global ushort* B, int rowStart, int 
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(B + offset) % 4 == 0);
-    prefetch(B + offset, 8);
+    prefetch(B + offset, 1);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -472,7 +472,7 @@ void prefetch_b_vnni_d16_k16_n8v2_sg8(global ushort* B, int rowStart, int colSta
     global uint* B_ui = (global uint*)B;
     uint offset_ui = colStart + (rowStart / 2 + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(B_ui + offset_ui) % 4 == 0);
-    prefetch(B_ui + offset_ui, 4);
+    prefetch(B_ui + offset_ui, 1);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -483,7 +483,7 @@ void prefetch_b_vnni_d16_k16v2_n16_sg16(global ushort* B, int rowStart, int colS
     global uint* B_ui = (global uint*)B;
     uint offset_ui = colStart + (rowStart / 2 + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(B_ui + offset_ui) % 4 == 0);
-    prefetch(B_ui + offset_ui, 4);
+    prefetch(B_ui + offset_ui, 1);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
