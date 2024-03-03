@@ -290,7 +290,7 @@ void prefetch_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int co
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(A + offset) % 4 == 0);
-    prefetch(A + offset, 1);
+    prefetch(A + offset, 2);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -379,7 +379,7 @@ void prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(global ushort* A, int rowStart, int
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(A + offset) % 4 == 0);
-    prefetch(A + offset, 1);
+    prefetch(A + offset, 2);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -449,9 +449,9 @@ void prefetch_b_rowmajor_d16_k16_n8v4_sg8(global ushort* B, int rowStart, int co
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(B + offset) % 4 == 0);
-    prefetch(B + offset, 1);    offset += 8 * stride;
+    prefetch(B + offset, 2);    offset += 8 * stride;
     __builtin_assume((ulong)(B + offset) % 4 == 0);
-    prefetch(B + offset, 1);    offset += 8 * stride;
+    prefetch(B + offset, 2);    offset += 8 * stride;
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -461,7 +461,7 @@ void prefetch_b_rowmajor_d16_k16_n16v2_sg16(global ushort* B, int rowStart, int 
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
     __builtin_assume((ulong)(B + offset) % 4 == 0);
-    prefetch(B + offset, 1);
+    prefetch(B + offset, 2);
 #endif // defined(PREFETCH_DEFAULT)
 }
 
@@ -587,10 +587,21 @@ void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int co
 //      - tile width: subgroup size (16)
 //      - number of tiles: 1
 
+enum LSC_LDCC {
+    LSC_LDCC_DEFAULT      = 0,
+    LSC_LDCC_L1UC_L3UC    = 1,   // Override to L1 uncached and L3 uncached
+    LSC_LDCC_L1UC_L3C     = 2,   // Override to L1 uncached and L3 cached
+    LSC_LDCC_L1C_L3UC     = 3,   // Override to L1 cached and L3 uncached
+    LSC_LDCC_L1C_L3C      = 4,   // Override to L1 cached and L3 cached
+    LSC_LDCC_L1S_L3UC     = 5,   // Override to L1 streaming load and L3 uncached
+    LSC_LDCC_L1S_L3C      = 6,   // Override to L1 streaming load and L3 cached
+    LSC_LDCC_L1IAR_L3C    = 7,   // Override to L1 invalidate-after-read, and L3 cached
+};
+
 typedef ushort __attribute__((ext_vector_type(32))) ushort32;
 typedef ushort __attribute__((ext_vector_type(64))) ushort64;
 
-// Define block reads and writes.  These are supported by the hardware but are not in the headers:
+// Define block reads, prefetches, and writes.  These are supported by the hardware but are not in the headers:
 
 ushort   __builtin_IB_subgroup_block_read_flat_u16_m1k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort2  __builtin_IB_subgroup_block_read_flat_u16_m2k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
@@ -604,6 +615,19 @@ ushort64 __builtin_IB_subgroup_block_read_flat_u16_m32k16v2(long baseoffset, int
 
 uint8  __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 uint16 __builtin_IB_subgroup_block_read_flat_u32_m16k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+
+
+void __builtin_IB_subgroup_block_read_prefetch_u16_m1k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+void __builtin_IB_subgroup_block_read_prefetch_u16_m2k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+void __builtin_IB_subgroup_block_read_prefetch_u16_m4k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+void __builtin_IB_subgroup_block_read_prefetch_u16_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+void __builtin_IB_subgroup_block_read_prefetch_u16_m8k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+void __builtin_IB_subgroup_block_read_prefetch_u16_m16k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+void __builtin_IB_subgroup_block_read_prefetch_u16_m32k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+
+void __builtin_IB_subgroup_block_read_prefetch_u16_m16k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+void __builtin_IB_subgroup_block_read_prefetch_u16_m32k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, enum LSC_LDCC cache_control);
+
 
 void __builtin_IB_subgroup_block_write_flat_u32_m1k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint  data);
 void __builtin_IB_subgroup_block_write_flat_u32_m2k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint2 data);
@@ -668,6 +692,46 @@ uint16 intel_subgroup_block_read_u32_m16k16(const __global void* base_address, i
 {
     return __builtin_IB_subgroup_block_read_flat_u32_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
+
+#define BLOCK_PREFETCH_CACHE_TYPE LSC_LDCC_L1C_L3C
+
+void intel_subgroup_block_prefetch_u16_m1k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m2k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m4k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m8k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m8k16v2(__global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m8k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m16k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m32k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m32k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m16k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m16k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+void intel_subgroup_block_prefetch_u16_m32k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    __builtin_IB_subgroup_block_read_prefetch_u16_m32k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
+}
+
 
 void intel_subgroup_block_write_u32_m1k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
 {

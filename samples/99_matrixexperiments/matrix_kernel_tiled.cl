@@ -481,6 +481,41 @@ void HELPER_NAME(btile_load_blockread_vnni, MM, NN)(global ushort* B, int tN, in
     }
 }
 
+void HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(global ushort* A, int tM, int M, int K, int m, int k)
+{
+    if (KK % 2 == 0 & MM % 4 == 0) {
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm+=4) {
+                intel_subgroup_block_prefetch_u16_m32k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+            }
+        }
+    } else if (KK % 2 == 0 & MM % 2 == 0) {
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm+=2) {
+                intel_subgroup_block_prefetch_u16_m16k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+            }
+        }
+    } else if (KK % 2 == 0) {
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm++) {
+                intel_subgroup_block_prefetch_u16_m8k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+            }
+        }
+    } else if (MM % 4 == 0) {
+        for (int kk = 0; kk < KK; kk++) {
+            for (int mm = 0; mm < MM; mm+=4) {
+                intel_subgroup_block_prefetch_u16_m32k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+            }
+        }
+    } else {
+        for (int kk = 0; kk < KK; kk++) {
+            for (int mm = 0; mm < MM; mm++) {
+                intel_subgroup_block_prefetch_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+            }
+        }
+    }
+}
+
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, SGS_PER_WG, 1)))
 kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 
@@ -492,11 +527,10 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
     const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
-    // Initial prefetch:
     int prefetch_k = 0;
     for (int p = 0; p < PREFETCH_DISTANCE; p++) {
-        HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(A, tM, K, m, prefetch_k);
         HELPER_NAME(btile_prefetch_rowmajor, MM, NN)(B, tN, N, prefetch_k, n);
+        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
         prefetch_k += tK * KK;
     }
 
@@ -510,17 +544,17 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
     split_barrier_arrive();
 
     for (int k = 0; k < K; k += tK * KK) {
-        // Next prefetch:
         // TODO: skip prefetch on the last iterations.
-        HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(A, tM, K, m, prefetch_k);
         HELPER_NAME(btile_prefetch_rowmajor, MM, NN)(B, tN, N, prefetch_k, n);
-        prefetch_k += tK * KK;
 
         short8  aData[KK][MM];
         HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
 
         int8    bData[KK][NN];
         HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(B, tN, K, N, k, n, bData);
+
+        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
+        prefetch_k += tK * KK;
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
@@ -554,11 +588,10 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
     const int m = compute_m(SGS_PER_WG, tM, MM);
     const int n = get_group_id(0) * tN * NN;
 
-    // Initial prefetch:
     int prefetch_k = 0;
     for (int p = 0; p < PREFETCH_DISTANCE; p++) {
-        HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(A, tM, K, m, prefetch_k);
         HELPER_NAME(btile_prefetch_vnni, MM, NN)(B, tN, N, prefetch_k, n);
+        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
         prefetch_k += tK * KK;
     }
 
@@ -572,17 +605,17 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
     split_barrier_arrive();
 
     for (int k = 0; k < K; k += tK * KK) {
-        // Next prefetch:
         // TODO: skip prefetch on the last iterations.
-        HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(A, tM, K, m, prefetch_k);
         HELPER_NAME(btile_prefetch_vnni, MM, NN)(B, tN, N, prefetch_k, n);
-        prefetch_k += tK * KK;
 
         short8  aData[KK][MM];
         HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
 
         int8    bData[KK][NN];
         HELPER_NAME(btile_load_blockread_vnni, MM, NN)(B, tN, K, N, k, n, bData);
+
+        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
+        prefetch_k += tK * KK;
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
