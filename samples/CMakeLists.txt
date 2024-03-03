@@ -88,3 +88,5 @@ if(BUILD_EXTENSION_SAMPLES)
     add_subdirectory( 13_mutablecommandbuffers )
     add_subdirectory( 14_ooqcommandbuffers )
 endif()
+
+add_subdirectory( 99_linkprogramerror )
