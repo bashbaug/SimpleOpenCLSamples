@@ -453,11 +453,42 @@ void HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(global ushort* A, int tM
     }
 }
 
+// TODO: consider swapping KK and NN order!
 void HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n, int8 bData[KK][NN])
 {
-    for (int kk = 0; kk < KK; kk++) {
-        for (int nn = 0; nn < NN; nn++) {
-            bData[kk][nn] = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK)));
+    if (KK % 2 == 0 & NN % 2 == 0) {
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int nn = 0; nn < NN; nn+=2) {
+                int8 tmp[2][2];
+                intel_subgroup_block_read_transform_u16_k32n16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), tmp);
+                for (int tnn = 0; tnn < 2; tnn++) {
+                    for (int tkk = 0; tkk < 2; tkk++) {
+                        bData[kk + tkk][nn + tnn] = tmp[tnn][tkk];
+                    }
+                }
+            }
+        }
+    } else if (NN % 2 == 0) {
+        for (int kk = 0; kk < KK; kk++) {
+            for (int nn = 0; nn < NN; nn+=2) {
+                int16 bTemp = intel_subgroup_block_read_transform_u16_k16n16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                bData[kk][nn + 0] = bTemp.lo;
+                bData[kk][nn + 1] = bTemp.hi;
+            }
+        }
+    } else if (KK % 2 == 0) {
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int nn = 0; nn < NN; nn++) {
+                int16 bTemp = intel_subgroup_block_read_transform_u16_k32n16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                bData[kk + 0][nn] = bTemp.lo;
+                bData[kk + 1][nn] = bTemp.hi;
+            }
+        }
+    } else {
+        for (int kk = 0; kk < KK; kk++) {
+            for (int nn = 0; nn < NN; nn++) {
+                bData[kk][nn] = intel_subgroup_block_read_transform_u16_k16n16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+            }
         }
     }
 }
