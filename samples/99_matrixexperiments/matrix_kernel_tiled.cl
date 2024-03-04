@@ -40,20 +40,20 @@
 #define PREFETCH_DISTANCE 1
 #endif
 
-void HELPER_NAME(btile_load_rowmajor, MM, NN)(global ushort* B, int tN, int N, int k, int n, int8 bData[KK][NN])
+void HELPER_NAME(btile_load_rowmajor, MM, NN)(global ushort* B, int tN, int N, int k, int n, int8 bData[NN][KK])
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn++) {
-            bData[kk][nn] = load_b_rowmajor_d16_k16_nx(B, k + kk * tK, n + nn * tN, N);
+            bData[nn][kk] = load_b_rowmajor_d16_k16_nx(B, k + kk * tK, n + nn * tN, N);
         }
     }
 }
 
-void HELPER_NAME(btile_load_vnni, MM, NN)(global ushort* B, int tN, int N, int k, int n, int8 bData[KK][NN])
+void HELPER_NAME(btile_load_vnni, MM, NN)(global ushort* B, int tN, int N, int k, int n, int8 bData[NN][KK])
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn++) {
-            bData[kk][nn] = load_b_vnni_d16_k16_nx(B, k + kk * tK, n + nn * tN, N);
+            bData[nn][kk] = load_b_vnni_d16_k16_nx(B, k + kk * tK, n + nn * tN, N);
         }
     }
 }
@@ -142,13 +142,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
         int8    aData[KK][MM];
         HELPER_NAME(atile_load_rowmajor_sg8, MM, NN)(A, tM, K, m, k, aData);
 
-        int8    bData[KK][NN];
+        int8    bData[NN][KK];
         HELPER_NAME(btile_load_rowmajor, MM, NN)(B, tN, N, k, n, bData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm++) {
                 for (int nn = 0; nn < NN; nn++) {
-                    sum[mm][nn] = mat_mul_sg8(aData[kk][mm], bData[kk][nn], sum[mm][nn]);
+                    sum[mm][nn] = mat_mul_sg8(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
             }
         }
@@ -203,13 +203,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
         int8    aData[KK][MM];
         HELPER_NAME(atile_load_rowmajor_sg8, MM, NN)(A, tM, K, m, k, aData);
 
-        int8    bData[KK][NN];
+        int8    bData[NN][KK];
         HELPER_NAME(btile_load_vnni, MM, NN)(B, tN, N, k, n, bData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
                 for (int mm = 0; mm < MM; mm++) {
-                    sum[mm][nn] = mat_mul_sg8(aData[kk][mm], bData[kk][nn], sum[mm][nn]);
+                    sum[mm][nn] = mat_mul_sg8(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
             }
         }
@@ -312,13 +312,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
         short8  aData[KK][MM];
         HELPER_NAME(atile_load_rowmajor, MM, NN)(A, tM, K, m, k, aData);
 
-        int8    bData[KK][NN];
+        int8    bData[NN][KK];
         HELPER_NAME(btile_load_rowmajor, MM, NN)(B, tN, N, k, n, bData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
                 for (int mm = 0; mm < MM; mm++) {
-                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[kk][nn], sum[mm][nn]);
+                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
             }
         }
@@ -373,13 +373,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
         short8  aData[KK][MM];
         HELPER_NAME(atile_load_rowmajor, MM, NN)(A, tM, K, m, k, aData);
 
-        int8    bData[KK][NN];
+        int8    bData[NN][KK];
         HELPER_NAME(btile_load_vnni, MM, NN)(B, tN, N, k, n, bData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
                 for (int mm = 0; mm < MM; mm++) {
-                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[kk][nn], sum[mm][nn]);
+                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
             }
         }
@@ -453,8 +453,7 @@ void HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(global ushort* A, int tM
     }
 }
 
-// TODO: consider swapping KK and NN order!
-void HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n, int8 bData[KK][NN])
+void HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
 {
     if (KK % 2 == 0 & NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
@@ -463,7 +462,7 @@ void HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(global ushort* B, int tN
                 intel_subgroup_block_read_transform_u16_k32n16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), tmp);
                 for (int tnn = 0; tnn < 2; tnn++) {
                     for (int tkk = 0; tkk < 2; tkk++) {
-                        bData[kk + tkk][nn + tnn] = tmp[tnn][tkk];
+                        bData[nn + tnn][kk + tkk] = tmp[tnn][tkk];
                     }
                 }
             }
@@ -472,41 +471,41 @@ void HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(global ushort* B, int tN
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn+=2) {
                 int16 bTemp = intel_subgroup_block_read_transform_u16_k16n16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
-                bData[kk][nn + 0] = bTemp.lo;
-                bData[kk][nn + 1] = bTemp.hi;
+                bData[nn + 0][kk] = bTemp.lo;
+                bData[nn + 1][kk] = bTemp.hi;
             }
         }
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
                 int16 bTemp = intel_subgroup_block_read_transform_u16_k32n16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
-                bData[kk + 0][nn] = bTemp.lo;
-                bData[kk + 1][nn] = bTemp.hi;
+                bData[nn][kk + 0] = bTemp.lo;
+                bData[nn][kk + 1] = bTemp.hi;
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                bData[kk][nn] = intel_subgroup_block_read_transform_u16_k16n16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                bData[nn][kk] = intel_subgroup_block_read_transform_u16_k16n16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     }
 }
 
-void HELPER_NAME(btile_load_blockread_vnni, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n, int8 bData[KK][NN])
+void HELPER_NAME(btile_load_blockread_vnni, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
 {
     if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
                 int16 bTemp = as_int16(intel_subgroup_block_read_u32_m16k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
-                bData[kk + 0][nn] = bTemp.lo;
-                bData[kk + 1][nn] = bTemp.hi;
+                bData[nn][kk + 0] = bTemp.lo;
+                bData[nn][kk + 1] = bTemp.hi;
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                bData[kk][nn] = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
+                bData[nn][kk] = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
             }
         }
     }
@@ -581,7 +580,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
         short8  aData[KK][MM];
         HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
 
-        int8    bData[KK][NN];
+        int8    bData[NN][KK];
         HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(B, tN, K, N, k, n, bData);
 
         HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
@@ -590,7 +589,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
                 for (int mm = 0; mm < MM; mm++) {
-                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[kk][nn], sum[mm][nn]);
+                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
             }
         }
@@ -642,7 +641,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
         short8  aData[KK][MM];
         HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
 
-        int8    bData[KK][NN];
+        int8    bData[NN][KK];
         HELPER_NAME(btile_load_blockread_vnni, MM, NN)(B, tN, K, N, k, n, bData);
 
         HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
@@ -651,7 +650,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
                 for (int mm = 0; mm < MM; mm++) {
-                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[kk][nn], sum[mm][nn]);
+                    sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
             }
         }
