@@ -559,8 +559,8 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
 
     int prefetch_k = 0;
     for (int p = 0; p < PREFETCH_DISTANCE; p++) {
-        HELPER_NAME(btile_prefetch_rowmajor, MM, NN)(B, tN, N, prefetch_k, n);
         HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
+        HELPER_NAME(btile_prefetch_rowmajor, MM, NN)(B, tN, N, prefetch_k, n);
         prefetch_k += tK * KK;
     }
 
@@ -575,22 +575,23 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
 
     for (int k = 0; k < K; k += tK * KK) {
         // TODO: skip prefetch on the last iterations.
-        HELPER_NAME(btile_prefetch_rowmajor, MM, NN)(B, tN, N, prefetch_k, n);
-
-        short8  aData[KK][MM];
-        HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
+        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
 
         int8    bData[NN][KK];
         HELPER_NAME(btile_load_blockread_rowmajor, MM, NN)(B, tN, K, N, k, n, bData);
 
-        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
-        prefetch_k += tK * KK;
+        short8  aData[KK][MM];
+        HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
                 for (int mm = 0; mm < MM; mm++) {
                     sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
+            }
+            if (kk == 0) {
+                HELPER_NAME(btile_prefetch_rowmajor, MM, NN)(B, tN, N, prefetch_k, n);
+                prefetch_k += tK * KK;
             }
         }
 
@@ -636,22 +637,23 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
 
     for (int k = 0; k < K; k += tK * KK) {
         // TODO: skip prefetch on the last iterations.
-        HELPER_NAME(btile_prefetch_vnni, MM, NN)(B, tN, N, prefetch_k, n);
-
-        short8  aData[KK][MM];
-        HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
+        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
 
         int8    bData[NN][KK];
         HELPER_NAME(btile_load_blockread_vnni, MM, NN)(B, tN, K, N, k, n, bData);
 
-        HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
-        prefetch_k += tK * KK;
+        short8  aData[KK][MM];
+        HELPER_NAME(atile_load_blockread_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
                 for (int mm = 0; mm < MM; mm++) {
                     sum[mm][nn] = mat_mul_sg16(aData[kk][mm], bData[nn][kk], sum[mm][nn]);
                 }
+            }
+            if (kk == 0) {
+                HELPER_NAME(btile_prefetch_vnni, MM, NN)(B, tN, N, prefetch_k, n);
+                prefetch_k += tK * KK;
             }
         }
 
