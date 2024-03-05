@@ -580,12 +580,6 @@ kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* 
 #undef MM
 #undef NN
 
-#define MM 8
-#define NN 2
-#include "matrix_kernel_tiled.cl"
-#undef MM
-#undef NN
-
 #endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
 
 #undef tK
