@@ -55,11 +55,18 @@ float8 activation(float8 f)
 
 typedef global ushort* global_aligned_ushort_ptr __attribute__((align_value(4)));
 
-inline int compute_m(const int num_sgs, const int tM, const int MM)
+inline int compute_m(const int num_sgs_x, const int num_sgs_y, const int tM, const int MM)
 {
-    const int m_start = get_group_id(1) * num_sgs;
-    const int m_index = num_sgs > 1 ? m_start + get_sub_group_id() : m_start;
+    const int m_start = get_group_id(1) * num_sgs_y;
+    const int m_index = num_sgs_y > 1 ? m_start + get_sub_group_id() / num_sgs_x : m_start;
     return m_index * tM * MM;
+}
+
+inline int compute_n(const int num_sgs_x, const int num_sgs_y, const int tN, const int NN)
+{
+    const int n_start = get_group_id(0) * num_sgs_x;
+    const int n_index = num_sgs_x > 1 ? n_start + get_sub_group_id() % num_sgs_x : n_start;
+    return n_index * tN * NN;
 }
 
 // Emulated SIMD8 dpas:
