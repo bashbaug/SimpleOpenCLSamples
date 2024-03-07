@@ -51,6 +51,13 @@ float8 activation(float8 f)
     return res;
 }
 
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+#if __has_builtin(__builtin_expect) == 0
+#define __builtin_expect(x)
+#endif
+
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short)
 
 typedef global ushort* global_aligned_ushort_ptr __attribute__((align_value(4)));
