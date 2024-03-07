@@ -27,6 +27,7 @@ bool validate = false;
 bool emulate = false;
 bool wallclock = false;
 bool skipinit = false;
+bool roundRobin = false;
 int testIterations = 16;
 float threshold = 0.01f;
 
@@ -73,6 +74,18 @@ static size_t findMinSubGroupSize(cl::Device& device)
         return *it;
     }
     return 0;
+}
+
+static void setRoundRobin(cl::Kernel& kernel)
+{
+    constexpr cl_kernel_exec_info CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_INTEL = 0x10025;
+    constexpr cl_uint CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_ROUND_ROBIN_INTEL = 0x10023;
+    const cl_uint policy = CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_ROUND_ROBIN_INTEL;
+    clSetKernelExecInfo(
+        kernel(),
+        CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_INTEL,
+        sizeof(policy),
+        &policy);
 }
 
 template <typename T>
@@ -440,6 +453,9 @@ static void bfloat16_dpas_blockread_rowmajor(
         kernel.setArg(1, A);
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
+        if (roundRobin) {
+            setRoundRobin(kernel);
+        }
 
         if (!skipinit) {
             queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
@@ -496,6 +512,9 @@ static void bfloat16_dpas_blockread_rowmajor_tiled(
         kernel.setArg(1, A);
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
+        if (roundRobin) {
+            setRoundRobin(kernel);
+        }
 
         if (!skipinit) {
             queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
@@ -546,6 +565,9 @@ static void bfloat16_dpas_blockread_vnni(
         kernel.setArg(1, A);
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
+        if (roundRobin) {
+            setRoundRobin(kernel);
+        }
 
         if (!skipinit) {
             queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
@@ -602,6 +624,9 @@ static void bfloat16_dpas_blockread_vnni_tiled(
         kernel.setArg(1, A);
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
+        if (roundRobin) {
+            setRoundRobin(kernel);
+        }
 
         if (!skipinit) {
             queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
@@ -658,6 +683,7 @@ int main(int argc, char** argv)
         op.add<popl::Switch>("", "emulate", "Unconditionally Emulate dpas", &emulate);
         op.add<popl::Switch>("", "wallclock", "Measure Wallclock Time", &wallclock);
         op.add<popl::Switch>("", "skipinit", "Do Not Initialize Buffers", &skipinit);
+        op.add<popl::Switch>("", "roundrobin", "Use Round Robin Scheduling", &roundRobin);
         op.add<popl::Value<float>>("", "threshold", "Local Error Threshold", threshold, &threshold);
         op.add<popl::Value<size_t>, popl::Attribute::advanced>("", "mask", "Test Mask", mask, &mask);
         bool printUsage = false;
