@@ -20,6 +20,7 @@
 
 using test_clock = std::chrono::high_resolution_clock;
 
+bool zeroData = false;
 bool identityData = false;
 bool fixedData = false;
 bool validate = false;
@@ -77,7 +78,10 @@ static size_t findMinSubGroupSize(cl::Device& device)
 template <typename T>
 static void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
 {
-    if (identityData) {
+    if (zeroData) {
+        std::generate(std::begin(M), std::end(M), [&]{ return 0.0f; });
+    }
+    else if (identityData) {
         std::generate(std::begin(M), std::end(M), [&]{ return 1.0f; });
     } else if (fixedData) {
         for (size_t r = 0; r < numRows; r++) {
@@ -648,6 +652,7 @@ int main(int argc, char** argv)
         op.add<popl::Value<size_t>>("m", "matrixsize", "Matrix Size", matrixSize, &matrixSize);
         op.add<popl::Value<int>>("i", "iterations", "Test Iterations", testIterations, &testIterations);
         op.add<popl::Switch>("", "validate", "Validate Results", &validate);
+        op.add<popl::Switch>("", "zero", "Use Zero Data", &zeroData);
         op.add<popl::Switch>("", "identity", "Use Identity Data", &identityData);
         op.add<popl::Switch>("", "fixed", "Use Fixed Data", &fixedData);
         op.add<popl::Switch>("", "emulate", "Unconditionally Emulate dpas", &emulate);
