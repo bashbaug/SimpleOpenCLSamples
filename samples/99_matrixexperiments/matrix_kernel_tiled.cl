@@ -555,9 +555,8 @@ void HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(global ushort* A, int tM
 
 void HELPER_NAME(btile_block_prefetch_rowmajor, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n)
 {
-    const int NUM_SGS = SGS_PER_WG_X * SGS_PER_WG_Y;
-    if (KK % 2 == 0 & NN == 4 & NUM_SGS >= 2) {
-        const int nn = (get_sub_group_id() % 2) * 2;
+    if (KK % 2 == 0 & NN == 4 & SGS_PER_WG_Y >= 2) {
+        const int nn = (get_sub_group_id() / SGS_PER_WG_X) % 2 * 2;
         for (int kk = 0; kk < KK; kk+=2) {
             intel_subgroup_block_prefetch_u16_m32k16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
         }
@@ -590,9 +589,8 @@ void HELPER_NAME(btile_block_prefetch_rowmajor, MM, NN)(global ushort* B, int tN
 
 void HELPER_NAME(btile_block_prefetch_vnni, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n)
 {
-    const int NUM_SGS = SGS_PER_WG_X * SGS_PER_WG_Y;
-    if (KK % 2 == 0 & NN == 4 & NUM_SGS >= 4) {
-        const int nn = get_sub_group_id() % 4;
+    if (KK % 2 == 0 & NN == 4 & SGS_PER_WG_Y >= 4) {
+        const int nn = (get_sub_group_id() / SGS_PER_WG_X) % 4;
         for (int kk = 0; kk < KK; kk+=2) {
             intel_subgroup_block_prefetch_u32_m16k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
         }
