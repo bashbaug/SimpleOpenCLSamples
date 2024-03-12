@@ -1197,6 +1197,7 @@ typedef struct _cl_command_buffer_khr
                     {
                         found_CL_COMMAND_BUFFER_FLAGS_KHR = true;
                         flags = ((const cl_command_buffer_flags_khr*)(check + 1))[0];
+                        errorCode = validateCreateCommandBufferFlags( flags );
                         check += 2;
                     }
                     break;
@@ -1244,6 +1245,19 @@ typedef struct _cl_command_buffer_khr
     static bool isValid( cl_command_buffer_khr cmdbuf )
     {
         return cmdbuf && cmdbuf->Magic == cMagic;
+    }
+
+    static cl_int validateCreateCommandBufferFlags(
+        cl_command_buffer_flags_khr flags )
+    {
+        const cl_command_buffer_flags_khr allFlags =
+            CL_COMMAND_BUFFER_SIMULTANEOUS_USE_KHR;
+        if( flags & ~allFlags )
+        {
+            return CL_INVALID_VALUE;
+        }
+
+        return CL_SUCCESS;
     }
 
     cl_int  retain()
