@@ -1248,7 +1248,14 @@ typedef struct _cl_command_buffer_khr
         cl_command_buffer_flags_khr flags )
     {
         const cl_command_buffer_flags_khr allFlags =
-            CL_COMMAND_BUFFER_SIMULTANEOUS_USE_KHR;
+            CL_COMMAND_BUFFER_SIMULTANEOUS_USE_KHR |
+#if defined(cl_khr_command_buffer_mutable_dispatch)
+            CL_COMMAND_BUFFER_MUTABLE_KHR |
+#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+#if defined(cl_khr_command_buffer_multi_device) && 0
+            CL_COMMAND_BUFFER_DEVICE_SIDE_SYNC_KHR |
+#endif // defined(cl_khr_command_buffer_multi_device)
+            0;
         if( flags & ~allFlags )
         {
             return CL_INVALID_VALUE;
