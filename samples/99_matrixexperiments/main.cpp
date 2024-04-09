@@ -545,6 +545,65 @@ static void bfloat16_dpas_blockread_rowmajor_tiled(
     }
 }
 
+template<int tM, int tN, int MM, int NN>
+static void bfloat16_dpas_blockread_rowmajor_h_tiled(
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
+    size_t M, size_t N, size_t K,
+    const std::vector<float>& C_ref)
+{
+    printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, MM, NN, M, N, K).c_str()); fflush(stdout);
+
+    std::string kernelName = "bfloat16_dpas_blockread_rowmajor_h_tiled";
+    kernelName += "_m" + std::to_string(tM);
+    kernelName += "_n" + std::to_string(tN);
+    kernelName += "_" + std::to_string(MM);
+    kernelName += "x" + std::to_string(NN);
+    cl::Kernel kernel{program, kernelName.c_str()};
+    if (kernel() == nullptr) {
+        printf("unsupported.\n");
+    } else if (tM * MM > M) {
+        printf("M is too small.\n");
+    } else if (tN * NN > N) {
+        printf("N is too small.\n");
+    } else {
+        kernel.setArg(0, C);
+        kernel.setArg(1, A);
+        kernel.setArg(2, B);
+        kernel.setArg(3, static_cast<cl_int>(K));
+        if (roundRobin) {
+            setRoundRobin(kernel);
+        }
+
+        if (!skipinit) {
+            queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
+        }
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            cl::Event event;
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = wallclock ? sw_time.count() : hw_time(event);
+            best = std::min(best, elapsed);
+        }
+        auto gops = 2.0 * M * N * K / best / 1e9;
+        printf("Best in %f seconds (%f gops)\n", best, gops);
+
+        if (validate) {
+            printf("Checking results... "); fflush(stdout);
+            std::vector<float> C_check(C_ref.size());
+            queue.enqueueReadBuffer(C, CL_TRUE, 0, C_check.size() * sizeof(C_check[0]), C_check.data());
+            check_results(M, N, C_check, C_ref);
+            printf(" done!\n");
+        }
+    }
+}
+
 template<int tM, int tN>
 static void bfloat16_dpas_blockread_vnni(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
@@ -905,6 +964,16 @@ int main(int argc, char** argv)
         bfloat16_dpas_blockread_vnni_tiled<8, 16, 4, 2>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_blockread_vnni_tiled<8, 16, 2, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
         bfloat16_dpas_blockread_vnni_tiled<8, 16, 4, 4>(context, program, queue, C, A, Bvnni, M, N, K, C_ref);
+    }
+
+    if (mask & 0x2000) {
+        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
+        bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     printf("Done.\n");
