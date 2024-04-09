@@ -48,6 +48,8 @@ typedef struct _cl_semaphore_khr
         ptrdiff_t numProperties = 0;
         cl_semaphore_type_khr type = ~0;
 
+        std::vector<cl_device_id> devices;
+
         if( properties )
         {
             const cl_semaphore_properties_khr* check = properties;
@@ -78,10 +80,11 @@ typedef struct _cl_semaphore_khr
                     else
                     {
                         found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR = true;
-                        ++check;
-                        while(*check++ != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
+                        check++;
+                        while(*check != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
                         {
-                            // TODO: validate device handles.
+                            devices.push_back(((cl_device_id*)check)[0]);
+                            check++;
                         }
                     }
                     break;
@@ -91,6 +94,38 @@ typedef struct _cl_semaphore_khr
                 }
             }
             numProperties = check - properties + 1;
+
+            // validate device handles.
+            if (!devices.empty()) {
+              std::vector<cl_semaphore_type_khr> types;
+              for (int i = devices.size() - 1; i >= 0; i--) {
+                size_t num_types_size = 0;
+                clGetDeviceInfo(devices[i],
+                                                 CL_DEVICE_SEMAPHORE_TYPES_KHR,
+                                                 0, nullptr, &num_types_size);
+
+                if (!num_types_size)
+                  continue;
+
+                types.resize(num_types_size / sizeof(cl_semaphore_type_khr));
+                clGetDeviceInfo(
+                    devices[i], CL_DEVICE_SEMAPHORE_TYPES_KHR, num_types_size,
+                    types.data(), nullptr);
+
+                bool capable = false;
+                for (auto sema_type : types) {
+                  if (type == sema_type) {
+                    capable = true;
+                    break;
+                  }
+                }
+
+                if (!capable) {
+                  errorCode = CL_INVALID_DEVICE;
+                  break;
+                }
+              }
+            }
         }
         switch( type )
         {
@@ -111,6 +146,12 @@ typedef struct _cl_semaphore_khr
                 semaphore->Properties.begin(),
                 properties,
                 properties + numProperties );
+
+            if (!devices.empty())
+                semaphore->Devices.assign(
+                    devices.begin(),
+                    devices.end() );
+
         }
         return semaphore;
     }
@@ -124,6 +165,7 @@ typedef struct _cl_semaphore_khr
     const cl_context Context;
     const cl_semaphore_type_khr Type;
     std::vector<cl_semaphore_properties_khr> Properties;
+    std::vector<cl_device_id>   Devices;
 
     std::atomic<cl_uint> RefCount;
     cl_event Event;
@@ -345,6 +387,16 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
             return writeParamToMemory(
                 param_value_size,
                 payload,
+                param_value_size_ret,
+                ptr );
+        }
+        break;
+    case CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR:
+        {
+            auto ptr = (cl_device_id*)param_value;
+            return writeVectorToMemory(
+                param_value_size,
+                semaphore->Devices,
                 param_value_size_ret,
                 ptr );
         }
