@@ -1,10 +1,68 @@
+__attribute__((overloadable))
+float activation(float f)
+{
+#if defined(ACTIVATION_RELU)
+    return fmax(f, 0);
+#else   // identity
+    return f;
+#endif
+}
+
+__attribute__((overloadable))
+float2 activation(float2 f)
+{
+    float2 res;
+    res.s0 = activation(f.s0);
+    res.s1 = activation(f.s1);
+    return res;
+}
+
+__attribute__((overloadable))
+float4 activation(float4 f)
+{
+    float4 res;
+    res.s0 = activation(f.s0);
+    res.s1 = activation(f.s1);
+    res.s2 = activation(f.s2);
+    res.s3 = activation(f.s3);
+    return res;
+}
+
+float8 activation(float8 f)
+{
+    float8 res;
+    res.s0 = activation(f.s0);
+    res.s1 = activation(f.s1);
+    res.s2 = activation(f.s2);
+    res.s3 = activation(f.s3);
+    res.s4 = activation(f.s4);
+    res.s5 = activation(f.s5);
+    res.s6 = activation(f.s6);
+    res.s7 = activation(f.s7);
+    return res;
+}
+
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+#if __has_builtin(__builtin_expect) == 0
+#define __builtin_expect(x)
+#endif
+
 #if defined(cl_intel_subgroups)
 
-inline int compute_m(const int num_sgs, const int tM, const int MM)
+inline int compute_m(const int num_sgs_x, const int num_sgs_y, const int tM, const int MM)
 {
-    const int m_start = get_group_id(1) * num_sgs;
-    const int m_index = num_sgs > 1 ? m_start + get_sub_group_id() : m_start;
+    const int m_start = get_group_id(1) * num_sgs_y;
+    const int m_index = num_sgs_y > 1 ? m_start + get_sub_group_id() / num_sgs_x : m_start;
     return m_index * tM * MM;
+}
+
+inline int compute_n(const int num_sgs_x, const int num_sgs_y, const int tN, const int NN)
+{
+    const int n_start = get_group_id(0) * num_sgs_x;
+    const int n_index = num_sgs_x > 1 ? n_start + get_sub_group_id() % num_sgs_x : n_start;
+    return n_index * tN * NN;
 }
 
 // Emulated dpas:
@@ -87,8 +145,8 @@ float load_a_rowmajor_d32_m1_k8_sg16(global float* A, int rowStart, int colStart
 {
     float ret;
 
+    // Note: only the low eight channels should be used.
     uint offset = rowStart * stride + colStart;
-    offset += (get_sub_group_local_id() < 8) ? 0 : stride;
     offset += (get_sub_group_local_id() % 8);
 
     ret = A[offset];

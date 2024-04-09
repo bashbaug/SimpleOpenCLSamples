@@ -17,6 +17,7 @@ kernel void tf32_naive(global float* C, global float* A, global float* B, int K)
         sum = fma(A[m * K + k], B[k * N + n], sum);
     }
 
+    sum = activation(sum);
     C[m * N + n] = sum;
 }
 
@@ -30,11 +31,12 @@ kernel void tf32_naive(global float* C, global float* A, global float* B, int K)
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_rowmajor_m1_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float sum = 0;
     for (int k = 0; k < K; k += tK) {
@@ -43,17 +45,19 @@ kernel void tf32_dpas_rowmajor_m1_n16(global float* C, global float* A, global f
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m1_nx(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_rowmajor_m2_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
@@ -62,17 +66,19 @@ kernel void tf32_dpas_rowmajor_m2_n16(global float* C, global float* A, global f
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m2_nx(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_rowmajor_m4_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
@@ -81,17 +87,19 @@ kernel void tf32_dpas_rowmajor_m4_n16(global float* C, global float* A, global f
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m4_nx(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_rowmajor_m8_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
@@ -100,6 +108,7 @@ kernel void tf32_dpas_rowmajor_m8_n16(global float* C, global float* A, global f
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     store_c_rowmajor_fp32_m8_nx(C, sum, m, n, N);
 }
 
@@ -108,6 +117,7 @@ kernel void tf32_dpas_rowmajor_m8_n16(global float* C, global float* A, global f
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_blockread_rowmajor_m1_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
     const int tN = 16;
     const int M = get_global_size(1);
@@ -122,12 +132,14 @@ kernel void tf32_dpas_blockread_rowmajor_m1_n16(global float* C, global float* A
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m1k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_blockread_rowmajor_m2_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
     const int tN = 16;
     const int M = get_global_size(1) * tM;
@@ -142,12 +154,14 @@ kernel void tf32_dpas_blockread_rowmajor_m2_n16(global float* C, global float* A
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m2k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_blockread_rowmajor_m4_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
     const int tN = 16;
     const int M = get_global_size(1) * tM;
@@ -162,12 +176,14 @@ kernel void tf32_dpas_blockread_rowmajor_m4_n16(global float* C, global float* A
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m4k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_blockread_rowmajor_m8_n16(global float* C, global float* A, global float* B, int K)
 {
+    __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
     const int tN = 16;
     const int M = get_global_size(1) * tM;
@@ -182,6 +198,7 @@ kernel void tf32_dpas_blockread_rowmajor_m8_n16(global float* C, global float* A
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
+    sum = activation(sum);
     intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
 }
 

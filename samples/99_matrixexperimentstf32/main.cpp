@@ -21,12 +21,14 @@
 
 using test_clock = std::chrono::high_resolution_clock;
 
+bool zeroData = false;
 bool identityData = false;
 bool fixedData = false;
 bool validate = false;
 bool emulate = false;
 bool wallclock = false;
 bool skipinit = false;
+bool roundRobin = false;
 int testIterations = 16;
 float threshold = 0.01f;
 
@@ -75,6 +77,18 @@ static size_t findMinSubGroupSize(cl::Device& device)
     return 0;
 }
 
+static void setRoundRobin(cl::Kernel& kernel)
+{
+    constexpr cl_kernel_exec_info CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_INTEL = 0x10025;
+    constexpr cl_uint CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_ROUND_ROBIN_INTEL = 0x10023;
+    const cl_uint policy = CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_ROUND_ROBIN_INTEL;
+    clSetKernelExecInfo(
+        kernel(),
+        CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_INTEL,
+        sizeof(policy),
+        &policy);
+}
+
 float to_tf32(float f)
 {
     union {
@@ -96,7 +110,10 @@ float to_tf32(float f)
 template <typename T>
 static void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
 {
-    if (identityData) {
+    if (zeroData) {
+        std::generate(std::begin(M), std::end(M), [&]{ return 0.0f; });
+    }
+    else if (identityData) {
         std::generate(std::begin(M), std::end(M), [&]{ return to_tf32(1.0f); });
     } else if (fixedData) {
         for (size_t r = 0; r < numRows; r++) {
@@ -334,6 +351,9 @@ static void tf32_dpas_blockread_rowmajor(
         kernel.setArg(1, A);
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
+        if (roundRobin) {
+            setRoundRobin(kernel);
+        }
 
         if (!skipinit) {
             queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
@@ -390,6 +410,9 @@ static void tf32_dpas_blockread_rowmajor_tiled(
         kernel.setArg(1, A);
         kernel.setArg(2, B);
         kernel.setArg(3, static_cast<cl_int>(K));
+        if (roundRobin) {
+            setRoundRobin(kernel);
+        }
 
         if (!skipinit) {
             queue.enqueueFillBuffer(C, 0, 0, C_ref.size() * sizeof(C_ref[0]));
@@ -440,11 +463,13 @@ int main(int argc, char** argv)
         op.add<popl::Value<size_t>>("m", "matrixsize", "Matrix Size", matrixSize, &matrixSize);
         op.add<popl::Value<int>>("i", "iterations", "Test Iterations", testIterations, &testIterations);
         op.add<popl::Switch>("", "validate", "Validate Results", &validate);
+        op.add<popl::Switch>("", "zero", "Use Zero Data", &zeroData);
         op.add<popl::Switch>("", "identity", "Use Identity Data", &identityData);
         op.add<popl::Switch>("", "fixed", "Use Fixed Data", &fixedData);
         op.add<popl::Switch>("", "emulate", "Unconditionally Emulate dpas", &emulate);
         op.add<popl::Switch>("", "wallclock", "Measure Wallclock Time", &wallclock);
         op.add<popl::Switch>("", "skipinit", "Do Not Initialize Buffers", &skipinit);
+        op.add<popl::Switch>("", "roundrobin", "Use Round Robin Scheduling", &roundRobin);
         op.add<popl::Value<float>>("", "threshold", "Local Error Threshold", threshold, &threshold);
         op.add<popl::Value<size_t>, popl::Attribute::advanced>("", "mask", "Test Mask", mask, &mask);
         bool printUsage = false;
