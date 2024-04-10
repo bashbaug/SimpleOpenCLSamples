@@ -90,4 +90,5 @@ if(BUILD_EXTENSION_SAMPLES)
 endif()
 
 add_subdirectory( 99_matrixexperiments )
+add_subdirectory( 99_matrixexperimentsi8 )
 add_subdirectory( 99_matrixexperimentstf32 )
