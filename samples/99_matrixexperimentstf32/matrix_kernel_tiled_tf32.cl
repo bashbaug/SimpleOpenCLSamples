@@ -145,9 +145,22 @@ kernel void MM_KERNEL_NAME(tf32_dpas_rowmajor_tiled, 8, 16, MM, NN)(global float
 
 void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global float* A, int tM, int M, int K, int m, int k, float4 aData[KK][MM])
 {
-    for (int kk = 0; kk < KK; kk++) {
-        for (int mm = 0; mm < MM; mm++) {
-            aData[kk][mm] = as_float4(intel_subgroup_block_read_u32_m8k8(A, K * sizeof(float), M, K * sizeof(float), (int2)(k + kk * tK, m + mm * tM)));
+    if (KK % 2 == 0) {
+        for (int kk = 0; kk < KK; kk+=2) {
+            for (int mm = 0; mm < MM; mm++) {
+                //if (get_sub_group_local_id() == 0) {
+                //    printf("atile block load    : %d, %d, %2d:           m = %3d, k = %3d, mm = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), m, k, mm, kk, k + kk * tK, m + mm * tM);
+                //}
+                float8 aTemp = as_float8(intel_subgroup_block_read_u32_m8k8v2(A, K * sizeof(float), M, K * sizeof(float), (int2)(k + kk * tK, m + mm * tM)));
+                aData[kk + 0][mm] = aTemp.lo;
+                aData[kk + 1][mm] = aTemp.hi;
+            }
+        }
+    } else {
+        for (int kk = 0; kk < KK; kk++) {
+            for (int mm = 0; mm < MM; mm++) {
+                aData[kk][mm] = as_float4(intel_subgroup_block_read_u32_m8k8(A, K * sizeof(float), M, K * sizeof(float), (int2)(k + kk * tK, m + mm * tM)));
+            }
         }
     }
 }
