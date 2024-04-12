@@ -380,8 +380,6 @@ kernel void i8_dpas_vnni_m8_n16(global int* C, global char* A, global char* B, i
     store_c_rowmajor_int32_m8_nx(C, sum, m, n, N);
 }
 
-#if 0
-
 #ifdef cl_intel_subgroup_extended_block_read
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -397,8 +395,8 @@ kernel void i8_dpas_blockread_rowmajor_m1_n16(global int* C, global char* A, glo
 
     int sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short   aData = as_short(intel_subgroup_block_read_u16_m1k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short   aData = as_short(intel_subgroup_block_read_u8_m1k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_transform_u8_k32(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -419,8 +417,8 @@ kernel void i8_dpas_blockread_rowmajor_m2_n16(global int* C, global char* A, glo
 
     int2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short2  aData = as_short2(intel_subgroup_block_read_u16_m2k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short2  aData = as_short2(intel_subgroup_block_read_u8_m2k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_transform_u8_k32(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -441,8 +439,8 @@ kernel void i8_dpas_blockread_rowmajor_m4_n16(global int* C, global char* A, glo
 
     int4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short4  aData = as_short4(intel_subgroup_block_read_u16_m4k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short4  aData = as_short4(intel_subgroup_block_read_u8_m4k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_transform_u8_k32(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -463,8 +461,8 @@ kernel void i8_dpas_blockread_rowmajor_m8_n16(global int* C, global char* A, glo
 
     int8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short8  aData = as_short8(intel_subgroup_block_read_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short8  aData = as_short8(intel_subgroup_block_read_u8_m8k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_transform_u8_k32(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -485,8 +483,8 @@ kernel void i8_dpas_blockread_vnni_m1_n16(global int* C, global char* A, global 
 
     int sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short   aData = as_short(intel_subgroup_block_read_u16_m1k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short   aData = as_short(intel_subgroup_block_read_u8_m1k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -507,8 +505,8 @@ kernel void i8_dpas_blockread_vnni_m2_n16(global int* C, global char* A, global 
 
     int2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short2  aData = as_short2(intel_subgroup_block_read_u16_m2k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short2  aData = as_short2(intel_subgroup_block_read_u8_m2k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -529,8 +527,8 @@ kernel void i8_dpas_blockread_vnni_m4_n16(global int* C, global char* A, global 
 
     int4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short4  aData = as_short4(intel_subgroup_block_read_u16_m4k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short4  aData = as_short4(intel_subgroup_block_read_u8_m4k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -551,8 +549,8 @@ kernel void i8_dpas_blockread_vnni_m8_n16(global int* C, global char* A, global 
 
     int8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short8  aData = as_short8(intel_subgroup_block_read_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short8  aData = as_short8(intel_subgroup_block_read_u8_m8k32(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m)));
+        int8    bData = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -561,6 +559,8 @@ kernel void i8_dpas_blockread_vnni_m8_n16(global int* C, global char* A, global 
 }
 
 #endif // cl_intel_subgroup_extended_block_read
+
+#if 0 // disable the tiled cases for now
 
 // Tiled matrix multiplication kernels, generated from a template:
 
@@ -606,7 +606,7 @@ kernel void i8_dpas_blockread_vnni_m8_n16(global int* C, global char* A, global 
 #undef MM
 #undef NN
 
-#endif // disabling these cases for now
+#endif // disable the tiled cases for now
 
 #endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
 
