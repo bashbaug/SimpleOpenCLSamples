@@ -749,7 +749,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
 
 #if defined(HEADER_BUILTINS)
 
-void HELPER_NAME(atile_block_load_rowmajor_h, MM, NN)(int8 ap, global ushort* A, int tM, int M, int K, int m, int k, short8 aData[KK][MM])
+void HELPER_NAME(atile_block_load_rowmajor_ap, MM, NN)(int* ap, global ushort* A, int tM, int M, int K, int m, int k, short8 aData[KK][MM])
 {
     if (KK % 2 == 0 & MM % 4 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
@@ -806,7 +806,7 @@ void HELPER_NAME(atile_block_load_rowmajor_h, MM, NN)(int8 ap, global ushort* A,
     }
 }
 
-void HELPER_NAME(btile_block_load_rowmajor_h, MM, NN)(int8 ap, global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
+void HELPER_NAME(btile_block_load_rowmajor_ap, MM, NN)(int* ap, global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
 {
     if (KK % 2 == 0 & NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
@@ -849,7 +849,7 @@ void HELPER_NAME(btile_block_load_rowmajor_h, MM, NN)(int8 ap, global ushort* B,
     }
 }
 
-void HELPER_NAME(btile_block_load_vnni_h, MM, NN)(int8 ap, global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
+void HELPER_NAME(btile_block_load_vnni_ap, MM, NN)(int* ap, global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
 {
     if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
@@ -868,7 +868,7 @@ void HELPER_NAME(btile_block_load_vnni_h, MM, NN)(int8 ap, global ushort* B, int
     }
 }
 
-void HELPER_NAME(atile_block_prefetch_rowmajor_h, MM, NN)(int8 ap, global ushort* A, int tM, int M, int K, int m, int k)
+void HELPER_NAME(atile_block_prefetch_rowmajor_ap, MM, NN)(int* ap, global ushort* A, int tM, int M, int K, int m, int k)
 {
     if (KK == 2 & MM == 4 & SGS_PER_WG_X >= 4) {
         const int sg_index_x = get_sub_group_id() % SGS_PER_WG_X;   // index in [0, SGS_PER_WG_X)
@@ -912,7 +912,7 @@ void HELPER_NAME(atile_block_prefetch_rowmajor_h, MM, NN)(int8 ap, global ushort
     }
 }
 
-void HELPER_NAME(btile_block_prefetch_rowmajor_h, MM, NN)(int8 ap, global ushort* B, int tN, int K, int N, int k, int n)
+void HELPER_NAME(btile_block_prefetch_rowmajor_ap, MM, NN)(int* ap, global ushort* B, int tN, int K, int N, int k, int n)
 {
     if (KK == 2 & NN == 4 & SGS_PER_WG_Y >= 4) {
         const int sg_index_y = get_sub_group_id() / SGS_PER_WG_X;   // index in [0, SGS_PER_WG_Y)
@@ -950,7 +950,7 @@ void HELPER_NAME(btile_block_prefetch_rowmajor_h, MM, NN)(int8 ap, global ushort
     }
 }
 
-void HELPER_NAME(btile_block_prefetch_vnni_h, MM, NN)(int8 ap, global ushort* B, int tN, int K, int N, int k, int n)
+void HELPER_NAME(btile_block_prefetch_vnni_ap, MM, NN)(int* ap, global ushort* B, int tN, int K, int N, int k, int n)
 {
     if (KK == 2 & NN == 4 & SGS_PER_WG_Y >= 4) {
         const int sg_index_y = get_sub_group_id() / SGS_PER_WG_X;   // index in [0, SGS_PER_WG_Y)
@@ -973,7 +973,7 @@ void HELPER_NAME(btile_block_prefetch_vnni_h, MM, NN)(int8 ap, global ushort* B,
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16 * SGS_PER_WG_X, SGS_PER_WG_Y, 1)))
-kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_h_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
+kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_ap_tiled, 8, 16, MM, NN)(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
@@ -983,11 +983,11 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_h_tiled, 8, 16, MM, 
     const int m = compute_m(SGS_PER_WG_X, SGS_PER_WG_Y, tM, MM);
     const int n = compute_n(SGS_PER_WG_X, SGS_PER_WG_Y, tN, NN);
 
-    int8 App = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(A), K * sizeof(ushort) - 1, M - 1, K * sizeof(ushort) - 1, 0, 0, 16,  8, 2); //  m8k16v2
-    int8 Bpp = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(B), N * sizeof(ushort) - 1, K - 1, N * sizeof(ushort) - 1, 0, 0, 16, 16, 2); // m16k16v2
+    int* App = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(A), K * sizeof(ushort) - 1, M - 1, K * sizeof(ushort) - 1, 0, 0, 16,  8, 2); //  m8k16v2
+    int* Bpp = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(B), N * sizeof(ushort) - 1, K - 1, N * sizeof(ushort) - 1, 0, 0, 16, 16, 2); // m16k16v2
 
-    int8 Aap = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(A), K * sizeof(ushort) - 1, M - 1, K * sizeof(ushort) - 1, 0, 0, 16, 32, 2); // m32k16v2
-    int8 Bap = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(B), N * sizeof(ushort) - 1, K - 1, N * sizeof(ushort) - 1, 0, 0, 16, 32, 2); // k32n16v2
+    int* Aap = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(A), K * sizeof(ushort) - 1, M - 1, K * sizeof(ushort) - 1, 0, 0, 16, 32, 2); // m32k16v2
+    int* Bap = __builtin_IB_subgroup_createBlock2DAddressPayload(as_long(B), N * sizeof(ushort) - 1, K - 1, N * sizeof(ushort) - 1, 0, 0, 16, 32, 2); // k32n16v2
 
     int prefetch_k = 0;
     for (int p = 0; p < PREFETCH_DISTANCE; p++) {
@@ -1007,13 +1007,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_h_tiled, 8, 16, MM, 
 
     for (int k = 0; k < K; k += tK * KK) {
         int8    bData[NN][KK];
-        HELPER_NAME(btile_block_load_rowmajor_h, MM, NN)(Bap, B, tN, K, N, k, n, bData);
+        HELPER_NAME(btile_block_load_rowmajor_ap, MM, NN)(Bap, B, tN, K, N, k, n, bData);
 
         short8  aData[KK][MM];
-        HELPER_NAME(atile_block_load_rowmajor_h, MM, NN)(Aap, A, tM, M, K, m, k, aData);
+        HELPER_NAME(atile_block_load_rowmajor_ap, MM, NN)(Aap, A, tM, M, K, m, k, aData);
 
-        HELPER_NAME(btile_block_prefetch_rowmajor_h, MM, NN)(Bpp, B, tN, K, N, prefetch_k, n);
-        HELPER_NAME(atile_block_prefetch_rowmajor_h, MM, NN)(App, A, tM, M, K, m, prefetch_k);
+        HELPER_NAME(btile_block_prefetch_rowmajor_ap, MM, NN)(Bpp, B, tN, K, N, prefetch_k, n);
+        HELPER_NAME(atile_block_prefetch_rowmajor_ap, MM, NN)(App, A, tM, M, K, m, prefetch_k);
         prefetch_k += tK * KK;
 
         for (int kk = 0; kk < KK; kk++) {

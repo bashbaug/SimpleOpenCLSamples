@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 add_opencl_sample(
-    TEST
+    # don't test by default due to long execution time
     NUMBER 99
     TARGET matrixexperimentstf32
     VERSION 120

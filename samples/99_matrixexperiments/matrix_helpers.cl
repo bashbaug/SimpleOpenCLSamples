@@ -835,22 +835,30 @@ void intel_subgroup_block_write_u32_m16k16(__global void* base_address, int widt
 
 #if defined(HEADER_BUILTINS)
 
-int8 __builtin_IB_subgroup_createBlock2DAddressPayload(long A, int wm1, int hm1, int pm1, int blockX, int blockY, const int blockWidth, const int blockHeight, const int numBlocks);
-int8 __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(int8 addrPayload, int blockX);
-int8 __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(int8 addrPayload, int blockY);
-int8 __builtin_IB_subgroup_addBlock2DAddressPayloadBlockX(int8 addrPayload, int blockX);
-int8 __builtin_IB_subgroup_addBlock2DAddressPayloadBlockY(int8 addrPayload, int blockY);
+int* __builtin_IB_subgroup_createBlock2DAddressPayload(
+        long base, int width_minus_one, int height_minus_one, int pitch_minus_one,
+        int blockX, int blockY, int blockWidth, int blockHeight, int numBlocks);
+int* __builtin_IB_subgroup_copyBlock2DAddressPayload(int* ap);
 
-int8     __builtin_IB_subgroup_block_read_ap_u32_m8k16v1 (int8 addrPayload, const int immX, const int immY, int cacheOpt);
-short8   __builtin_IB_subgroup_block_read_ap_u16_m8k16v1 (int8 addrPayload, const int immX, const int immY, int cacheOpt);
-ushort64 __builtin_IB_subgroup_block_read_ap_u16_m32k16v2(int8 addrPayload, const int immX, const int immY, int cacheOpt);
+void __builtin_IB_subgroup_addBlock2DAddressPayloadBlockX(int* ap, int blockX);
+void __builtin_IB_subgroup_addBlock2DAddressPayloadBlockY(int* ap, int blockY);
+void __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(int* ap, int blockX);
+void __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(int* ap, int blockY);
+void __builtin_IB_subgroup_setBlock2DAddressPayloadBase(int* ap, long base);
+void __builtin_IB_subgroup_setBlock2DAddressPayloadWidth(int* ap, int width_minus_one);
+void __builtin_IB_subgroup_setBlock2DAddressPayloadHeigth(int* ap, int height_minus_one);
+void __builtin_IB_subgroup_setBlock2DAddressPayloadPitch(int* ap, int pitch_minus_one);
 
-uint32   __builtin_IB_subgroup_block_read_ap_transform_u16_m32k16v2(int8 addrPayload, const int immX, const int immY, int cacheOpt);
+int8     __builtin_IB_subgroup_block_read_ap_u32_m8k16v1 (int* ap, const int immX, const int immY, int cacheOpt);
+short8   __builtin_IB_subgroup_block_read_ap_u16_m8k16v1 (int* ap, const int immX, const int immY, int cacheOpt);
+ushort64 __builtin_IB_subgroup_block_read_ap_u16_m32k16v2(int* ap, const int immX, const int immY, int cacheOpt);
 
-void intel_subgroup_block_read_ap_u16_m32k16v2(int8 ap, int2 coord, ushort8 dst[2][4])
+uint32   __builtin_IB_subgroup_block_read_ap_transform_u16_m32k16v2(int* ap, const int immX, const int immY, int cacheOpt);
+
+void intel_subgroup_block_read_ap_u16_m32k16v2(int* ap, int2 coord, ushort8 dst[2][4])
 {
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
     ushort64 tmp = __builtin_IB_subgroup_block_read_ap_u16_m32k16v2(ap, 0, 0, 0);
     dst[0][0] = tmp.lo.lo.lo;
     dst[0][1] = tmp.lo.lo.hi;
@@ -863,10 +871,10 @@ void intel_subgroup_block_read_ap_u16_m32k16v2(int8 ap, int2 coord, ushort8 dst[
 }
 
 // Each block is K rows x N columns, where the K rows have been VNNI transformed.
-void intel_subgroup_block_read_ap_transform_u16_k32n16v2(int8 ap, int2 coord, int8 dst[2][2])
+void intel_subgroup_block_read_ap_transform_u16_k32n16v2(int* ap, int2 coord, int8 dst[2][2])
 {
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
     uint32 tmp = __builtin_IB_subgroup_block_read_ap_transform_u16_m32k16v2(ap, 0, 0, 0);
     dst[0][0] = as_int8(tmp.lo.lo);
     dst[0][1] = as_int8(tmp.lo.hi);
@@ -874,22 +882,22 @@ void intel_subgroup_block_read_ap_transform_u16_k32n16v2(int8 ap, int2 coord, in
     dst[1][1] = as_int8(tmp.hi.hi);
 }
 
-void __builtin_IB_subgroup_block_read_ap_prefetch_u16_m8k16v2(int8 addrPayload, const int immX, const int immY, int cacheOpt);
-void __builtin_IB_subgroup_block_read_ap_prefetch_u16_m16k16v2(int8 addrPayload, const int immX, const int immY, int cacheOpt);
+void __builtin_IB_subgroup_block_read_ap_prefetch_u16_m8k16v2(int* ap, const int immX, const int immY, int cacheOpt);
+void __builtin_IB_subgroup_block_read_ap_prefetch_u16_m16k16v2(int* ap, const int immX, const int immY, int cacheOpt);
 
-void intel_subgroup_block_prefetch_ap_u16_m8k16v2(int8 ap, int2 coord)
+void intel_subgroup_block_prefetch_ap_u16_m8k16v2(int* ap, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
     __builtin_IB_subgroup_block_read_ap_prefetch_u16_m8k16v2(ap, 0, 0, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_ap_u16_m16k16v2(int8 ap, int2 coord)
+void intel_subgroup_block_prefetch_ap_u16_m16k16v2(int* ap, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
-    ap = __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockX(ap, coord.x);
+    __builtin_IB_subgroup_setBlock2DAddressPayloadBlockY(ap, coord.y);
     __builtin_IB_subgroup_block_read_ap_prefetch_u16_m16k16v2(ap, 0, 0, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }

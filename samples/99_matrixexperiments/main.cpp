@@ -546,7 +546,7 @@ static void bfloat16_dpas_blockread_rowmajor_tiled(
 }
 
 template<int tM, int tN, int MM, int NN>
-static void bfloat16_dpas_blockread_rowmajor_h_tiled(
+static void bfloat16_dpas_blockread_rowmajor_ap_tiled(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
     size_t M, size_t N, size_t K,
@@ -554,7 +554,7 @@ static void bfloat16_dpas_blockread_rowmajor_h_tiled(
 {
     printf("%80s: ", makeTestName(__FUNCTION__, tM, tN, MM, NN, M, N, K).c_str()); fflush(stdout);
 
-    std::string kernelName = "bfloat16_dpas_blockread_rowmajor_h_tiled";
+    std::string kernelName = "bfloat16_dpas_blockread_rowmajor_ap_tiled";
     kernelName += "_m" + std::to_string(tM);
     kernelName += "_n" + std::to_string(tN);
     kernelName += "_" + std::to_string(MM);
@@ -967,13 +967,13 @@ int main(int argc, char** argv)
     }
 
     if (mask & 0x2000) {
-        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
-        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
-        //bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
-        bfloat16_dpas_blockread_rowmajor_h_tiled<8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_ap_tiled<8, 16, 1, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_ap_tiled<8, 16, 2, 1>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_ap_tiled<8, 16, 1, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_ap_tiled<8, 16, 2, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_ap_tiled<8, 16, 4, 2>(context, program, queue, C, A, B, M, N, K, C_ref);
+        //bfloat16_dpas_blockread_rowmajor_ap_tiled<8, 16, 2, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
+        bfloat16_dpas_blockread_rowmajor_ap_tiled<8, 16, 4, 4>(context, program, queue, C, A, B, M, N, K, C_ref);
     }
 
     printf("Done.\n");

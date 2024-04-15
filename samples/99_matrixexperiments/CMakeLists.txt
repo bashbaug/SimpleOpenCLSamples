@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 add_opencl_sample(
-    TEST
+    # don't test by default due to long execution time
     NUMBER 99
     TARGET matrixexperiments
     VERSION 200 # for clSetKernelExecInfo
