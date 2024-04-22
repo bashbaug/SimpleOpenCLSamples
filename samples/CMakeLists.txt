@@ -1,22 +1,6 @@
-# Copyright (c) 2019-2023 Ben Ashbaugh
+# Copyright (c) 2019-2024 Ben Ashbaugh
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# SPDX-License-Identifier: MIT
 
 function(add_opencl_sample)
     set(options TEST)
@@ -48,7 +32,7 @@ function(add_opencl_sample)
         target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_HPP_ENABLE_EXCEPTIONS)
     endif()
     if (WIN32)
-        target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS)
+        target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
     endif()
 
     set_target_properties(${OPENCL_SAMPLE_TARGET} PROPERTIES FOLDER "Samples/${OPENCL_SAMPLE_CATEGORY}/${OPENCL_SAMPLE_NUMBER}_${OPENCL_SAMPLE_TARGET}")
@@ -104,4 +88,5 @@ if(BUILD_EXTENSION_SAMPLES)
     add_subdirectory( 12_commandbufferspp )
     add_subdirectory( 13_mutablecommandbuffers )
     add_subdirectory( 14_ooqcommandbuffers )
+    add_subdirectory( 15_mutablecommandbufferasserts )
 endif()

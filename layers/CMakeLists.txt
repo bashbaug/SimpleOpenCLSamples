@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Ben Ashbaugh
+# Copyright (c) 2022-2024 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
@@ -34,7 +34,7 @@ function(add_opencl_layer)
     target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_USE_DEPRECATED_OPENCL_2_2_APIS)
 
     if (WIN32)
-        target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS)
+        target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
     endif()
 
     set_target_properties(${OPENCL_LAYER_TARGET} PROPERTIES FOLDER "Layers/${OPENCL_LAYER_CATEGORY}/${OPENCL_LAYER_NUMBER}_${OPENCL_LAYER_TARGET}")
