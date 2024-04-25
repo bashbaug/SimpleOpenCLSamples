@@ -79,7 +79,7 @@ See example [here](https://godbolt.org/z/hEogpZ).
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
-| `-file <string>` | See Description | Specify the name of the file with the SPIR-V kernel intermediate representation.  The default value for a 32-bit executable is `sample_kernel32.spv` and the default value for a 64-bit executable is `sample_kernel64.spv`.
-| `-name <string>` | `Test` | Specify the name of the OpenCL kernel in the source file.
-| `-options <string>` | None | Specify optional program build options.
-| `-gwx <number>` | 512 | Specify the global work size to execute.
+| `--file <string>` | See Description | Specify the name of the file with the SPIR-V kernel intermediate representation.  The default value for a 32-bit executable is `sample_kernel32.spv` and the default value for a 64-bit executable is `sample_kernel64.spv`.
+| `--name <string>` | `Test` | Specify the name of the OpenCL kernel in the source file.
+| `--options <string>` | None | Specify optional program build options.
+| `--gwx <number>` | 512 | Specify the global work size to execute.

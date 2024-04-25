@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2023 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +20,19 @@
 // SOFTWARE.
 */
 
+#include <popl/popl.hpp>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+
 #include <CL/opencl.hpp>
-#include "bmp.hpp"
 
 #include <chrono>
-#include <ctime>
 
 const char* filename = "julia.bmp";
 
-size_t iterations = 16;
-size_t gwx = 512;
-size_t gwy = 512;
-size_t lwx = 0;
-size_t lwy = 0;
-
-float cr = -0.123f;
-float ci =  0.745f;
-
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl::Buffer deviceMemDst;
+const float cr = -0.123f;
+const float ci =  0.745f;
 
 static const char kernelString[] = R"CLC(
 kernel void Julia( global uchar4* dst, float cr, float ci )
@@ -78,171 +71,50 @@ kernel void Julia( global uchar4* dst, float cr, float ci )
     result = max( result, 0.0f );
     result = min( result, 1.0f );
 
-    // BGRA
-    float4 color = (float4)( 1.0f, sqrt(result) , result, 1.0f );
+    // RGBA
+    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
 
     dst[ y * cWidth + x ] = convert_uchar4(color * 255.0f);
 }
 )CLC";
 
-static void init( void )
-{
-    // No initialization is needed for this sample.
-}
-
-static void go()
-{
-    kernel.setArg(0, deviceMemDst);
-    kernel.setArg(1, cr);
-    kernel.setArg(2, ci);
-
-    cl::NDRange lws;    // NullRange by default.
-
-    printf("Executing the kernel %d times\n", (int)iterations);
-    printf("Global Work Size = ( %d, %d )\n", (int)gwx, (int)gwy);
-    if( lwx > 0 && lwy > 0 )
-    {
-        printf("Local Work Size = ( %d, %d )\n", (int)lwx, (int)lwy);
-        lws = cl::NDRange{lwx, lwy};
-    }
-    else
-    {
-        printf("Local work size = NULL\n");
-    }
-
-    // Ensure the queue is empty and no processing is happening
-    // on the device before starting the timer.
-    commandQueue.finish();
-
-    auto start = std::chrono::system_clock::now();
-    for( int i = 0; i < iterations; i++ )
-    {
-        commandQueue.enqueueNDRangeKernel(
-            kernel,
-            cl::NullRange,
-            cl::NDRange{gwx, gwy},
-            lws);
-    }
-
-    // Enqueue all processing is complete before stopping the timer.
-    commandQueue.finish();
-
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<float> elapsed_seconds = end - start;
-    printf("Finished in %f seconds\n", elapsed_seconds.count());
-}
-
-static void checkResults()
-{
-    auto buf = reinterpret_cast<const uint32_t*>(
-        commandQueue.enqueueMapBuffer(
-            deviceMemDst,
-            CL_TRUE,
-            CL_MAP_READ,
-            0,
-            gwx * gwy * sizeof(cl_uchar4) ) );
-
-    BMP::save_image(buf, gwx, gwy, filename);
-    printf("Wrote image file %s\n", filename);
-
-    commandQueue.enqueueUnmapMemObject(
-        deviceMemDst,
-        (void*)buf ); // TODO: Why isn't this a const void* in the API?
-}
-
 int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    if( argc < 1 )
-    {
-        printUsage = true;
-    }
-    else
-    {
-        for( size_t i = 1; i < argc; i++ )
-        {
-            if( !strcmp( argv[i], "-d" ) )
-            {
-                if( ++i < argc )
-                {
-                    deviceIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                if( ++i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                if( ++i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-i" ) )
-            {
-                if( ++i < argc )
-                {
-                    iterations = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-gwx" ) )
-            {
-                if( ++i < argc )
-                {
-                    gwx = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-gwy" ) )
-            {
-                if( ++i < argc )
-                {
-                    gwy = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-lwx" ) )
-            {
-                if( ++i < argc )
-                {
-                    lwx = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-lwy" ) )
-            {
-                if( ++i < argc )
-                {
-                    lwy = strtol(argv[i], NULL, 10);
-                }
-            }
-            else
-            {
-                printUsage = true;
-            }
-        }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: julia   [options]\n"
-            "Options:\n"
-            "      -d: Device Index (default = 0)\n"
-            "      -p: Platform Index (default = 0)\n"
-            "      -i: Number of Iterations (default = 16)\n"
-            "      -gwx: Global Work Size X AKA Image Width (default = 512)\n"
-            "      -gwy: Global Work Size Y AKA Image Height (default = 512)\n"
-            "      -lwx: Local Work Size X (default = 0 = NULL Local Work Size)\n"
-            "      -lwy: Local Work Size Y (default = 0 = Null Local Work size)\n"
-            );
+    size_t iterations = 16;
+    size_t gwx = 512;
+    size_t gwy = 512;
+    size_t lwx = 0;
+    size_t lwy = 0;
 
-        return -1;
+    {
+        popl::OptionParser op("Supported Options");
+        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
+        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
+        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Image Width", gwx, &gwx);
+        op.add<popl::Value<size_t>>("", "gwy", "Global Work Size Y AKA Image Height", gwy, &gwy);
+        op.add<popl::Value<size_t>>("", "lwx", "Local Work Size X", lwx, &lwx);
+        op.add<popl::Value<size_t>>("", "lwy", "Local Work Size Y", lwy, &lwy);
+
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
+        }
+
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: julia [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;
@@ -258,29 +130,76 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
-#if 0
-    for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
-    {
-        printf("Program build log for device %s:\n",
-            device.getInfo<CL_DEVICE_NAME>().c_str() );
-        printf("%s\n",
-            program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
-    }
-#endif
-    kernel = cl::Kernel{ program, "Julia" };
+    cl::Kernel kernel = cl::Kernel{ program, "Julia" };
 
-    deviceMemDst = cl::Buffer{
+    cl::Buffer deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,
         gwx * gwy * sizeof( cl_uchar4 ) };
 
-    init();
-    go();
-    checkResults();
+    // execution
+    {
+        kernel.setArg(0, deviceMemDst);
+        kernel.setArg(1, cr);
+        kernel.setArg(2, ci);
+
+        cl::NDRange lws;    // NullRange by default.
+
+        printf("Executing the kernel %d times\n", (int)iterations);
+        printf("Global Work Size = ( %d, %d )\n", (int)gwx, (int)gwy);
+        if( lwx > 0 && lwy > 0 )
+        {
+            printf("Local Work Size = ( %d, %d )\n", (int)lwx, (int)lwy);
+            lws = cl::NDRange{lwx, lwy};
+        }
+        else
+        {
+            printf("Local work size = NULL\n");
+        }
+
+        // Ensure the queue is empty and no processing is happening
+        // on the device before starting the timer.
+        commandQueue.finish();
+
+        auto start = std::chrono::system_clock::now();
+        for( size_t i = 0; i < iterations; i++ )
+        {
+            commandQueue.enqueueNDRangeKernel(
+                kernel,
+                cl::NullRange,
+                cl::NDRange{gwx, gwy},
+                lws);
+        }
+
+        // Ensure all processing is complete before stopping the timer.
+        commandQueue.finish();
+
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        printf("Finished in %f seconds\n", elapsed_seconds.count());
+    }
+
+    // save bitmap
+    {
+        auto buf = reinterpret_cast<const uint32_t*>(
+            commandQueue.enqueueMapBuffer(
+                deviceMemDst,
+                CL_TRUE,
+                CL_MAP_READ,
+                0,
+                gwx * gwy * sizeof(cl_uchar4) ) );
+
+        stbi_write_bmp(filename, gwx, gwy, 4, buf);
+        printf("Wrote image file %s\n", filename);
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemDst,
+            (void*)buf );
+    }
 
     return 0;
 }

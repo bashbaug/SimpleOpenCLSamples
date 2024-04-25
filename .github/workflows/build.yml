@@ -1,0 +1,82 @@
+name: build
+
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+    branches:
+      - main
+
+env:
+  BUILD_TYPE: RelWithDebInfo
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check Tabs
+      run: |
+        if git grep -n $'\t'          samples/*.cpp samples/*.h tutorials/*.cpp tutorials/*.h; then echo 'Please replace tabs with spaces in source files.';     false; fi
+
+    - name: Check Whitespace
+      run: |
+        if git grep -n '[[:blank:]]$' samples/*.cpp samples/*.h tutorials/*.cpp tutorials/*.h; then echo 'Please remove trailing whitespace from source files.'; false; fi
+
+  build:
+    needs: check
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        ext: [YES, NO]
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get Ubuntu OpenGL Dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libglfw3-dev
+
+    - name: Get OpenCL Headers
+      uses: actions/checkout@v3
+      with:
+        repository: KhronosGroup/OpenCL-Headers
+        path: external/OpenCL-Headers
+
+    - name: Get OpenCL ICD Loader
+      uses: actions/checkout@v3
+      with:
+        repository: KhronosGroup/OpenCL-ICD-Loader
+        path: external/opencl-icd-loader
+
+    - name: Get OpenCL Extension Loader
+      if: matrix.ext == 'YES'
+      uses: actions/checkout@v3
+      with:
+        repository: bashbaug/opencl-extension-loader
+        path: external/opencl-extension-loader
+
+    - name: Create Build Directory
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Run CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake -DOpenCL_INCLUDE_DIRS=$GITHUB_WORKSPACE/external/OpenCL-Headers -DCMAKE_BUILD_TYPE=$BUILD_TYPE $GITHUB_WORKSPACE
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --parallel --config $BUILD_TYPE
+
+    #- name: Test
+    #  working-directory: ${{runner.workspace}}/build
+    #  shell: bash
+    #  run: ctest -C $BUILD_TYPE

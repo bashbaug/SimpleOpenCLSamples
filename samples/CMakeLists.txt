@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020 Ben Ashbaugh
+# Copyright (c) 2019-2023 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -17,14 +17,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(SAMPLES_PLATFORM_NAME "x64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(SAMPLES_PLATFORM_NAME "x86")
-else()
-    set(SAMPLES_PLATFORM_NAME "Unknown")
-endif()
 
 function(add_opencl_sample)
     set(options TEST)
@@ -52,6 +44,9 @@ function(add_opencl_sample)
     target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_TARGET_OPENCL_VERSION=${OPENCL_SAMPLE_VERSION})
     target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_HPP_TARGET_OPENCL_VERSION=${OPENCL_SAMPLE_VERSION})
     target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_HPP_MINIMUM_OPENCL_VERSION=${OPENCL_SAMPLE_VERSION})
+    if (SAMPLES_ENABLE_EXCEPTIONS)
+        target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE CL_HPP_ENABLE_EXCEPTIONS)
+    endif()
     if (WIN32)
         target_compile_definitions(${OPENCL_SAMPLE_TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
@@ -64,8 +59,8 @@ function(add_opencl_sample)
         set(OPENCL_SAMPLE_CONFIGS ${CMAKE_BUILD_TYPE})
     endif()
     foreach(CONFIG ${OPENCL_SAMPLE_CONFIGS})
-        install(TARGETS ${OPENCL_SAMPLE_TARGET} CONFIGURATIONS ${CONFIG} DESTINATION ${SAMPLES_PLATFORM_NAME}/${CONFIG})
-        install(FILES ${OPENCL_SAMPLE_KERNELS} CONFIGURATIONS ${CONFIG} DESTINATION ${SAMPLES_PLATFORM_NAME}/${CONFIG})
+        install(TARGETS ${OPENCL_SAMPLE_TARGET} CONFIGURATIONS ${CONFIG} DESTINATION ${CONFIG})
+        install(FILES ${OPENCL_SAMPLE_KERNELS} CONFIGURATIONS ${CONFIG} DESTINATION ${CONFIG})
     endforeach()
     if(OPENCL_SAMPLE_TEST)
         add_test(NAME ${OPENCL_SAMPLE_TARGET} COMMAND ${OPENCL_SAMPLE_TARGET})
@@ -73,15 +68,39 @@ function(add_opencl_sample)
 endfunction()
 
 add_subdirectory( images )
+add_subdirectory( opengl )
+add_subdirectory( python )
+add_subdirectory( vulkan )
 add_subdirectory( usm )
 
 add_subdirectory( 00_enumopencl )
 add_subdirectory( 00_enumopenclpp )
+add_subdirectory( 00_enumqueuefamilies )
+add_subdirectory( 00_extendeddevicequeries )
+add_subdirectory( 00_loaderinfo )
 add_subdirectory( 00_newqueries )
 add_subdirectory( 00_newqueriespp )
 add_subdirectory( 01_copybuffer )
 add_subdirectory( 02_copybufferkernel )
 add_subdirectory( 03_mandelbrot )
 add_subdirectory( 04_julia )
+add_subdirectory( 04_sobel )
 add_subdirectory( 05_kernelfromfile )
 add_subdirectory( 05_spirvkernelfromfile )
+add_subdirectory( 06_ndrangekernelfromfile )
+
+add_subdirectory( 10_queueexperiments )
+
+set(BUILD_EXTENSION_SAMPLES TRUE)
+if(NOT TARGET OpenCLExt)
+    message(STATUS "Skipping Extension Samples - OpenCL Extension Loader is not found.")
+    set(BUILD_EXTENSION_SAMPLES FALSE)
+endif()
+
+if(BUILD_EXTENSION_SAMPLES)
+    add_subdirectory( 11_semaphores )
+    add_subdirectory( 12_commandbuffers )
+    add_subdirectory( 12_commandbufferspp )
+    add_subdirectory( 13_mutablecommandbuffers )
+    add_subdirectory( 14_ooqcommandbuffers )
+endif()

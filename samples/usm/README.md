@@ -13,6 +13,8 @@ Because the interfaces defined by the `cl_intel_unified_shared_memory` extension
 
 These samples are in sync with the USM extension draft revision H.
 
+These samples require the OpenCL Extension Loader to get the extension APIs for Unified Shared Memory.
+
 ## Unified Shared Memory Advantages
 
 Unified Shared Memory (USM) provides:

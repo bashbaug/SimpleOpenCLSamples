@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <vector>
+#include <popl/popl.hpp>
 
 #include <CL/cl.h>
 #include <CL/cl_ext.h>
@@ -614,31 +615,23 @@ int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
-
-    int i = 0;
-
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( i = 1; i < argc; i++ )
-        {
-            {
-                printUsage = true;
-            }
+        popl::OptionParser op("Supported Options");
+
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
         }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: newqueries  [options]\n"
-            "Options:\n"
-            );
 
-        return -1;
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: newqueries [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     cl_uint numPlatforms = 0;

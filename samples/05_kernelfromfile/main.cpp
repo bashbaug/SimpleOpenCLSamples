@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2021 Ben Ashbaugh
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,12 @@
 // SOFTWARE.
 */
 
+#include <popl/popl.hpp>
+
 #include <CL/opencl.hpp>
 
 #include <fstream>
 #include <string>
-
-size_t gwx = 512;
-
-cl::CommandQueue commandQueue;
-cl::Kernel kernel;
-cl::Buffer deviceMemDst;
 
 static std::string readStringFromFile(
     const std::string& filename )
@@ -52,110 +48,40 @@ static std::string readStringFromFile(
     return source;
 }
 
-static void init( void )
-{
-    // No initialization is needed for this sample.
-}
-
-static void go()
-{
-    kernel.setArg(0, deviceMemDst);
-
-    commandQueue.enqueueNDRangeKernel(
-        kernel,
-        cl::NullRange,
-        cl::NDRange{gwx});
-}
-
-static void checkResults()
-{
-    // No results to check for this sample, but do verify that execution
-    // has completed.
-    commandQueue.finish();
-}
-
 int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    const char* fileName = "sample_kernel.cl";
-    const char* kernelName = "Test";
-    const char* buildOptions = NULL;
+    std::string fileName("sample_kernel.cl");
+    std::string kernelName("Test");
+    std::string buildOptions;
+    size_t gwx = 512;
 
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( size_t i = 1; i < argc; i++ )
-        {
-            if( !strcmp( argv[i], "-d" ) )
-            {
-                if( ++i < argc )
-                {
-                    deviceIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                if( ++i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-file" ) )
-            {
-                if( ++i < argc )
-                {
-                    fileName = argv[i];
-                }
-            }
-            else if( !strcmp( argv[i], "-name" ) )
-            {
-                if( ++i < argc )
-                {
-                    kernelName = argv[i];
-                }
-            }
-            else if( !strcmp( argv[i], "-options" ) )
-            {
-                if( ++i < argc )
-                {
-                    buildOptions = argv[i];
-                }
-            }
-            else if( !strcmp( argv[i], "-gwx" ) )
-            {
-                if( ++i < argc )
-                {
-                    gwx = strtol(argv[i], NULL, 10);
-                }
-            }
-            else
-            {
-                printUsage = true;
-            }
+        popl::OptionParser op("Supported Options");
+        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
+        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Value<std::string>>("", "file", "Kernel File Name", fileName, &fileName);
+        op.add<popl::Value<std::string>>("", "name", "Kernel Name", kernelName, &kernelName);
+        op.add<popl::Value<std::string>>("", "options", "Program Build Options", buildOptions, &buildOptions);
+        op.add<popl::Value<size_t>>("", "gwx", "Global Work Size", gwx, &gwx);
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
         }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: kernelfromfile  [options]\n"
-            "Options:\n"
-            "      -d: Device Index (default = 0)\n"
-            "      -p: Platform Index (default = 0)\n"
-            "      -file: Kernel File Name (default = sample_kernel.cl)\n"
-            "      -name: Kernel Name (default = Test)\n"
-            "      -options: Program Build Options (default = NULL)\n"
-            "      -gwx: Global Work Size (default = 512)\n"
-            );
 
-        return -1;
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: kernelfromfile [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;
@@ -171,15 +97,15 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
 
-    printf("Reading program source from file: %s\n", fileName );
-    std::string kernelString = readStringFromFile(fileName);
+    printf("Reading program source from file: %s\n", fileName.c_str() );
+    std::string kernelString = readStringFromFile(fileName.c_str());
 
     printf("Building program with build options: %s\n",
-        buildOptions ? buildOptions : "(none)" );
+        buildOptions.empty() ? "(none)" : buildOptions.c_str() );
     cl::Program program{ context, kernelString };
-    program.build(buildOptions);
+    program.build(buildOptions.c_str());
     for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
     {
         printf("Program build log for device %s:\n",
@@ -187,17 +113,38 @@ int main(
         printf("%s\n",
             program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str() );
     }
-    printf("Creating kernel: %s\n", kernelName );
-    kernel = cl::Kernel{ program, kernelName };
+    printf("Creating kernel: %s\n", kernelName.c_str() );
+    cl::Kernel kernel = cl::Kernel{ program, kernelName.c_str() };
 
-    deviceMemDst = cl::Buffer{
+    cl::Buffer deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,
         gwx * sizeof( cl_uint ) };
 
-    init();
-    go();
-    checkResults();
+    // execution
+    kernel.setArg(0, deviceMemDst);
+    commandQueue.enqueueNDRangeKernel(
+        kernel,
+        cl::NullRange,
+        cl::NDRange{gwx});
+
+    // verify results by printing the first few values
+    if (gwx > 3) {
+        auto ptr = (const cl_uint*)commandQueue.enqueueMapBuffer(
+            deviceMemDst,
+            CL_TRUE,
+            CL_MAP_READ,
+            0,
+            gwx * sizeof( cl_uint ) );
+
+        printf("First few values: [0] = %u, [1] = %u, [2] = %u\n", ptr[0], ptr[1], ptr[2]);
+
+        commandQueue.enqueueUnmapMemObject(
+            deviceMemDst,
+            (void*)ptr );
+    }
+
+    commandQueue.finish();
 
     printf("Done.\n");
 

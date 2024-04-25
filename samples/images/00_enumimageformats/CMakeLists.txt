@@ -22,6 +22,6 @@ add_opencl_sample(
     TEST
     NUMBER 00
     TARGET enumimageformats
-    VERSION 120
+    VERSION 300 # for OpenCL 2.0+ image formats
     CATEGORY images
     SOURCES main.cpp)

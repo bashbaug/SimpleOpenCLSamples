@@ -21,7 +21,6 @@
 */
 
 #include <CL/opencl.hpp>
-#include "libusm.h"
 
 constexpr size_t BIG_ALLOC = 5ULL * 1024 * 1024 * 1024;    // 5GB
 
@@ -86,7 +85,6 @@ int main(
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-    libusm::initialize(platforms[platformIndex]());
 
     std::vector<cl::Device> devices;
     platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);

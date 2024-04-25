@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <vector>
+#include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
 
@@ -90,7 +91,7 @@ static void PrintDeviceAtomicCapabilities(
         ( caps & CL_DEVICE_ATOMIC_ORDER_SEQ_CST     ) ? "\n\t\tCL_DEVICE_ATOMIC_ORDER_SEQ_CST"      : "",
         ( caps & CL_DEVICE_ATOMIC_SCOPE_WORK_ITEM   ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_WORK_ITEM"    : "",
         ( caps & CL_DEVICE_ATOMIC_SCOPE_WORK_GROUP  ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_WORK_GROUP"   : "",
-        ( caps & CL_DEVICE_ATOMIC_SCOPE_DEVICE      ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_DEVICE"       : "", 
+        ( caps & CL_DEVICE_ATOMIC_SCOPE_DEVICE      ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_DEVICE"       : "",
         ( caps & CL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES ) ? "\n\t\tCL_DEVICE_ATOMIC_SCOPE_ALL_DEVICES"  : "");
 }
 
@@ -107,7 +108,7 @@ static void PrintDeviceDeviceEnqueueCapabilities(
 #endif
 
 static void PrintDeviceInfoSummary(
-    const std::vector<cl::Device> devices )
+    const std::vector<cl::Device>& devices )
 {
     size_t  i = 0;
     for( i = 0; i < devices.size(); i++ )
@@ -253,31 +254,23 @@ int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
-
-    int i = 0;
-
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( i = 1; i < argc; i++ )
-        {
-            {
-                printUsage = true;
-            }
+        popl::OptionParser op("Supported Options");
+
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
         }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: newqueries  [options]\n"
-            "Options:\n"
-            );
 
-        return -1;
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: newqueriespp [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;

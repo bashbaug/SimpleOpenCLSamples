@@ -10,6 +10,10 @@ configuration:
   #- Debug
   - Release
 
+skip_commits:
+  files:
+    - '**/*.md'
+
 before_build:
   - git clone --depth=1 https://github.com/KhronosGroup/OpenCL-Headers    external/OpenCL-Headers
   - git clone --depth=1 https://github.com/KhronosGroup/OpenCL-ICD-Loader external/opencl-icd-loader

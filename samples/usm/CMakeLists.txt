@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Ben Ashbaugh
+# Copyright (c) 2021 Ben Ashbaugh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,22 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Require OpenCL 2.0, for clSetKernelExecInfo:
-set(SAMPLES_CL_VERSION 200)
+set(BUILD_USM_SAMPLES TRUE)
+if(NOT TARGET OpenCLExt)
+    message(STATUS "Skipping USM Samples - OpenCL Extension Loader is not found.")
+    set(BUILD_USM_SAMPLES FALSE)
+endif()
 
-add_subdirectory( libusm )
+if(BUILD_USM_SAMPLES)
+    add_subdirectory( 00_usmqueries )
+    add_subdirectory( 01_usmmeminfo )
 
-add_subdirectory( 00_usmqueries )
-add_subdirectory( 01_usmmeminfo )
+    add_subdirectory( 100_dmemhelloworld )
+    add_subdirectory( 101_dmemlinkedlist )
 
-add_subdirectory( 100_dmemhelloworld )
-add_subdirectory( 101_dmemlinkedlist )
+    add_subdirectory( 200_hmemhelloworld )
+    add_subdirectory( 201_hmemlinkedlist )
 
-add_subdirectory( 200_hmemhelloworld )
-add_subdirectory( 201_hmemlinkedlist )
+    add_subdirectory( 300_smemhelloworld )
+    add_subdirectory( 301_smemlinkedlist )
+    add_subdirectory( 310_usmmigratemem )
 
-add_subdirectory( 300_smemhelloworld )
-add_subdirectory( 301_smemlinkedlist )
-add_subdirectory( 310_usmmigratemem )
+    add_subdirectory( 400_sysmemhelloworld )
 
-add_subdirectory( 999_bigusm )
+    add_subdirectory( 999_bigusm )
+endif()

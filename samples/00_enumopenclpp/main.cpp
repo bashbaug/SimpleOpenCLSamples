@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <vector>
+#include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
 
@@ -49,12 +50,11 @@ static void PrintDeviceType(
 }
 
 static cl_int PrintDeviceInfoSummary(
-    const std::vector<cl::Device> devices )
+    const std::vector<cl::Device>& devices )
 {
-    size_t  i = 0;
-    for( i = 0; i < devices.size(); i++ )
+    for( size_t i = 0; i < devices.size(); i++ )
     {
-        printf("Device[%d]:\n", (int)i );
+        printf("Device[%zu]:\n", i );
 
         cl_device_type  deviceType = devices[i].getInfo<CL_DEVICE_TYPE>();
         PrintDeviceType("\tType:           ", deviceType);
@@ -72,43 +72,35 @@ int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
-
-    int i = 0;
-
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( i = 1; i < argc; i++ )
-        {
-            {
-                printUsage = true;
-            }
+        popl::OptionParser op("Supported Options");
+
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
         }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: enumopencl      [options]\n"
-            "Options:\n"
-            );
 
-        return -1;
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: enumopenclpp [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
-    for( auto& platform : platforms )
+    for( size_t i = 0; i < platforms.size(); i++ )
     {
-        printf( "Platform:\n" );
-        PrintPlatformInfoSummary( platform );
+        printf( "Platform[%zu]:\n", i );
+        PrintPlatformInfoSummary( platforms[i] );
 
         std::vector<cl::Device> devices;
-        platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
         PrintDeviceInfoSummary( devices );
         printf( "\n" );

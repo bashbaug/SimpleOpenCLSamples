@@ -20,8 +20,7 @@
 // SOFTWARE.
 */
 
-#include <stdio.h>
-#include <vector>
+#include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
 
@@ -98,6 +97,19 @@ const char* channel_order_to_string(cl_channel_order channel_order)
     CASE_TO_STRING(CL_sBGRA);
     CASE_TO_STRING(CL_ABGR);
 #endif
+#ifdef CL_NV21_IMG  // cl_img_yuv_image
+    CASE_TO_STRING(CL_NV21_IMG);
+    CASE_TO_STRING(CL_YV12_IMG);
+#endif
+#ifdef cl_intel_packed_yuv
+    CASE_TO_STRING(CL_YUYV_INTEL);
+    CASE_TO_STRING(CL_UYVY_INTEL);
+    CASE_TO_STRING(CL_YVYU_INTEL);
+    CASE_TO_STRING(CL_VYUY_INTEL);
+#endif
+#ifdef CL_NV12_INTEL // cl_intel_planar_yuv
+    CASE_TO_STRING(CL_NV12_INTEL);
+#endif
     default: return "Unknown cl_channel_order";
     }
 }
@@ -134,50 +146,28 @@ int main(
     int argc,
     char** argv )
 {
-    bool printUsage = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    if( argc < 1 )
     {
-        printUsage = true;
-    }
-    else
-    {
-        for( size_t i = 1; i < argc; i++ )
-        {
-            if( !strcmp( argv[i], "-d" ) )
-            {
-                ++i;
-                if( i < argc )
-                {
-                    deviceIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else if( !strcmp( argv[i], "-p" ) )
-            {
-                ++i;
-                if( i < argc )
-                {
-                    platformIndex = strtol(argv[i], NULL, 10);
-                }
-            }
-            else
-            {
-                printUsage = true;
-            }
-        }
-    }
-    if( printUsage )
-    {
-        fprintf(stderr,
-            "Usage: enumimageformats    [options]\n"
-            "Options:\n"
-            "      -d: Device Index (default = 0)\n"
-            "      -p: Platform Index (default = 0)\n"
-            );
+        popl::OptionParser op("Supported Options");
+        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
+        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
 
-        return -1;
+        bool printUsage = false;
+        try {
+            op.parse(argc, argv);
+        } catch (std::exception& e) {
+            fprintf(stderr, "Error: %s\n\n", e.what());
+            printUsage = true;
+        }
+
+        if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
+            fprintf(stderr,
+                "Usage: enumimageformats [options]\n"
+                "%s", op.help().c_str());
+            return -1;
+        }
     }
 
     std::vector<cl::Platform> platforms;
@@ -192,7 +182,7 @@ int main(
     printf("Querying device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    const std::vector<cl_mem_flags> imageAccesses{ 
+    const std::vector<cl_mem_flags> imageAccesses{
         {
             CL_MEM_READ_ONLY,
             CL_MEM_WRITE_ONLY,
