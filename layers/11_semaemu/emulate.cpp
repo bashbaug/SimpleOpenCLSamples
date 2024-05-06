@@ -100,17 +100,17 @@ typedef struct _cl_semaphore_khr
               std::vector<cl_semaphore_type_khr> types;
               for (int i = devices.size() - 1; i >= 0; i--) {
                 size_t num_types_size = 0;
-                clGetDeviceInfo(devices[i],
-                                                 CL_DEVICE_SEMAPHORE_TYPES_KHR,
-                                                 0, nullptr, &num_types_size);
+                clGetDeviceInfo_override(devices[i],
+                                         CL_DEVICE_SEMAPHORE_TYPES_KHR, 0,
+                                         nullptr, &num_types_size, &errorCode);
 
                 if (!num_types_size)
                   continue;
 
                 types.resize(num_types_size / sizeof(cl_semaphore_type_khr));
-                clGetDeviceInfo(
+                clGetDeviceInfo_override(
                     devices[i], CL_DEVICE_SEMAPHORE_TYPES_KHR, num_types_size,
-                    types.data(), nullptr);
+                    types.data(), nullptr, &errorCode);
 
                 bool capable = false;
                 for (auto sema_type : types) {
