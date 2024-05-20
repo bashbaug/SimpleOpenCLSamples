@@ -212,7 +212,7 @@ float8 emu_sub_group_bf16_bf16_matrix_mad_k16(short8 a, int8 b, float8 acc)
 
 // M rows x K columns
 // This is the SIMD8 version, where each work-item loads two values.
-int  load_a_rowmajor_d16_m1_k16_sg8(global ushort* A, int rowStart, int colStart, int stride)
+int  load_a_rowmajor_16b_1r16c_sg8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int ret;
 
@@ -225,7 +225,7 @@ int  load_a_rowmajor_d16_m1_k16_sg8(global ushort* A, int rowStart, int colStart
 
 // M rows x K columns
 // This is the SIMD8 version, where each work-item loads two values.
-int2 load_a_rowmajor_d16_m2_k16_sg8(global ushort* A, int rowStart, int colStart, int stride)
+int2 load_a_rowmajor_16b_2r16c_sg8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int2 ret;
 
@@ -240,7 +240,7 @@ int2 load_a_rowmajor_d16_m2_k16_sg8(global ushort* A, int rowStart, int colStart
 
 // M rows x K columns
 // This is the SIMD8 version, where each work-item loads two values.
-int4 load_a_rowmajor_d16_m4_k16_sg8(global ushort* A, int rowStart, int colStart, int stride)
+int4 load_a_rowmajor_16b_4r16c_sg8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int4 ret;
 
@@ -257,7 +257,7 @@ int4 load_a_rowmajor_d16_m4_k16_sg8(global ushort* A, int rowStart, int colStart
 
 // M rows x K columns
 // This is the SIMD8 version, where each work-item loads two values.
-int8 load_a_rowmajor_d16_m8_k16_sg8(global ushort* A, int rowStart, int colStart, int stride)
+int8 load_a_rowmajor_16b_8r16c_sg8(global ushort* A, int rowStart, int colStart, int stride)
 {
     int8 ret;
 
@@ -279,7 +279,7 @@ int8 load_a_rowmajor_d16_m8_k16_sg8(global ushort* A, int rowStart, int colStart
 // M rows x K columns x V tiles (in the K dimension)
 // This is the SIMD8 version, where each work-item loads two values.
 // The first tile is returned the first components of the return value, the the next tile, etc.
-int16 load_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colStart, int stride)
+int16 load_a_rowmajor_16b_8r16x2c_sg8(global ushort* A, int rowStart, int colStart, int stride)
 {
     uint16 ret;
 
@@ -299,7 +299,7 @@ int16 load_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colSt
 }
 
 // M rows x K columns x V tiles (in the K dimension)
-void prefetch_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int colStart, int stride)
+void prefetch_a_rowmajor_16b_8r16x2c_sg8(global ushort* A, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
@@ -310,7 +310,7 @@ void prefetch_a_rowmajor_d16_m8_k16v2_sg8(global ushort* A, int rowStart, int co
 
 // M rows x K columns
 // This is the SIMD16 version, where each work-item loads one value.
-short load_a_rowmajor_d16_m1_k16_sg16(global ushort* A, int rowStart, int colStart, int stride)
+short load_a_rowmajor_16b_1r16c_sg16(global ushort* A, int rowStart, int colStart, int stride)
 {
     ushort ret;
 
@@ -322,7 +322,7 @@ short load_a_rowmajor_d16_m1_k16_sg16(global ushort* A, int rowStart, int colSta
 
 // M rows x K columns
 // This is the SIMD16 version, where each work-item loads one value.
-short2 load_a_rowmajor_d16_m2_k16_sg16(global ushort* A, int rowStart, int colStart, int stride)
+short2 load_a_rowmajor_16b_2r16c_sg16(global ushort* A, int rowStart, int colStart, int stride)
 {
     ushort2 ret;
 
@@ -335,7 +335,7 @@ short2 load_a_rowmajor_d16_m2_k16_sg16(global ushort* A, int rowStart, int colSt
 
 // M rows x K columns
 // This is the SIMD16 version, where each work-item loads one value.
-short4 load_a_rowmajor_d16_m4_k16_sg16(global ushort* A, int rowStart, int colStart, int stride)
+short4 load_a_rowmajor_16b_4r16c_sg16(global ushort* A, int rowStart, int colStart, int stride)
 {
     ushort4 ret;
 
@@ -350,7 +350,7 @@ short4 load_a_rowmajor_d16_m4_k16_sg16(global ushort* A, int rowStart, int colSt
 
 // M rows x K columns
 // This is the SIMD16 version, where each work-item loads one value.
-short8 load_a_rowmajor_d16_m8_k16_sg16(global ushort* A, int rowStart, int colStart, int stride)
+short8 load_a_rowmajor_16b_8r16c_sg16(global ushort* A, int rowStart, int colStart, int stride)
 {
     ushort8 ret;
 
@@ -370,7 +370,7 @@ short8 load_a_rowmajor_d16_m8_k16_sg16(global ushort* A, int rowStart, int colSt
 // M rows x K columns x V tiles (in the K dimension)
 // This is the SIMD16 version, where each work-item loads one value.
 // The first tile is returned the first components of the return value, the the next tile, etc.
-short16 load_a_rowmajor_d16_m8_k16v2_sg16(global ushort* A, int rowStart, int colStart, int stride)
+short16 load_a_rowmajor_16b_8r16x2c_sg16(global ushort* A, int rowStart, int colStart, int stride)
 {
     ushort16 ret;
 
@@ -388,7 +388,7 @@ short16 load_a_rowmajor_d16_m8_k16v2_sg16(global ushort* A, int rowStart, int co
 }
 
 // M rows x K columns x V tiles (in the M and K dimensions)
-void prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(global ushort* A, int rowStart, int colStart, int stride)
+void prefetch_a_rowmajor_16b_8x2r16x2c_sg16(global ushort* A, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
@@ -398,9 +398,9 @@ void prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(global ushort* A, int rowStart, int
 }
 
 // K rows x N columns:
-// Each work-item loads K values and converts to VNNI.
+// Each work-item loads K values and packs into 32-bits.
 // Stride is in units of elements.
-int8 load_b_rowmajor_d16_k16_nx(global ushort* B, int rowStart, int colStart, int stride)
+int8 load_b_rowmajor_16b_16rNc(global ushort* B, int rowStart, int colStart, int stride)
 {
     int8 ret;
 
@@ -436,9 +436,9 @@ int8 load_b_rowmajor_d16_k16_nx(global ushort* B, int rowStart, int colStart, in
 }
 
 // K rows x N columns:
-// Each work-item loads K values that has already been converted to VNNI.
+// Each work-item loads K values that have already been packed into 32-bits.
 // Stride is in units of elements.
-int8 load_b_vnni_d16_k16_nx(global ushort* B, int rowStart, int colStart, int stride)
+int8 load_b_packed_16b_16rNc(global ushort* B, int rowStart, int colStart, int stride)
 {
     int8 ret;
 
@@ -458,7 +458,7 @@ int8 load_b_vnni_d16_k16_nx(global ushort* B, int rowStart, int colStart, int st
 }
 
 // K rows x N columns x V tiles (in the N dimension)
-void prefetch_b_rowmajor_d16_k16_n8v4_sg8(global ushort* B, int rowStart, int colStart, int stride)
+void prefetch_b_rowmajor_16b_16r8x4c_sg8(global ushort* B, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
@@ -470,7 +470,7 @@ void prefetch_b_rowmajor_d16_k16_n8v4_sg8(global ushort* B, int rowStart, int co
 }
 
 // K rows x N columns x V tiles (in the N dimension)
-void prefetch_b_rowmajor_d16_k16_n16v2_sg16(global ushort* B, int rowStart, int colStart, int stride)
+void prefetch_b_rowmajor_16b_16r16x2c_sg16(global ushort* B, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
@@ -480,7 +480,7 @@ void prefetch_b_rowmajor_d16_k16_n16v2_sg16(global ushort* B, int rowStart, int 
 }
 
 // K rows x N columns x V tiles (in the N dimension)
-void prefetch_b_vnni_d16_k16_n8v2_sg8(global ushort* B, int rowStart, int colStart, int stride)
+void prefetch_b_packed_16b_16r8x2c_sg8(global ushort* B, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     global uint* B_ui = (global uint*)B;
@@ -491,7 +491,7 @@ void prefetch_b_vnni_d16_k16_n8v2_sg8(global ushort* B, int rowStart, int colSta
 }
 
 // K rows x N columns x V tiles (in the K dimension)
-void prefetch_b_vnni_d16_k16v2_n16_sg16(global ushort* B, int rowStart, int colStart, int stride)
+void prefetch_b_packed_16b_16x2r16c_sg16(global ushort* B, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     global uint* B_ui = (global uint*)B;
@@ -501,7 +501,7 @@ void prefetch_b_vnni_d16_k16v2_n16_sg16(global ushort* B, int rowStart, int colS
 #endif // defined(PREFETCH_DEFAULT)
 }
 
-void store_c_rowmajor_fp32_m1_nx(global float* C, float v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_1rNc(global float* C, float v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint v_ui = as_uint(v);
@@ -511,7 +511,7 @@ void store_c_rowmajor_fp32_m1_nx(global float* C, float v, int rowStart, int col
     intel_sub_group_block_write(C_ui + offset, v_ui); offset += stride;
 }
 
-void store_c_rowmajor_fp32_m2_nx(global float* C, float2 v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_2rNc(global float* C, float2 v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint2 v_ui = as_uint2(v);
@@ -522,7 +522,7 @@ void store_c_rowmajor_fp32_m2_nx(global float* C, float2 v, int rowStart, int co
     intel_sub_group_block_write(C_ui + offset, v_ui.s1); offset += stride;
 }
 
-void store_c_rowmajor_fp32_m4_nx(global float* C, float4 v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_4rNc(global float* C, float4 v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint4 v_ui = as_uint4(v);
@@ -535,7 +535,7 @@ void store_c_rowmajor_fp32_m4_nx(global float* C, float4 v, int rowStart, int co
     intel_sub_group_block_write(C_ui + offset, v_ui.s3); offset += stride;
 }
 
-void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_8rNc(global float* C, float8 v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint8 v_ui = as_uint8(v);
@@ -563,24 +563,6 @@ void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int co
 //  - height is the height of the entire matrix, or equivalently the number of rows.
 //  - pitch is the number of bytes between rows of the entire matrix.  Must be >= 64B.  Must be a multiple of 8 bytes.
 //  - coord is the number of elements (x coord) and row (y coord) to read from.  X coord must be multiple 4 for for 1B data and 2 for 2B data.
-
-// Built-in functions are:
-
-// #ifdef cl_intel_subgroup_extended_block_read
-// ushort2  intel_subgroup_block_read_u8_m1k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort4  intel_subgroup_block_read_u8_m2k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort8  intel_subgroup_block_read_u8_m4k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort16 intel_subgroup_block_read_u8_m8k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort2  intel_subgroup_block_read_u16_m1k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort4  intel_subgroup_block_read_u16_m2k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort8  intel_subgroup_block_read_u16_m4k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort16 intel_subgroup_block_read_u16_m8k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// uint8    intel_subgroup_block_read_transform_u8_k32(__global void *base_address, int width, int height, int pitch, int2 coord);
-// uint8    intel_subgroup_block_read_transform_u16_k16(__global void *base_address, int width, int height, int pitch, int2 coord);
-// uint8    intel_subgroup_block_read_transpose_u32_k8(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ulong4   intel_subgroup_block_read_transpose_u64_k4(__global void *base_address, int width, int height, int pitch, int2 coord);
-// #endif //defined(cl_intel_subgroup_extended_block_read)
-
 
 // For intrinsics, the pattern is:
 //  - prefix: __builtin_IB_subgroup_block_read_flat or __builtin_IB_subgroup_block_write_flat
@@ -626,12 +608,17 @@ ushort8  __builtin_IB_subgroup_block_read_flat_u16_m8k16v1(long baseoffset, int 
 ushort16 __builtin_IB_subgroup_block_read_flat_u16_m16k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort32 __builtin_IB_subgroup_block_read_flat_u16_m32k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 
+ushort2  __builtin_IB_subgroup_block_read_flat_u16_m1k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+ushort4  __builtin_IB_subgroup_block_read_flat_u16_m2k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+ushort8  __builtin_IB_subgroup_block_read_flat_u16_m4k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+ushort16 __builtin_IB_subgroup_block_read_flat_u16_m8k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort32 __builtin_IB_subgroup_block_read_flat_u16_m16k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 ushort64 __builtin_IB_subgroup_block_read_flat_u16_m32k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 
 uint8  __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 uint16 __builtin_IB_subgroup_block_read_flat_u32_m16k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 
+uint8   __builtin_IB_subgroup_block_read_flat_transform_u16_k16(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 uint16  __builtin_IB_subgroup_block_read_flat_transform_u16_k32(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 
 uint16  __builtin_IB_subgroup_block_read_flat_transform_u16_k16v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
@@ -659,27 +646,27 @@ void __builtin_IB_subgroup_block_write_flat_u32_m4k16v1(long baseoffset, int wid
 void __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint8 data);
 void __builtin_IB_subgroup_block_write_flat_u32_m16k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint16 data);
 
-ushort   intel_subgroup_block_read_u16_m1k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+ushort   intel_sub_group_block_read_16b_1r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u16_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
-ushort2  intel_subgroup_block_read_u16_m2k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+ushort2  intel_sub_group_block_read_16b_2r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u16_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
-ushort4  intel_subgroup_block_read_u16_m4k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+ushort4  intel_sub_group_block_read_16b_4r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u16_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
-ushort8  intel_subgroup_block_read_u16_m8k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+ushort8  intel_sub_group_block_read_16b_8r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u16_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
-ushort16 intel_subgroup_block_read_u16_m16k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+ushort16 intel_sub_group_block_read_16b_16r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u16_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
-void intel_subgroup_block_read_u16_m32k16(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[4])
+void intel_sub_group_block_read_16b_32r16c(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[4])
 {
     ushort32 tmp = __builtin_IB_subgroup_block_read_flat_u16_m32k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
     dst[0] = tmp.lo.lo;
@@ -688,7 +675,24 @@ void intel_subgroup_block_read_u16_m32k16(const __global void *base_address, int
     dst[3] = tmp.hi.hi;
 }
 
-void intel_subgroup_block_read_u16_m16k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[2][2])
+ushort2  intel_sub_group_block_read_16b_1r16x2c(__global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u16_m1k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+ushort4  intel_sub_group_block_read_16b_2r16x2c(__global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u16_m2k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+ushort8  intel_sub_group_block_read_16b_4r16x2c(__global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u16_m4k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+ushort16 intel_sub_group_block_read_16b_8r16x2c(__global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u16_m8k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+
+void intel_sub_group_block_read_16b_16r16x2c(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[2][2])
 {
     ushort32 tmp = __builtin_IB_subgroup_block_read_flat_u16_m16k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
     dst[0][0] = tmp.lo.lo;
@@ -696,7 +700,7 @@ void intel_subgroup_block_read_u16_m16k16v2(const __global void *base_address, i
     dst[1][0] = tmp.hi.lo;
     dst[1][1] = tmp.hi.hi;
 }
-void intel_subgroup_block_read_u16_m32k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[2][4])
+void intel_sub_group_block_read_16b_32r16x2c(const __global void *base_address, int width, int height, int pitch, int2 coord, ushort8 dst[2][4])
 {
     ushort64 tmp = __builtin_IB_subgroup_block_read_flat_u16_m32k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
     dst[0][0] = tmp.lo.lo.lo;
@@ -709,30 +713,29 @@ void intel_subgroup_block_read_u16_m32k16v2(const __global void *base_address, i
     dst[1][3] = tmp.hi.hi.hi;
 }
 
-uint8 intel_subgroup_block_read_u32_m8k16(const __global void* base_address, int width, int height, int pitch, int2 coord)
+uint8 intel_sub_group_block_read_32b_8r16c(const __global void* base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
-uint16 intel_subgroup_block_read_u32_m16k16(const __global void* base_address, int width, int height, int pitch, int2 coord)
+uint16 intel_sub_group_block_read_32b_16r16c(const __global void* base_address, int width, int height, int pitch, int2 coord)
 {
     return __builtin_IB_subgroup_block_read_flat_u32_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
 }
 
-// Each block is K rows x N columns, where the K rows have been VNNI transformed.
-int8 intel_subgroup_block_read_transform_u16_k16n16(__global void *base_address, int width, int height, int pitch, int2 coord)
+// Each block is K rows x N columns, where the K rows are returned packed into 32-bits.
+int8 intel_sub_group_block_read_transform_16b_16r16c(__global void *base_address, int width, int height, int pitch, int2 coord)
 {
-    // Note: this function is in the headers, but is named confusingly and returns unsigned integers rather than signed integers:
-    return as_int8(intel_subgroup_block_read_transform_u16_k16(base_address, width, height, pitch, coord));
+    return as_int8(__builtin_IB_subgroup_block_read_flat_transform_u16_k16(as_long(base_address), width - 1, height - 1, pitch - 1, coord));
 }
-int16 intel_subgroup_block_read_transform_u16_k32n16(__global void *base_address, int width, int height, int pitch, int2 coord)
+int16 intel_sub_group_block_read_transform_16b_32r16c(__global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return as_int16(__builtin_IB_subgroup_block_read_flat_transform_u16_k32(as_long(base_address), width - 1, height - 1, pitch - 1, coord));
 }
-int16 intel_subgroup_block_read_transform_u16_k16n16v2(__global void *base_address, int width, int height, int pitch, int2 coord)
+int16 intel_sub_group_block_read_transform_16b_16r16x2c(__global void *base_address, int width, int height, int pitch, int2 coord)
 {
     return as_int16(__builtin_IB_subgroup_block_read_flat_transform_u16_k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord));
 }
-void intel_subgroup_block_read_transform_u16_k32n16v2(__global void *base_address, int width, int height, int pitch, int2 coord, int8 dst[2][2])
+void intel_sub_group_block_read_transform_16b_32r16x2c(__global void *base_address, int width, int height, int pitch, int2 coord, int8 dst[2][2])
 {
     uint32 tmp = __builtin_IB_subgroup_block_read_flat_transform_u16_k32v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
     dst[0][0] = as_int8(tmp.lo.lo);
@@ -742,69 +745,71 @@ void intel_subgroup_block_read_transform_u16_k32n16v2(__global void *base_addres
 }
 
 
+#if !defined(BLOCK_PREFETCH_CACHE_TYPE)
 #define BLOCK_PREFETCH_CACHE_TYPE LSC_LDCC_L1C_L3C
+#endif
 
-void intel_subgroup_block_prefetch_u16_m1k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_1r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m2k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_2r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m4k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_4r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m8k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_8r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m8k16v2(__global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_8r16x2c(__global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m8k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m16k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_16r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m32k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_32r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m32k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m16k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_16r16x2c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m16k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u16_m32k16v2(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_16b_32r16x2c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u16_m32k16v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u32_m8k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_32b_8r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
 #endif // defined(PREFETCH_DEFAULT)
 }
-void intel_subgroup_block_prefetch_u32_m16k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
+void intel_sub_group_block_prefetch_32b_16r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
 {
 #if defined(PREFETCH_DEFAULT)
     __builtin_IB_subgroup_block_read_prefetch_u32_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, BLOCK_PREFETCH_CACHE_TYPE);
@@ -812,23 +817,23 @@ void intel_subgroup_block_prefetch_u32_m16k16(const __global void *base_address,
 }
 
 
-void intel_subgroup_block_write_u32_m1k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
+void intel_sub_group_block_write_32b_1r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m2k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint2 data)
+void intel_sub_group_block_write_32b_2r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint2 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m4k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint4 data)
+void intel_sub_group_block_write_32b_4r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint4 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m8k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint8 data)
+void intel_sub_group_block_write_32b_8r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint8 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m16k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint16 data)
+void intel_sub_group_block_write_32b_16r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint16 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m16k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
