@@ -33,7 +33,7 @@
 // Disabling enhanced error checking may enable command buffer emulation
 // to function properly on more implementations.
 
-const bool g_cEnhancedErrorChecking = false;
+const bool g_cEnhancedErrorChecking = true;
 
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
