@@ -35,6 +35,28 @@ SLayerContext& getLayerContext(void)
     return c;
 }
 
+static bool isDeviceWithinContext(const cl_context context,
+                                  const cl_device_id device) {
+  cl_uint numDevices = 0;
+  cl_int error = g_pNextDispatch->clGetContextInfo(
+      context, CL_CONTEXT_NUM_DEVICES, sizeof(cl_uint), &numDevices, NULL);
+  if (error != CL_SUCCESS || numDevices == 0)
+    return false;
+
+  std::vector<cl_device_id> devices(numDevices, 0);
+  error = g_pNextDispatch->clGetContextInfo(context, CL_CONTEXT_DEVICES,
+                                            numDevices * sizeof(cl_device_id),
+                                            devices.data(), NULL);
+  if (error != CL_SUCCESS)
+    return false;
+
+  for (auto dev : devices)
+    if (dev == device)
+      return true;
+
+  return false;
+}
+
 typedef struct _cl_semaphore_khr
 {
     static _cl_semaphore_khr* create(
