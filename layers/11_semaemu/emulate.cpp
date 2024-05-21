@@ -97,32 +97,21 @@ typedef struct _cl_semaphore_khr
 
             // validate device handles.
             if (!devices.empty()) {
-              std::vector<cl_semaphore_type_khr> types;
-              for (int i = devices.size() - 1; i >= 0; i--) {
-                size_t num_types_size = 0;
-                clGetDeviceInfo_override(devices[i],
-                                         CL_DEVICE_SEMAPHORE_TYPES_KHR, 0,
-                                         nullptr, &num_types_size, &errorCode);
-
-                if (!num_types_size)
-                  continue;
-
-                types.resize(num_types_size / sizeof(cl_semaphore_type_khr));
-                clGetDeviceInfo_override(
-                    devices[i], CL_DEVICE_SEMAPHORE_TYPES_KHR, num_types_size,
-                    types.data(), nullptr, &errorCode);
-
-                bool capable = false;
-                for (auto sema_type : types) {
-                  if (type == sema_type) {
-                    capable = true;
+              // for now - if CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR is specified
+              // as part of sema_props, but it does not identify exactly one
+              // valid device
+              if (devices.size() > 1) {
+                errorCode = CL_INVALID_DEVICE;
+              } else {
+                // if a device identified by CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR
+                // is not one of the devices within context
+                std::vector<cl_semaphore_type_khr> types;
+                for (auto device : devices) {
+                  if (device == nullptr ||
+                      !isDeviceWithinContext(context, device)) {
+                    errorCode = CL_INVALID_DEVICE;
                     break;
                   }
-                }
-
-                if (!capable) {
-                  errorCode = CL_INVALID_DEVICE;
-                  break;
                 }
               }
             }
@@ -147,11 +136,7 @@ typedef struct _cl_semaphore_khr
                 properties,
                 properties + numProperties );
 
-            if (!devices.empty())
-                semaphore->Devices.assign(
-                    devices.begin(),
-                    devices.end() );
-
+            semaphore->Devices=devices;
         }
         return semaphore;
     }
