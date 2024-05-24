@@ -64,8 +64,8 @@ int main(
     program.build();
     cl::Kernel kernel = cl::Kernel{ program, "CopyBuffer" };
 
-    const cl_svm_mem_properties_exp props[] = {
-        CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_mem_properties_exp)devices[deviceIndex](),
+    const cl_svm_alloc_properties_exp props[] = {
+        CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_alloc_properties_exp)devices[deviceIndex](),
         0,
     };
     cl_uint* s_src = (cl_uint*)clSVMAllocWithPropertiesEXP(

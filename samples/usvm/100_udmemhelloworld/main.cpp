@@ -66,8 +66,8 @@ int main(
 
     cl_uint* h_buf = new cl_uint[gwx];
 
-    const cl_svm_mem_properties_exp props[] = {
-        CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_mem_properties_exp)devices[deviceIndex](),
+    const cl_svm_alloc_properties_exp props[] = {
+        CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_alloc_properties_exp)devices[deviceIndex](),
         0,
     };
     cl_uint* d_src = (cl_uint*)clSVMAllocWithPropertiesEXP(

@@ -53,13 +53,13 @@ getSVM_MEM_INFO_SIZE_EXP( cl::Context& context, const void* ptr )
 }
 
 static cl_device_id
-getSVM_MEM_INFO_DEVICE_EXP( cl::Context& context, const void* ptr )
+getSVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP( cl::Context& context, const void* ptr )
 {
     cl_device_id device = 0;
     clGetSVMMemInfoEXP(
         context(),
         ptr,
-        CL_SVM_MEM_INFO_DEVICE_EXP,
+        CL_SVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP,
         sizeof(device),
         &device,
         nullptr );
@@ -121,16 +121,9 @@ int main(
 
     cl::Context context{devices[deviceIndex]};
 
-    cl_device_unified_shared_memory_capabilities_exp usmcaps = 0;
-    cl_int errCode;
-
-    errCode = clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_HOST_MEM_CAPABILITIES_EXP,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    if( errCode == CL_SUCCESS && usmcaps != 0 )
+    cl_device_svm_capabilities svmCaps =
+        devices[deviceIndex].getInfo<CL_DEVICE_SVM_CAPABILITIES>();
+    if( svmCaps & CL_SVM_MEM_TYPE_HOST_EXP )
     {
         printf("\nTesting Host Allocations:\n");
         char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
@@ -176,7 +169,7 @@ int main(
         size_t size = getSVM_MEM_INFO_SIZE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: size = %u\n", (unsigned)size);
 
-        cl_device_id device = getSVM_MEM_INFO_DEVICE_EXP(context, ptr0 + 4);
+        cl_device_id device = getSVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: device = %p\n", device);
 
         clSVMFree(
@@ -192,20 +185,14 @@ int main(
         printf("\nThis device does not support HOST allocations.\n");
     }
 
-    errCode = clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    if( errCode == CL_SUCCESS && usmcaps != 0 )
+    if( svmCaps & CL_SVM_MEM_TYPE_DEVICE_EXP )
     {
         printf("\nTesting Device Allocations:\n");
         printf("Associated Device is: %p (%s)\n",
             devices[deviceIndex](),
             devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str());
-        const cl_svm_mem_properties_exp props[] = {
-            CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_mem_properties_exp)devices[deviceIndex](),
+        const cl_svm_alloc_properties_exp props[] = {
+            CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_alloc_properties_exp)devices[deviceIndex](),
             0,
         };
         char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
@@ -251,7 +238,7 @@ int main(
         size_t size = getSVM_MEM_INFO_SIZE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: size = %u\n", (unsigned)size);
 
-        cl_device_id device = getSVM_MEM_INFO_DEVICE_EXP(context, ptr0 + 4);
+        cl_device_id device = getSVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: device = %p\n", device);
 
         clSVMFree(
@@ -267,20 +254,14 @@ int main(
         printf("\nThis device does not support DEVICE allocations.\n");
     }
 
-    errCode = clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    if( errCode == CL_SUCCESS && usmcaps != 0 )
+    if( svmCaps & CL_SVM_MEM_TYPE_SHARED_EXP )
     {
         printf("\nTesting Shared Allocations:\n");
         printf("Associated Device is: %p (%s)\n",
             devices[deviceIndex](),
             devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str());
-        const cl_svm_mem_properties_exp props[] = {
-            CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_mem_properties_exp)devices[deviceIndex](),
+        const cl_svm_alloc_properties_exp props[] = {
+            CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_alloc_properties_exp)devices[deviceIndex](),
             0,
         };
         char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
@@ -326,7 +307,7 @@ int main(
         size_t size = getSVM_MEM_INFO_SIZE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: size = %u\n", (unsigned)size);
 
-        cl_device_id device = getSVM_MEM_INFO_DEVICE_EXP(context, ptr0 + 4);
+        cl_device_id device = getSVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP(context, ptr0 + 4);
         printf("Queried offset pointer 0: device = %p\n", device);
 
         clSVMFree(

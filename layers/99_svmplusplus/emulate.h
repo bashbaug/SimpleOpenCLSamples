@@ -11,7 +11,7 @@ extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
 void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
     cl_context context,
-    const cl_svm_mem_properties_exp* properties,
+    const cl_svm_alloc_properties_exp* properties,
     cl_svm_mem_flags flags,
     size_t size,
     cl_uint alignment,

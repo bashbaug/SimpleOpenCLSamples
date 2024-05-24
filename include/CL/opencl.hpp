@@ -1444,6 +1444,13 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_command_queue_info, CL_QUEUE_FAMILY_INTEL, cl_uint) \
     F(cl_command_queue_info, CL_QUEUE_INDEX_INTEL, cl_uint)
 
+#define CL_HPP_PARAM_NAME_CL_EXP_UNIFIED_SVM_(F) \
+    F(cl_device_info, CL_DEVICE_UNIFIED_SVM_TYPES_EXP, cl::vector<cl_device_unified_svm_type_exp>) \
+    \
+    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_TYPE_EXP, cl_svm_mem_type_exp) \
+    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_BASE_PTR_EXP, void*) \
+    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_SIZE_EXP, size_type) \
+    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP, cl::Device)
 
 template <typename enum_type, cl_int Name>
 struct param_traits {};
@@ -1653,6 +1660,10 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_NUM_EUS_PER_SUB_SLICE_INT
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_NUM_THREADS_PER_EU_INTEL, cl_uint)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_FEATURE_CAPABILITIES_INTEL, cl_device_feature_capabilities_intel)
 #endif // cl_intel_device_attribute_query
+
+#if defined(cl_exp_unified_svm)
+CL_HPP_PARAM_NAME_CL_EXP_UNIFIED_SVM_(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif
 
 // Convenience functions
 

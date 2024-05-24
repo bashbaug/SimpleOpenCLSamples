@@ -43,8 +43,8 @@ kernel void WalkLinkedList( global struct Node* pHead )
 
 static void init( cl::Context& context, cl::Device& device )
 {
-    const cl_svm_mem_properties_exp props[] = {
-        CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_mem_properties_exp)device(),
+    const cl_svm_alloc_properties_exp props[] = {
+        CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP, (cl_svm_alloc_properties_exp)device(),
         0,
     };
 

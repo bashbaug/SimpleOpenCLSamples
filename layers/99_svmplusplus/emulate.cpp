@@ -83,13 +83,13 @@ static bool isUSMPtr(
 }
 
 static cl_device_id getAssociatedDeviceFromProperties(
-    const cl_svm_mem_properties_exp* props)
+    const cl_svm_alloc_properties_exp* props)
 {
     if (props) {
         while(props[0] != 0) {
             cl_int property = (cl_int)props[0];
             switch(property) {
-            case CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP: {
+            case CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP: {
                     auto pdev = (const cl_device_id*)(props + 1);
                     return pdev[0];
                 }
@@ -104,9 +104,178 @@ static cl_device_id getAssociatedDeviceFromProperties(
     return nullptr;
 }
 
+static std::vector<cl_device_unified_svm_type_exp> getUSVMTypes(cl_device_id device)
+{
+    std::vector<cl_device_unified_svm_type_exp> types;
+
+    // USM Types
+
+    cl_device_unified_shared_memory_capabilities_intel usmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL,
+        sizeof(usmCaps),
+        &usmCaps,
+        nullptr);
+    if (usmCaps != 0) {
+        types.emplace_back();
+        cl_device_unified_svm_type_exp& type = types.back();
+
+        type.mem_flags = CL_MEM_SVM_DEVICE_EXP;
+        type.capabilities =
+            CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP |
+            CL_UNIFIED_SVM_DEVICE_OWNED_EXP |
+            CL_UNIFIED_SVM_DEVICE_ACCESS_EXP |
+            CL_UNIFIED_SVM_INDIRECT_ACCESS_EXP;
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP;
+        }
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP;
+        }
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP;
+        }
+    }
+
+    usmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,
+        sizeof(usmCaps),
+        &usmCaps,
+        nullptr);
+    if (usmCaps != 0) {
+        types.emplace_back();
+        cl_device_unified_svm_type_exp& type = types.back();
+
+        type.mem_flags = CL_MEM_SVM_HOST_EXP;
+        type.capabilities =
+            CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP |
+            CL_UNIFIED_SVM_HOST_OWNED_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP |
+            CL_UNIFIED_SVM_DEVICE_ACCESS_EXP |
+            CL_UNIFIED_SVM_INDIRECT_ACCESS_EXP;
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP;
+        }
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP;
+        }
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP;
+        }
+    }
+
+    usmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
+        sizeof(usmCaps),
+        &usmCaps,
+        nullptr);
+    if (usmCaps != 0) {
+        types.emplace_back();
+        cl_device_unified_svm_type_exp& type = types.back();
+
+        type.mem_flags = CL_MEM_SVM_SHARED_EXP;
+        type.capabilities =
+            CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP |
+            CL_UNIFIED_SVM_DEVICE_ACCESS_EXP |
+            CL_UNIFIED_SVM_INDIRECT_ACCESS_EXP;
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP;
+        }
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP;
+        }
+        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL) {
+            type.capabilities |= CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP;
+        }
+    }
+
+    usmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL,
+        sizeof(usmCaps),
+        &usmCaps,
+        nullptr);
+
+    // SVM Types
+
+    cl_device_svm_capabilities svmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_SVM_CAPABILITIES,
+        sizeof(svmCaps),
+        &svmCaps,
+        nullptr);
+    if (svmCaps & CL_DEVICE_SVM_COARSE_GRAIN_BUFFER) {
+        types.emplace_back();
+        cl_device_unified_svm_type_exp& type = types.back();
+
+        // Note: no flags are needed to allocate coarse-grain SVM!
+        type.mem_flags = 0;
+        type.capabilities =
+            CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP |
+            CL_UNIFIED_SVM_DEVICE_ACCESS_EXP |
+            CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP;
+    }
+    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) {
+        types.emplace_back();
+        cl_device_unified_svm_type_exp& type = types.back();
+
+        type.mem_flags = CL_MEM_SVM_FINE_GRAIN_BUFFER;
+        type.capabilities =
+            CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP |
+            CL_UNIFIED_SVM_DEVICE_ACCESS_EXP |
+            CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP |
+            CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP;
+    }
+    if (svmCaps & (CL_DEVICE_SVM_FINE_GRAIN_BUFFER | CL_DEVICE_SVM_ATOMICS)) {
+        types.emplace_back();
+        cl_device_unified_svm_type_exp& type = types.back();
+
+        type.mem_flags = CL_MEM_SVM_FINE_GRAIN_BUFFER | CL_MEM_SVM_ATOMICS;
+        type.capabilities =
+            CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP |
+            CL_UNIFIED_SVM_DEVICE_ACCESS_EXP |
+            CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP |
+            CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP |
+            CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP;
+    }
+
+    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_SYSTEM || usmCaps != 0) {
+        types.emplace_back();
+        cl_device_unified_svm_type_exp& type = types.back();
+
+        // Note: no flags are needed for the system allocator.
+        type.mem_flags = 0;
+        type.capabilities =
+            CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP |
+            CL_UNIFIED_SVM_SYSTEM_ALLOCATOR_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP |
+            CL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP |
+            CL_UNIFIED_SVM_DEVICE_ACCESS_EXP |
+            CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP |
+            CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP |
+            CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP |
+            CL_UNIFIED_SVM_INDIRECT_ACCESS_EXP;
+    }
+
+    return types;
+}
+
 void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
     cl_context context,
-    const cl_svm_mem_properties_exp* properties,
+    const cl_svm_alloc_properties_exp* properties,
     cl_svm_mem_flags flags,
     size_t size,
     cl_uint alignment,
@@ -347,12 +516,17 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
             }
         }
         break;
-    // USM aliases - pass through.
-    case CL_DEVICE_HOST_MEM_CAPABILITIES_EXP:
-    case CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP:
-    case CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP:
-    case CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_EXP:
-    case CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_EXP:
+    case CL_DEVICE_UNIFIED_SVM_TYPES_EXP:
+        {
+            auto svmTypes = getUSVMTypes(device);
+            auto ptr = (cl_device_unified_svm_type_exp*)param_value;
+            return writeVectorToMemory(
+                param_value_size,
+                svmTypes,
+                param_value_size_ret,
+                ptr);
+        }
+        break;
     default: break;
     }
 

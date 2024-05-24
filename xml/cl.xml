@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <registry>
     <comment>
-Copyright 2013-2023 The Khronos Group Inc.
+Copyright 2013-2024 The Khronos Group Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -232,6 +232,7 @@ server's OpenCL/api-docs repository.
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_device_feature_capabilities_intel</name>;</type>
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_device_integer_dot_product_capabilities_khr</name>;</type>
         <type category="define">typedef <type>cl_properties</type>    <name>cl_semaphore_properties_khr</name>;</type>
+        <type category="define">typedef <type>cl_properties</type>    <name>cl_semaphore_reimport_properties_khr</name>;</type>
         <type category="define">typedef <type>cl_uint</type>          <name>cl_semaphore_info_khr</name>;</type>
         <type category="define">typedef <type>cl_uint</type>          <name>cl_semaphore_type_khr</name>;</type>
         <type category="define">typedef <type>cl_ulong</type>         <name>cl_semaphore_payload_khr</name>;</type>
@@ -252,13 +253,15 @@ server's OpenCL/api-docs repository.
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_device_fp_atomic_capabilities_ext</name>;</type>
         <type category="define">typedef <type>cl_uint</type>          <name>cl_image_requirements_info_ext</name>;</type>
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_platform_command_buffer_capabilities_khr</name>;</type>
-        <type category="define">typedef <type>cl_bitfield</type>      <name>cl_device_unified_shared_memory_capabilities_exp</name>;</type>
-        <type category="define">typedef <type>cl_properties</type>    <name>cl_svm_mem_properties_exp</name>;</type>
+        <type category="define">typedef <type>cl_bitfield</type>      <name>cl_mutable_dispatch_asserts_khr</name></type>
+        <type category="define">typedef <type>cl_bitfield</type>      <name>cl_device_kernel_clock_capabilities_khr</name>;</type>
+        <type category="define">typedef <type>cl_bitfield</type>      <name>cl_device_unified_svm_capabilities_exp</name>;</type>
+        <type category="define">typedef <type>cl_properties</type>    <name>cl_svm_alloc_properties_exp</name>;</type>
+        <type category="define">typedef <type>cl_properties</type>    <name>cl_svm_free_properties_exp</name>;</type>
         <type category="define">typedef <type>cl_uint</type>          <name>cl_svm_mem_info_exp</name>;</type>
         <type category="define">typedef <type>cl_uint</type>          <name>cl_svm_mem_type_exp</name>;</type>
         <type category="define">typedef <type>cl_uint</type>          <name>cl_svm_mem_advice_exp</name>;</type>
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_svm_free_flags_exp</name>;</type>
-        <type category="define">typedef <type>cl_properties</type>    <name>cl_svm_free_properties_exp</name>;</type>
 
             <comment>Structure types</comment>
         <type category="struct" name="cl_dx9_surface_info_khr">
@@ -310,11 +313,11 @@ server's OpenCL/api-docs repository.
         </type>
         <type category="struct" name="cl_name_version">
             <member><type>cl_version</type>          <name>version</name></member>
-            <member><type>char</type><name>name</name>[<enum>CL_NAME_VERSION_MAX_NAME_SIZE</enum>]</member>
+            <member><type>char</type> <name>name</name>[<enum>CL_NAME_VERSION_MAX_NAME_SIZE</enum>]</member>
         </type>
         <type category="struct" name="cl_name_version_khr">
             <member><type>cl_version_khr</type>      <name>version</name></member>
-            <member><type>char</type><name>name</name>[<enum>CL_NAME_VERSION_MAX_NAME_SIZE_KHR</enum>]</member>
+            <member><type>char</type> <name>name</name>[<enum>CL_NAME_VERSION_MAX_NAME_SIZE_KHR</enum>]</member>
         </type>
         <type category="struct" name="cl_device_pci_bus_info_khr">
             <member><type>cl_uint</type>             <name>pci_domain</name></member>
@@ -326,8 +329,22 @@ server's OpenCL/api-docs repository.
             <member><type>cl_command_queue_properties</type>            <name>properties</name></member>
             <member><type>cl_command_queue_capabilities_intel</type>    <name>capabilities</name></member>
             <member><type>cl_uint</type>                                <name>count</name></member>
-            <member><type>char</type><name>name</name>[<enum>CL_QUEUE_FAMILY_MAX_NAME_SIZE_INTEL</enum>]</member>
+            <member><type>char</type> <name>name</name>[<enum>CL_QUEUE_FAMILY_MAX_NAME_SIZE_INTEL</enum>]</member>
         </type>
+
+        <type category="define">#define <name>CL_VERSION_MAJOR_MASK</name> ((1 &lt;&lt; CL_VERSION_MAJOR_BITS) - 1)</type>
+        <type category="define">#define <name>CL_VERSION_MINOR_MASK</name> ((1 &lt;&lt; CL_VERSION_MINOR_BITS) - 1)</type>
+        <type category="define">#define <name>CL_VERSION_PATCH_MASK</name> ((1 &lt;&lt; CL_VERSION_PATCH_BITS) - 1)</type>
+
+        <type category="define">#define <name>CL_VERSION_MAJOR</name>(version) ((version) &gt;&gt; (CL_VERSION_MINOR_BITS + CL_VERSION_PATCH_BITS))</type>
+        <type category="define">#define <name>CL_VERSION_MINOR</name>(version) (((version) &gt;&gt; CL_VERSION_PATCH_BITS) &amp; CL_VERSION_MINOR_MASK)</type>
+        <type category="define">#define <name>CL_VERSION_PATCH</name>(version) ((version) &amp; CL_VERSION_PATCH_MASK)</type>
+
+        <type category="define">#define <name>CL_MAKE_VERSION</name>(major, minor, patch) \
+    ((((major) &amp; CL_VERSION_MAJOR_MASK) &lt;&lt; (CL_VERSION_MINOR_BITS + CL_VERSION_PATCH_BITS)) | \
+    (((minor) &amp;  CL_VERSION_MINOR_MASK) &lt;&lt; CL_VERSION_PATCH_BITS) | \
+    ((patch) &amp; CL_VERSION_PATCH_MASK))</type>
+
         <type category="define">#define <name>CL_VERSION_MAJOR_MASK_KHR</name> ((1 &lt;&lt; CL_VERSION_MAJOR_BITS_KHR) - 1)</type>
         <type category="define">#define <name>CL_VERSION_MINOR_MASK_KHR</name> ((1 &lt;&lt; CL_VERSION_MINOR_BITS_KHR) - 1)</type>
         <type category="define">#define <name>CL_VERSION_PATCH_MASK_KHR</name> ((1 &lt;&lt; CL_VERSION_PATCH_BITS_KHR) - 1)</type>
@@ -340,13 +357,14 @@ server's OpenCL/api-docs repository.
     ((((major) &amp; CL_VERSION_MAJOR_MASK_KHR) &lt;&lt; (CL_VERSION_MINOR_BITS_KHR + CL_VERSION_PATCH_BITS_KHR)) | \
     (((minor) &amp;  CL_VERSION_MINOR_MASK_KHR) &lt;&lt; CL_VERSION_PATCH_BITS_KHR) | \
     ((patch) &amp; CL_VERSION_PATCH_MASK_KHR))</type>
+
         <type category="struct" name="cl_device_integer_dot_product_acceleration_properties_khr">
-            <member><type>cl_bool</type><name>signed_accelerated</name></member>
-            <member><type>cl_bool</type><name>unsigned_accelerated</name></member>
-            <member><type>cl_bool</type><name>mixed_signedness_accelerated</name></member>
-            <member><type>cl_bool</type><name>accumulating_saturating_signed_accelerated</name></member>
-            <member><type>cl_bool</type><name>accumulating_saturating_unsigned_accelerated</name></member>
-            <member><type>cl_bool</type><name>accumulating_saturating_mixed_signedness_accelerated</name></member>
+            <member><type>cl_bool</type> <name>signed_accelerated</name></member>
+            <member><type>cl_bool</type> <name>unsigned_accelerated</name></member>
+            <member><type>cl_bool</type> <name>mixed_signedness_accelerated</name></member>
+            <member><type>cl_bool</type> <name>accumulating_saturating_signed_accelerated</name></member>
+            <member><type>cl_bool</type> <name>accumulating_saturating_unsigned_accelerated</name></member>
+            <member><type>cl_bool</type> <name>accumulating_saturating_mixed_signedness_accelerated</name></member>
         </type>
         <type category="struct" name="cl_mutable_dispatch_arg_khr">
             <member><type>cl_uint</type>          <name>arg_index</name></member>
@@ -379,6 +397,11 @@ server's OpenCL/api-docs repository.
             <member>const <type>void</type>*                             <name>next</name></member>
             <member><type>cl_uint</type>                                 <name>num_mutable_dispatch</name></member>
             <member>const <type>cl_mutable_dispatch_config_khr</type>*   <name>mutable_dispatch_list</name></member>
+        </type>
+
+        <type category="struct" name="cl_device_unified_svm_type_exp">
+            <member><type>cl_svm_mem_flags</type>                        <name>mem_flags</name></member>
+            <member><type>cl_device_unified_svm_capabilities_exp</type>  <name>capabilities</name></member>
         </type>
     </types>
 
@@ -679,7 +702,8 @@ server's OpenCL/api-docs repository.
         <enum value="-1123"         name="CL_ERROR_RESERVED1_IMG"/>
         <enum value="-1124"         name="CL_ERROR_RESERVED2_IMG"/>
         <enum value="-1125"         name="CL_ERROR_RESERVED3_IMG"/>
-            <unused start="-1126" end="-1137"/>
+        <enum value="-1126"         name="CL_CANCELLED_IMG"/>
+            <unused start="-1127" end="-1137"/>
     </enums>
 
     <enums start="-1138" end="-1141" name="ErrorCodes.1138" vendor="Khronos" comment="For cl_khr_command_buffer related extensions">
@@ -1237,11 +1261,18 @@ server's OpenCL/api-docs repository.
         <enum bitpos="3"            name="CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL"/>
     </enums>
 
-    <enums name="cl_device_unified_shared_memory_capabilities_exp" vendor="Experimental" type="bitmask">
-        <enum bitpos="0"            name="CL_UNIFIED_SHARED_MEMORY_ACCESS_EXP"/>
-        <enum bitpos="1"            name="CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_EXP"/>
-        <enum bitpos="2"            name="CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_EXP"/>
-        <enum bitpos="3"            name="CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_EXP"/>
+    <enums name="cl_device_unified_svm_capabilities_exp" vendor="Experimental" type="bitmask">
+        <enum bitpos="0"            name="CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP"/>
+        <enum bitpos="1"            name="CL_UNIFIED_SVM_SYSTEM_ALLOCATOR_EXP"/>
+        <enum bitpos="2"            name="CL_UNIFIED_SVM_DEVICE_OWNED_EXP"/>
+        <enum bitpos="3"            name="CL_UNIFIED_SVM_HOST_OWNED_EXP"/>
+        <enum bitpos="4"            name="CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP"/>
+        <enum bitpos="5"            name="CL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP"/>
+        <enum bitpos="6"            name="CL_UNIFIED_SVM_DEVICE_ACCESS_EXP"/>
+        <enum bitpos="7"            name="CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP"/>
+        <enum bitpos="8"            name="CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP"/>
+        <enum bitpos="9"            name="CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP"/>
+        <enum bitpos="10"           name="CL_UNIFIED_SVM_INDIRECT_ACCESS_EXP"/>
     </enums>
 
     <enums name="cl_mem_alloc_flags_intel" vendor="Intel" type="bitmask">
@@ -1258,6 +1289,11 @@ server's OpenCL/api-docs repository.
 
     <enums name="cl_mem_alloc_flags_img" vendor="IMG" type="bitmask">
         <enum bitpos="0"            name="CL_MEM_ALLOC_RELAX_REQUIREMENTS_IMG"/>
+        <enum bitpos="1"            name="CL_MEM_ALLOC_GPU_WRITE_COMBINE_IMG"/>
+        <enum bitpos="2"            name="CL_MEM_ALLOC_GPU_CACHED_IMG"/>
+        <enum bitpos="3"            name="CL_MEM_ALLOC_CPU_LOCAL_IMG"/>
+        <enum bitpos="4"            name="CL_MEM_ALLOC_GPU_LOCAL_IMG"/>
+        <enum bitpos="5"            name="CL_MEM_ALLOC_GPU_PRIVATE_IMG"/>
     </enums>
 
     <enums name="cl_device_scheduling_controls_capabilities_arm" vendor="Arm" type="bitmask">
@@ -1364,6 +1400,9 @@ server's OpenCL/api-docs repository.
         <enum bitpos="4"            name="CL_MUTABLE_DISPATCH_EXEC_INFO_KHR"/>
             <unused start="5" end="31"/>
     </enums>
+    <enums name="cl_mutable_dispatch_asserts_khr" vendor="Khronos" type="bitmask">
+        <enum bitpos="0"            name="CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR"/>
+    </enums>
 
     <enums name="cl_command_buffer_structure_type_khr" vendor="Khronos">
         <enum value="0"             name="CL_STRUCTURE_TYPE_MUTABLE_BASE_CONFIG_KHR"/>
@@ -1380,6 +1419,13 @@ server's OpenCL/api-docs repository.
         <enum bitpos="17"           name="CL_DEVICE_LOCAL_FP_ATOMIC_ADD_EXT"/>
         <enum bitpos="18"           name="CL_DEVICE_LOCAL_FP_ATOMIC_MIN_MAX_EXT"/>
             <unused start="19" end="63"/>
+    </enums>
+
+    <enums name="cl_device_kernel_clock_capabilities_khr" vendor="Khronos" type="bitmask">
+        <enum bitpos="0"            name="CL_DEVICE_KERNEL_CLOCK_SCOPE_DEVICE_KHR"/>
+        <enum bitpos="1"            name="CL_DEVICE_KERNEL_CLOCK_SCOPE_WORK_GROUP_KHR"/>
+        <enum bitpos="2"            name="CL_DEVICE_KERNEL_CLOCK_SCOPE_SUB_GROUP_KHR"/>
+            <unused start="3" end="63"/>
     </enums>
 
     <enums name="cl_svm_free_flags_exp" vendor="Experimental" type="bitmask">
@@ -1547,7 +1593,9 @@ server's OpenCL/api-docs repository.
         <enum value="0x1073"        name="CL_DEVICE_INTEGER_DOT_PRODUCT_CAPABILITIES_KHR"/>
         <enum value="0x1074"        name="CL_DEVICE_INTEGER_DOT_PRODUCT_ACCELERATION_PROPERTIES_8BIT_KHR"/>
         <enum value="0x1075"        name="CL_DEVICE_INTEGER_DOT_PRODUCT_ACCELERATION_PROPERTIES_4x8BIT_PACKED_KHR"/>
-            <unused start="0x1076" end="0x107F" comment="Reserved for cl_device_info"/>
+        <enum value="0x1076"        name="CL_DEVICE_KERNEL_CLOCK_CAPABILITIES_KHR"/>
+        <enum value="0x1077"        name="CL_DEVICE_UNIFIED_SVM_TYPES_EXP"/>
+            <unused start="0x1078" end="0x107F" comment="Reserved for cl_device_info"/>
         <enum value="0x1080"        name="CL_CONTEXT_REFERENCE_COUNT"/>
         <enum value="0x1081"        name="CL_CONTEXT_DEVICES"/>
         <enum value="0x1082"        name="CL_CONTEXT_PROPERTIES"/>
@@ -1590,8 +1638,7 @@ server's OpenCL/api-docs repository.
         <enum value="0x10C1"        name="CL_sRGBA"/>
         <enum value="0x10C2"        name="CL_sBGRA"/>
         <enum value="0x10C3"        name="CL_ABGR"/>
-            <unused start="0x10C4" end="0x10CE" comment="Reserved for cl_ext_yuv_images #722"/>
-            <unused start="0x10CF" end="0x10CF" comment="Reserved for cl_channel_order"/>
+            <unused start="0x10C4" end="0x10CF" comment="Reserved for cl_ext_yuv_images #722"/>
         <enum value="0x10D0"        name="CL_SNORM_INT8"/>
         <enum value="0x10D1"        name="CL_SNORM_INT16"/>
         <enum value="0x10D2"        name="CL_UNORM_INT8"/>
@@ -1806,7 +1853,9 @@ server's OpenCL/api-docs repository.
         <enum value="0x12B4"        name="CL_IMAGE_REQUIREMENTS_MAX_HEIGHT_EXT"/>
         <enum value="0x12B5"        name="CL_IMAGE_REQUIREMENTS_MAX_DEPTH_EXT"/>
         <enum value="0x12B6"        name="CL_IMAGE_REQUIREMENTS_MAX_ARRAY_SIZE_EXT"/>
-            <unused start="0x12B7" end="0x1FFF" comment="Reserved for core API tokens"/>
+        <enum value="0x12B7"        name="CL_COMMAND_BUFFER_MUTABLE_DISPATCH_ASSERTS_KHR"/>
+        <enum value="0x12B8"        name="CL_MUTABLE_DISPATCH_ASSERTS_KHR"/>
+            <unused start="0x12B9" end="0x1FFF" comment="Reserved for core API tokens"/>
     </enums>
 
     <enums start="0x2000" end="0x201F" name="enums.2000" vendor="Khronos" comment="Reserved for interop with other APIs">
@@ -1875,7 +1924,7 @@ server's OpenCL/api-docs repository.
         <enum value="0x2051"        name="CL_MEM_DEVICE_HANDLE_LIST_KHR"/>
         <enum value="0x2052"        name="CL_DEVICE_EXTERNAL_MEMORY_IMPORT_ASSUME_LINEAR_IMAGES_HANDLE_TYPES_KHR"/>
         <enum value="0x2053"        name="CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR"/>
-            <unused start="0x2054" end="0x2054"/>
+        <enum value="0x2054"        name="CL_SEMAPHORE_EXPORTABLE_KHR"/>
         <enum value="0x2055"        name="CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR"/>
         <enum value="0x2056"        name="CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR"/>
         <enum value="0x2057"        name="CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KMT_KHR"/>
@@ -2114,10 +2163,11 @@ server's OpenCL/api-docs repository.
         <enum value="0x40D5"        name="CL_INVALID_GRALLOC_OBJECT_IMG"/>
         <enum value="0x40D6"        name="CL_COMMAND_GENERATE_MIPMAP_IMG"/>
         <enum value="0x40D7"        name="CL_MEM_ALLOC_FLAGS_IMG"/>
-        <enum value="0x40D8"        name="CL_RESERVED0_IMG"/>
-        <enum value="0x40D9"        name="CL_RESERVED1_IMG"/>
-        <enum value="0x40DA"        name="CL_RESERVED2_IMG"/>
-            <unused start="0x40DB" end="0x40DF"/>
+        <enum value="0x40D8"        name="CL_DEVICE_MEMORY_CAPABILITIES_IMG"/>
+        <enum value="0x40D9"        name="CL_RESERVED0_IMG"/>
+        <enum value="0x40DA"        name="CL_RESERVED1_IMG"/>
+        <enum value="0x40DB"        name="CL_RESERVED2_IMG"/>
+        <unused start="0x40DC" end="0x40DF"/>
     </enums>
 
     <enums start="0x40E0" end="0x40EF" name="enums.40E0" vendor="Khronos SPIR WG" comment="Per Bugs 11309,11310">
@@ -2182,15 +2232,15 @@ server's OpenCL/api-docs repository.
 
     <enums start="0x4190" end="0x419F" name="enums.4190" vendor="Intel">
         <enum value="0x4190"        name="CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL"/>
-        <enum value="0x4190"        name="CL_DEVICE_HOST_MEM_CAPABILITIES_EXP"/>
+        <!-- enum value="0x4190"        name="CL_DEVICE_HOST_MEM_CAPABILITIES_EXP"/ -->
         <enum value="0x4191"        name="CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL"/>
-        <enum value="0x4191"        name="CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP"/>
+        <!-- enum value="0x4191"        name="CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP"/ -->
         <enum value="0x4192"        name="CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL"/>
-        <enum value="0x4192"        name="CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP"/>
+        <!-- enum value="0x4192"        name="CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP"/ -->
         <enum value="0x4193"        name="CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL"/>
-        <enum value="0x4193"        name="CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_EXP"/>
+        <!-- enum value="0x4193"        name="CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_EXP"/ -->
         <enum value="0x4194"        name="CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL"/>
-        <enum value="0x4194"        name="CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_EXP"/>
+        <!-- enum value="0x4194"        name="CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_EXP"/ -->
         <enum value="0x4195"        name="CL_MEM_ALLOC_FLAGS_INTEL"/>
         <enum value="0x4196"        name="CL_MEM_TYPE_UNKNOWN_INTEL"/>
         <enum value="0x4196"        name="CL_SVM_MEM_TYPE_UNKNOWN_EXP"/>
@@ -2207,9 +2257,9 @@ server's OpenCL/api-docs repository.
         <enum value="0x419C"        name="CL_MEM_ALLOC_SIZE_INTEL"/>
         <enum value="0x419C"        name="CL_SVM_MEM_INFO_SIZE_EXP"/>
         <enum value="0x419D"        name="CL_MEM_ALLOC_DEVICE_INTEL"/>
-        <enum value="0x419D"        name="CL_SVM_MEM_INFO_DEVICE_EXP"/>
+        <enum value="0x419D"        name="CL_SVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP"/>
         <enum value="0x419E"        name="CL_MEM_ALLOC_BUFFER_LOCATION_INTEL"/>
-        <enum value="0x419F"        name="CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP"/>
+        <enum value="0x419F"        name="CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP"/>
     </enums>
 
     <enums start="0x41A0" end="0x41DF" name="enums.41A0" vendor="Qualcomm">
@@ -2280,7 +2330,8 @@ server's OpenCL/api-docs repository.
         <enum value="0x4232"        name="CL_DEVICE_DOUBLE_FP_ATOMIC_CAPABILITIES_EXT"/>
         <enum value="0x4233"        name="CL_DEVICE_HALF_FP_ATOMIC_CAPABILITIES_EXT"/>
             <unused start="0x4234" end="0x4236" comment="Reserved for cl_ext_image_tiling_control"/>
-            <unused start="0x4237" end="0x423F"/>
+            <unused start="0x4237" end="0x423A" comment="Reserved for cl_ext_image_drm_modifier"/>
+            <unused start="0x423B" end="0x423F"/>
     </enums>
 
     <enums start="0x4240" end="0x424F" name="enums.4240" comment="Reserved for ICD Loader Layers">
@@ -2733,6 +2784,12 @@ server's OpenCL/api-docs repository.
             <param><type>size_t</type>                     <name>handle_size</name></param>
             <param><type>void</type>*                      <name>handle_ptr</name></param>
             <param><type>size_t</type>*                    <name>handle_size_ret</name></param>
+        </command>
+        <command suffix="CL_API_SUFFIX__VERSION_3_0">
+            <proto><type>cl_int</type>                                  <name>clReImportSemaphoreSyncFdKHR</name></proto>
+            <param><type>cl_semaphore_khr</type>                        <name>sema_object</name></param>
+            <param><type>cl_semaphore_reimport_properties_khr</type>*   <name>reimport_props</name></param>
+            <param><type>int</type>                                     <name>fd</name></param>
         </command>
         <command suffix="CL_API_SUFFIX__VERSION_3_0">
             <proto><type>cl_int</type>                     <name>clEnqueueAcquireExternalMemObjectsKHR</name></proto>
@@ -3315,7 +3372,7 @@ server's OpenCL/api-docs repository.
         <command>
             <proto><type>void</type>*                           <name>clSVMAllocWithPropertiesEXP</name></proto>
             <param><type>cl_context</type>                      <name>context</name></param>
-            <param>const <type>cl_svm_mem_properties_exp</type>*  <name>properties</name></param>
+            <param>const <type>cl_svm_alloc_properties_exp</type>*  <name>properties</name></param>
             <param><type>cl_svm_mem_flags</type>                <name>flags</name></param>
             <param><type>size_t</type>                          <name>size</name></param>
             <param><type>cl_uint</type>                         <name>alignment</name></param>
@@ -4365,6 +4422,11 @@ server's OpenCL/api-docs repository.
             <param><type>void</type>*                                   <name>param_value</name></param>
             <param><type>size_t</type>*                                 <name>param_value_size_ret</name></param>
         </command>
+        <command>
+            <proto><type>cl_int</type>                                  <name>clCancelCommandsIMG</name></proto>
+            <param>const <type>cl_event</type>*                         <name>event_list</name></param>
+            <param><type>size_t</type>                                  <name>num_events_in_list</name></param>
+        </command>
     </commands>
 
     <!-- SECTION: OpenCL API interface definitions -->
@@ -5403,6 +5465,15 @@ server's OpenCL/api-docs repository.
             <enum name="CL_VERSION_PATCH_BITS"/>
             <enum name="CL_NAME_VERSION_MAX_NAME_SIZE"/>
         </require>
+        <require comment="Macros">
+            <type name="CL_VERSION_MAJOR_MASK"/>
+            <type name="CL_VERSION_MINOR_MASK"/>
+            <type name="CL_VERSION_PATCH_MASK"/>
+            <type name="CL_VERSION_MAJOR"/>
+            <type name="CL_VERSION_MINOR"/>
+            <type name="CL_VERSION_PATCH"/>
+            <type name="CL_MAKE_VERSION"/>
+        </require>
         <require comment="Context APIs">
             <command name="clSetContextDestructorCallback"/>
         </require>
@@ -5414,7 +5485,7 @@ server's OpenCL/api-docs repository.
 
     <!-- SECTION: OpenCL extension interface definitions -->
     <extensions>
-        <extension name="cl_khr_d3d10_sharing" supported="opencl">
+        <extension name="cl_khr_d3d10_sharing" supported="opencl" ratified="opencl">
             <require>
                 <type name="d3d10.h"/>
                 <type name="CL/cl.h"/>
@@ -5461,7 +5532,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueReleaseD3D10ObjectsKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_d3d11_sharing" supported="opencl">
+        <extension name="cl_khr_d3d11_sharing" supported="opencl" ratified="opencl">
             <require>
                 <type name="d3d11.h"/>
                 <type name="CL/cl.h"/>
@@ -5508,7 +5579,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueReleaseD3D11ObjectsKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_dx9_media_sharing" supported="opencl">
+        <extension name="cl_khr_dx9_media_sharing" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5557,7 +5628,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueReleaseDX9MediaSurfacesKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_egl_image" supported="opencl">
+        <extension name="cl_khr_egl_image" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5585,7 +5656,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueReleaseEGLObjectsKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_egl_event" supported="opencl">
+        <extension name="cl_khr_egl_event" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5599,7 +5670,7 @@ server's OpenCL/api-docs repository.
                 <command name="clCreateEventFromEGLSyncKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_fp64" supported="opencl">
+        <extension name="cl_khr_fp64" supported="opencl" promotedto="CL_VERSION_1_2" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5607,7 +5678,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_DEVICE_DOUBLE_FP_CONFIG"/>
             </require>
         </extension>
-        <extension name="cl_khr_fp16" supported="opencl">
+        <extension name="cl_khr_fp16" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5633,7 +5704,7 @@ server's OpenCL/api-docs repository.
                 <command name="clLogMessagesToStderrAPPLE"/>
             </require>
         </extension>
-        <extension name="cl_khr_icd" supported="opencl">
+        <extension name="cl_khr_icd" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5684,7 +5755,7 @@ server's OpenCL/api-docs repository.
                 <command name="clGetICDLoaderInfoOCLICD"/>
             </require>
         </extension>
-        <extension name="cl_khr_il_program" supported="opencl">
+        <extension name="cl_khr_il_program" supported="opencl" promotedto="CL_VERSION_2_1" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5698,13 +5769,13 @@ server's OpenCL/api-docs repository.
                 <command name="clCreateProgramWithILKHR" comment="No EXT_SUFFIX?"/>
             </require>
         </extension>
-        <extension name="cl_khr_image2d_from_buffer" supported="opencl">
+        <extension name="cl_khr_image2d_from_buffer" supported="opencl" promotedto="CL_VERSION_2_0" ratified="opencl">
             <require comment="cl_device_info">
                 <enum name="CL_DEVICE_IMAGE_PITCH_ALIGNMENT_KHR"/>
                 <enum name="CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_initialize_memory" supported="opencl">
+        <extension name="cl_khr_initialize_memory" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5719,7 +5790,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_CONTEXT_MEMORY_INITIALIZE_PRIVATE_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_terminate_context" supported="opencl">
+        <extension name="cl_khr_terminate_context" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5742,7 +5813,7 @@ server's OpenCL/api-docs repository.
                 <command name="clTerminateContextKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_spir" supported="opencl">
+        <extension name="cl_khr_spir" supported="opencl" obsoletedby="cl_khr_il_program" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5753,7 +5824,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_PROGRAM_BINARY_TYPE_INTERMEDIATE"/>
             </require>
         </extension>
-        <extension name="cl_khr_create_command_queue" supported="opencl">
+        <extension name="cl_khr_create_command_queue" supported="opencl" promotedto="CL_VERSION_2_0" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5955,7 +6026,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_MEM_USE_CACHED_CPU_MEMORY_IMG"/>
             </require>
         </extension>
-        <extension name="cl_khr_mipmap_image" supported="opencl">
+        <extension name="cl_khr_mipmap_image" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -5985,7 +6056,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueReleaseGrallocObjectsIMG"/>
             </require>
         </extension>
-        <extension name="cl_khr_subgroups" supported="opencl">
+        <extension name="cl_khr_subgroups" supported="opencl" promotedto="CL_VERSION_2_1" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6000,7 +6071,7 @@ server's OpenCL/api-docs repository.
                 <command name="clGetKernelSubGroupInfoKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_priority_hints" supported="opencl">
+        <extension name="cl_khr_priority_hints" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6016,7 +6087,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_QUEUE_PRIORITY_LOW_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_throttle_hints" supported="opencl">
+        <extension name="cl_khr_throttle_hints" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6032,7 +6103,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_QUEUE_THROTTLE_LOW_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_subgroup_named_barrier" supported="opencl">
+        <extension name="cl_khr_subgroup_named_barrier" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6468,7 +6539,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_AVC_ME_INTERLACED_SCAN_BOTTOM_FIELD_INTEL"/>
             </require>
         </extension>
-        <extension name="cl_khr_gl_event" supported="opencl">
+        <extension name="cl_khr_gl_event" supported="opencl" depends="cl_khr_gl_sharing" ratified="opencl">
             <require>
                 <type name="cl_GLsync"/>
             </require>
@@ -6566,7 +6637,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueReleaseDX9ObjectsINTEL"/>
             </require>
         </extension>
-        <extension name="cl_khr_gl_depth_images" requires="cl_khr_gl_sharing" comment="no API - reuses tokens from core API" supported="opencl">
+        <extension name="cl_khr_gl_depth_images" depends="cl_khr_gl_sharing" comment="no API - reuses tokens from core API" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6577,7 +6648,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_UNORM_INT24"/>
             </require>
         </extension>
-        <extension name="cl_khr_gl_msaa_sharing" requires="cl_khr_gl_depth_images" comment="no API - reuses tokens from core API" supported="opencl">
+        <extension name="cl_khr_gl_msaa_sharing" depends="cl_khr_gl_depth_images+cl_khr_gl_sharing" comment="no API - reuses tokens from core API" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6587,7 +6658,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_GL_NUM_SAMPLES"/>
             </require>
         </extension>
-        <extension name="cl_khr_gl_sharing" supported="opencl">
+        <extension name="cl_khr_gl_sharing" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6721,7 +6792,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueMemsetINTEL"/>
             </require>
         </extension>
-        <extension name="cl_khr_device_uuid" supported="opencl">
+        <extension name="cl_khr_device_uuid" supported="opencl" ratified="opencl">
             <require comment="Size Constants">
                 <enum name="CL_UUID_SIZE_KHR"/>
                 <enum name="CL_LUID_SIZE_KHR"/>
@@ -6802,7 +6873,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_MEM_FORCE_HOST_MEMORY_INTEL"/>
             </require>
         </extension>
-        <extension name="cl_khr_depth_images" supported="opencl">
+        <extension name="cl_khr_depth_images" supported="opencl" promotedto="CL_VERSION_2_0" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6810,7 +6881,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_DEPTH"/>
             </require>
         </extension>
-        <extension name="cl_khr_extended_versioning" supported="opencl">
+        <extension name="cl_khr_extended_versioning" supported="opencl" promotedto="CL_VERSION_3_0" ratified="opencl">
             <require>
                 <enum name="CL_VERSION_MAJOR_BITS_KHR"/>
                 <enum name="CL_VERSION_MINOR_BITS_KHR"/>
@@ -6872,6 +6943,14 @@ server's OpenCL/api-docs repository.
             </require>
             <require comment="cl_mem_alloc_flags_img">
                 <enum name="CL_MEM_ALLOC_RELAX_REQUIREMENTS_IMG"/>
+                <enum name="CL_MEM_ALLOC_GPU_WRITE_COMBINE_IMG"/>
+                <enum name="CL_MEM_ALLOC_GPU_CACHED_IMG"/>
+                <enum name="CL_MEM_ALLOC_CPU_LOCAL_IMG"/>
+                <enum name="CL_MEM_ALLOC_GPU_LOCAL_IMG"/>
+                <enum name="CL_MEM_ALLOC_GPU_PRIVATE_IMG"/>
+            </require>
+            <require comment="cl_device_info">
+                <enum name="CL_DEVICE_MEMORY_CAPABILITIES_IMG"/>
             </require>
         </extension>
         <extension name="cl_arm_controlled_kernel_termination" supported="opencl">
@@ -6939,7 +7018,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_QUEUE_CAPABILITY_KERNEL_INTEL"/>
             </require>
         </extension>
-        <extension name="cl_khr_pci_bus_info" supported="opencl">
+        <extension name="cl_khr_pci_bus_info" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6950,7 +7029,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_DEVICE_PCI_BUS_INFO_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_suggested_local_work_size" supported="opencl">
+        <extension name="cl_khr_suggested_local_work_size" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6979,7 +7058,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_DEVICE_FEATURE_CAPABILITIES_INTEL"/>
             </require>
         </extension>
-        <extension name="cl_khr_integer_dot_product" supported="opencl">
+        <extension name="cl_khr_integer_dot_product" revision="2.0.0" supported="opencl" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -6997,7 +7076,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_DEVICE_INTEGER_DOT_PRODUCT_ACCELERATION_PROPERTIES_4x8BIT_PACKED_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_semaphore" supported="opencl">
+        <extension name="cl_khr_semaphore" revision="0.9.1" supported="opencl" depends="CL_VERSION_1_2" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7044,7 +7123,7 @@ server's OpenCL/api-docs repository.
                 <command name="clRetainSemaphoreKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_semaphore" supported="opencl">
+        <extension name="cl_khr_external_semaphore" revision="0.9.0" supported="opencl" depends="CL_VERSION_1_2+cl_khr_semaphore" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7064,11 +7143,14 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR"/>
                 <enum name="CL_SEMAPHORE_EXPORT_HANDLE_TYPES_LIST_END_KHR"/>
             </require>
+            <require comment="cl_semaphore_info_khr">
+                <enum name="CL_SEMAPHORE_EXPORTABLE_KHR"/>
+            </require>
             <require>
                 <command name="clGetSemaphoreHandleForTypeKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_semaphore_dx_fence" supported="opencl">
+        <extension name="cl_khr_external_semaphore_dx_fence" revision="0.9.0" supported="opencl" depends="CL_VERSION_1_2+cl_khr_semaphore+cl_khr_external_semaphore" ratified="opencl" provisional="true">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7076,7 +7158,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_semaphore_opaque_fd" supported="opencl">
+        <extension name="cl_khr_external_semaphore_opaque_fd" revision="0.9.0" supported="opencl" depends="CL_VERSION_1_2+cl_khr_semaphore+cl_khr_external_semaphore" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7084,15 +7166,21 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_semaphore_sync_fd" supported="opencl">
+        <extension name="cl_khr_external_semaphore_sync_fd" revision="0.9.0" supported="opencl" depends="CL_VERSION_1_2+cl_khr_semaphore+cl_khr_external_semaphore" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
+            </require>
+            <require>
+                <type name="cl_semaphore_reimport_properties_khr"/>
             </require>
             <require comment="cl_external_semaphore_handle_type_khr">
                 <enum name="CL_SEMAPHORE_HANDLE_SYNC_FD_KHR"/>
             </require>
+            <require>
+                <command name="clReImportSemaphoreSyncFdKHR"/>
+            </require>
         </extension>
-        <extension name="cl_khr_external_semaphore_win32" supported="opencl">
+        <extension name="cl_khr_external_semaphore_win32" revision="0.9.0" supported="opencl" depends="CL_VERSION_1_2+cl_khr_semaphore+cl_khr_external_semaphore" ratified="opencl" provisional="true">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7101,7 +7189,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KMT_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_memory" supported="opencl">
+        <extension name="cl_khr_external_memory" revision="0.9.3" supported="opencl" depends="CL_VERSION_3_0" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7128,7 +7216,7 @@ server's OpenCL/api-docs repository.
                 <command name="clEnqueueReleaseExternalMemObjectsKHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_memory_dma_buf" supported="opencl">
+        <extension name="cl_khr_external_memory_dma_buf" revision="0.9.3" supported="opencl" depends="CL_VERSION_3_0+cl_khr_external_memory" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7136,7 +7224,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_memory_dx" supported="opencl">
+        <extension name="cl_khr_external_memory_dx" revision="0.9.3" supported="opencl" depends="CL_VERSION_3_0+cl_khr_external_memory" ratified="opencl" provisional="true">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7147,7 +7235,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_EXTERNAL_MEMORY_HANDLE_D3D12_RESOURCE_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_memory_opaque_fd" supported="opencl">
+        <extension name="cl_khr_external_memory_opaque_fd" revision="0.9.3" supported="opencl" depends="CL_VERSION_3_0+cl_khr_external_memory" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7155,7 +7243,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR"/>
             </require>
         </extension>
-        <extension name="cl_khr_external_memory_win32" supported="opencl">
+        <extension name="cl_khr_external_memory_win32" revision="0.9.3" supported="opencl" depends="CL_VERSION_3_0+cl_khr_external_memory" ratified="opencl">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7199,7 +7287,7 @@ server's OpenCL/api-docs repository.
                 <command name="clSetContentSizeBufferPoCL"/>
             </require>
         </extension>
-        <extension name="cl_khr_command_buffer" comment="in sync with version 0.9.3" supported="opencl">
+        <extension name="cl_khr_command_buffer" revision="0.9.4" supported="opencl" depends="CL_VERSION_1_2" ratified="opencl" provisional="true">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7266,9 +7354,11 @@ server's OpenCL/api-docs repository.
                 <command name="clCommandFillBufferKHR"/>
                 <command name="clCommandFillImageKHR"/>
                 <command name="clCommandNDRangeKernelKHR"/>
+                <command name="clGetCommandBufferInfoKHR"/>
+            </require>
+            <require depends="CL_VERSION_2_0" comment="From version 0.9.4 of the extension">
                 <command name="clCommandSVMMemcpyKHR"/>
                 <command name="clCommandSVMMemFillKHR"/>
-                <command name="clGetCommandBufferInfoKHR"/>
             </require>
         </extension>
         <extension name="cl_arm_protected_memory_allocation" supported="opencl">
@@ -7344,7 +7434,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_QUEUE_JOB_SLOT_ARM"/>
             </require>
         </extension>
-        <extension name="cl_khr_command_buffer_mutable_dispatch" requires="cl_khr_command_buffer" comment="version 0.9.0" supported="opencl">
+        <extension name="cl_khr_command_buffer_mutable_dispatch" revision="0.9.1" supported="opencl" depends="cl_khr_command_buffer" ratified="opencl" provisional="true" comment="requires cl_khr_command_buffer 0.9.0 or later">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7356,6 +7446,7 @@ server's OpenCL/api-docs repository.
                 <type name="cl_mutable_dispatch_exec_info_khr"/>
                 <type name="cl_mutable_dispatch_config_khr"/>
                 <type name="cl_mutable_base_config_khr"/>
+                <type name="cl_mutable_dispatch_asserts_khr"/>
             </require>
             <require comment="cl_command_buffer_flags_khr - bitfield">
                <enum name="CL_COMMAND_BUFFER_MUTABLE_KHR"/>
@@ -7392,6 +7483,15 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_STRUCTURE_TYPE_MUTABLE_BASE_CONFIG_KHR"/>
                 <enum name="CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR"/>
             </require>
+            <require comment="cl_command_buffer_properties_khr">
+                <enum name="CL_COMMAND_BUFFER_MUTABLE_DISPATCH_ASSERTS_KHR"/>
+            </require>
+            <require comment="cl_ndrange_kernel_command_properties_khr">
+                <enum name="CL_MUTABLE_DISPATCH_ASSERTS_KHR"/>
+            </require>
+            <require comment="cl_mutable_dispatch_asserts_khr - bitfield">
+                <enum name="CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR"/>
+            </require>
             <require>
                 <command name="clUpdateMutableCommandsKHR"/>
                 <command name="clGetMutableCommandInfoKHR"/>
@@ -7408,7 +7508,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_MEM_DEVICE_ID_INTEL"/>
             </require>
         </extension>
-        <extension name="cl_khr_command_buffer_multi_device" requires="cl_khr_command_buffer" comment="in sync with version 0.9.0" supported="opencl">
+        <extension name="cl_khr_command_buffer_multi_device" revision="0.9.1" supported="opencl" depends="cl_khr_command_buffer" ratified="opencl" provisional="true" comment="in sync with version 0.9.1; requires cl_khr_command_buffer 0.9.3 or later">
             <require>
                 <type name="CL/cl.h"/>
             </require>
@@ -7443,57 +7543,120 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_UNSIGNED_INT_RAW12_EXT"/>
             </require>
         </extension>
+        <extension name="cl_khr_3d_image_writes" supported="opencl" promotedto="CL_VERSION_2_0" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_async_work_group_copy_fence" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_byte_addressable_store" supported="opencl" promotedto="CL_VERSION_1_1" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_device_enqueue_local_arg_types" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_expect_assume" supported="opencl" ratified="opencl" comment="OpenCL C only - not exactly an extension, but a compiler directive?"/>
+        <extension name="cl_khr_extended_async_copies" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_extended_bit_ops" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_global_int32_base_atomics" supported="opencl" promotedto="CL_VERSION_1_1" ratified="opencl" comment="OpenCL C only, promotion with name changes"/>
+        <extension name="cl_khr_global_int32_extended_atomics" supported="opencl" promotedto="CL_VERSION_1_1" ratified="opencl" comment="OpenCL C only, promotion with name changes"/>
+        <extension name="cl_khr_local_int32_base_atomics" supported="opencl" promotedto="CL_VERSION_1_1" ratified="opencl" comment="OpenCL C only, promotion with name changes"/>
+        <extension name="cl_khr_local_int32_extended_atomics" supported="opencl" promotedto="CL_VERSION_1_1" ratified="opencl" comment="OpenCL C only, promotion with name changes"/>
+        <extension name="cl_khr_int64_base_atomics" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_int64_extended_atomics" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_mipmap_image_writes" supported="opencl" depends="cl_khr_mipmap_image" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_select_fprounding_mode" supported="opencl" obsoletedby="CL_VERSION_1_1" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_srgb_image_writes" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_extended_types" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_non_uniform_vote" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_ballot" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_non_uniform_arithmetic" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_shuffle" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_shuffle_relative" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_clustered_reduce" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_subgroup_rotate" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_work_group_uniform_arithmetic" supported="opencl" ratified="opencl" comment="OpenCL C only"/>
+        <extension name="cl_khr_spirv_no_integer_wrap_decoration" supported="opencl" ratified="opencl" comment="SPIR-V only"/>
+        <extension name="cl_khr_spirv_extended_debug_info" supported="opencl" ratified="opencl" comment="SPIR-V only"/>
+        <extension name="cl_khr_spirv_linkonce_odr" supported="opencl" ratified="opencl" comment="SPIR-V only"/>
+        <extension name="cl_img_cancel_command" supported="opencl">
+            <require comment="Error codes">
+                <enum name="CL_CANCELLED_IMG"/>
+            </require>
+            <require>
+                <command name="clCancelCommandsIMG"/>
+            </require>
+        </extension>
+        <extension name="cl_khr_kernel_clock" supported="opencl" ratified="opencl" provisional="true">
+            <require>
+                <type name="CL/cl.h"/>
+            </require>
+            <require comment="cl_device_info">
+                <enum name="CL_DEVICE_KERNEL_CLOCK_CAPABILITIES_KHR"/>
+            </require>
+            <require>
+                <type name="cl_device_kernel_clock_capabilities_khr"/>
+            </require>
+            <require comment="cl_device_kernel_clock_capabilities_khr">
+                <enum name="CL_DEVICE_KERNEL_CLOCK_SCOPE_DEVICE_KHR"/>
+                <enum name="CL_DEVICE_KERNEL_CLOCK_SCOPE_WORK_GROUP_KHR"/>
+                <enum name="CL_DEVICE_KERNEL_CLOCK_SCOPE_SUB_GROUP_KHR"/>
+            </require>
+        </extension>
         <extension name="cl_exp_unified_svm" condition="defined(CL_VERSION_2_0)" comment="very early version" supported="opencl">
             <require>
-                <type name="cl_device_unified_shared_memory_capabilities_exp"/>
-                <type name="cl_svm_mem_properties_exp"/>
+                <type name="cl_device_unified_svm_capabilities_exp"/>
+                <type name="cl_device_unified_svm_type_exp"/>
+                <type name="cl_svm_alloc_properties_exp"/>
+                <type name="cl_svm_free_properties_exp"/>
+                <type name="cl_svm_free_flags_exp"/>
                 <type name="cl_svm_mem_info_exp"/>
                 <type name="cl_svm_mem_type_exp"/>
                 <type name="cl_svm_mem_advice_exp"/>
-                <type name="cl_svm_free_flags_exp"/>
-                <type name="cl_svm_free_properties_exp"/>
             </require>
-            <require comment="cl_svm_mem_flags">
-                <enum name="CL_MEM_SVM_DEVICE_EXP"/>
-                <enum name="CL_MEM_SVM_HOST_EXP"/>
-                <enum name="CL_MEM_SVM_SHARED_EXP"/>
+            <require comment="cl_device_info">
+                <enum name="CL_DEVICE_UNIFIED_SVM_TYPES_EXP"/>
             </require>
             <require comment="cl_device_svm_capabilities">
                 <enum name="CL_DEVICE_SVM_DEVICE_ALLOC_EXP"/>
                 <enum name="CL_DEVICE_SVM_HOST_ALLOC_EXP"/>
                 <enum name="CL_DEVICE_SVM_SHARED_ALLOC_EXP"/>
             </require>
+            <require comment="cl_device_unified_svm_capabilities_exp - bitfield">
+                <enum name="CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP"/>
+                <enum name="CL_UNIFIED_SVM_SYSTEM_ALLOCATOR_EXP"/>
+                <enum name="CL_UNIFIED_SVM_DEVICE_OWNED_EXP"/>
+                <enum name="CL_UNIFIED_SVM_HOST_OWNED_EXP"/>
+                <enum name="CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP"/>
+                <enum name="CL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP"/>
+                <enum name="CL_UNIFIED_SVM_DEVICE_ACCESS_EXP"/>
+                <enum name="CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP"/>
+                <enum name="CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP"/>
+                <enum name="CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP"/>
+                <enum name="CL_UNIFIED_SVM_INDIRECT_ACCESS_EXP"/>
+            </require>
+            <require comment="cl_svm_mem_flags">
+                <enum name="CL_MEM_SVM_DEVICE_EXP"/>
+                <enum name="CL_MEM_SVM_HOST_EXP"/>
+                <enum name="CL_MEM_SVM_SHARED_EXP"/>
+            </require>
+            <require comment="cl_svm_alloc_properties_exp">
+                <enum name="CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP"/>
+            </require>
             <require comment="cl_svm_free_flags_exp">
                 <enum name="CL_SVM_FREE_NON_BLOCKING_EXP"/>
                 <enum name="CL_SVM_FREE_BLOCKING_EXP"/>
             </require>
-            <require comment="cl_svm_mem_properties_exp">
-                <enum name="CL_SVM_MEM_ASSOCIATED_DEVICE_HANDLE_EXP"/>
-            </require>
-            <require comment="cl_device_info - aliases for USM">
+            <!-- require comment="cl_device_info - aliases for USM">
                 <enum name="CL_DEVICE_HOST_MEM_CAPABILITIES_EXP"/>
                 <enum name="CL_DEVICE_DEVICE_MEM_CAPABILITIES_EXP"/>
                 <enum name="CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_EXP"/>
                 <enum name="CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_EXP"/>
                 <enum name="CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_EXP"/>
-            </require>
-            <require comment="cl_unified_shared_memory_capabilities_exp - bitfield - aliases for USM">
-                <enum name="CL_UNIFIED_SHARED_MEMORY_ACCESS_EXP"/>
-                <enum name="CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_EXP"/>
-                <enum name="CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_EXP"/>
-                <enum name="CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_EXP"/>
+            </require -->
+            <require comment="cl_svm_mem_info_exp - aliases for USM">
+                <enum name="CL_SVM_MEM_INFO_TYPE_EXP"/>
+                <enum name="CL_SVM_MEM_INFO_BASE_PTR_EXP"/>
+                <enum name="CL_SVM_MEM_INFO_SIZE_EXP"/>
+                <enum name="CL_SVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP"/>
             </require>
             <require comment="cl_svm_mem_type_exp - aliases for USM">
                 <enum name="CL_SVM_MEM_TYPE_UNKNOWN_EXP"/>
                 <enum name="CL_SVM_MEM_TYPE_HOST_EXP"/>
                 <enum name="CL_SVM_MEM_TYPE_DEVICE_EXP"/>
                 <enum name="CL_SVM_MEM_TYPE_SHARED_EXP"/>
-            </require>
-            <require comment="cl_svm_mem_info_exp - aliases for USM">
-                <enum name="CL_SVM_MEM_INFO_TYPE_EXP"/>
-                <enum name="CL_SVM_MEM_INFO_BASE_PTR_EXP"/>
-                <enum name="CL_SVM_MEM_INFO_SIZE_EXP"/>
-                <enum name="CL_SVM_MEM_INFO_DEVICE_EXP"/>
             </require>
             <require comment="cl_kernel_exec_info - aliases for USM">
                 <enum name="CL_KERNEL_EXEC_INFO_INDIRECT_HOST_ACCESS_EXP"/>
