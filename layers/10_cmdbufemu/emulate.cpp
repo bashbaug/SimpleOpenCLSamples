@@ -1645,7 +1645,7 @@ private:
 
     void setupTestQueue(cl_command_queue src)
     {
-        if( g_cEnhancedErrorChecking )
+        if( g_EnhancedErrorChecking )
         {
             cl_command_queue testQueue = nullptr;
 

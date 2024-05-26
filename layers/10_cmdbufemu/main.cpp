@@ -23,6 +23,7 @@
 #include <cstring>
 #include <cstdio>
 
+#include "getenv_util.hpp"
 #include "layer_util.hpp"
 
 #include "emulate.h"
@@ -30,10 +31,8 @@
 // Enhanced error checking can be used to catch additional errors when
 // commands are recorded into a command buffer, but relies on tricky
 // use of user events that may not work properly with some implementations.
-// Disabling enhanced error checking may enable command buffer emulation
-// to function properly on more implementations.
 
-const bool g_cEnhancedErrorChecking = true;
+bool g_EnhancedErrorChecking = false;
 
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
@@ -284,6 +283,8 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     }
 
     _init_dispatch();
+
+    getControl("CMDBUFEMU_EnhancedErrorChecking", g_EnhancedErrorChecking);
 
     g_pNextDispatch = target_dispatch;
 

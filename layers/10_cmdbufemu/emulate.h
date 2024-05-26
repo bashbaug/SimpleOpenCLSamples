@@ -9,7 +9,7 @@
 
 #include <map>
 
-extern const bool g_cEnhancedErrorChecking;
+extern bool g_EnhancedErrorChecking;
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
