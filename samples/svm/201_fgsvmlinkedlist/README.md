@@ -1,21 +1,18 @@
-# dmemlinkedlist
+# fgsvmlinkedlist
 
 ## Sample Purpose
 
-This sample demonstrates how to build a linked list on the host in device Unified Shared Memory, access and modify the linked list in a kernel, then access and check the contents of the linked list on the host.
+This sample demonstrates how to build a linked list on the host using fine-grained Shared Virtual Memory (SVM) allocations, how to access and modify the linked list in a kernel, then how to access and check the contents of the linked list on the host.
 
-Because device Unified Shared Memory cannot be directly read from or written to on the host, the linked list must be constructed and verified using explicit memory copies.
+Because fine-grained SVM does not require any API calls to access the contents of an allocation on the host, this sample is much simpler than the coarse-grained SVM sample.
 
 ## Key APIs and Concepts
 
-This sample demonstrates how to indicate that a kernel may access any device Unified Shared Memory allocation using `clSetKernelExecInfo` and `CL_KERNEL_EXEC_INFO_INDIRECT_DEVICE_ACCESS_INTEL`, without specifying all allocations explicitly.
-For kernels that operate on complex data structures consisting of many Unified Shared Memory allocations, this can considerably improve API efficiency.
+This sample only needs to ensure the device is not accessing the fine-grained SVM allocation before initializing the contents of the source allocation or verifying that the copy was performed correctly.
+For simplicity, this sample calls `clFinish` to ensure all execution is complete on the device.
 
-Since Unified Shared Memory is an OpenCL extension, this sample uses the `OpenCLExt` extension loader library to query the extension APIs.
-Please see the OpenCL Extension Loader [README](https://github.com/bashbaug/opencl-extension-loader) for more detail.
-
-This sample currently uses c APIs because the C++ bindings do not support Unified Shared Memory (yet).
-When support for Unified Shared Memory is added to the C++ bindings the samples will be updated to use the C++ bindings instead, which should simplify the sample slightly.
+This sample also demonstrates how to specifying a set of indirectly accessed SVM pointers using `clSetKernelExecInfo` and `CL_KERNEL_EXEC_INFO_SVM_PTRS`.
+This is still required for kernels that operate on complex data structures consisting of fine-grained Shared Virtual Memory allocations that are not directly passed as kernel arguments.
 
 ## Command Line Options
 

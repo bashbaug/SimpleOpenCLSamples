@@ -12,7 +12,7 @@ void PrintSVMCaps(
     const char* label,
     cl_device_svm_capabilities svmcaps )
 {
-    printf("%s: %s%s%s%s\n",
+    printf("\t%s: %s%s%s%s\n",
         label,
         ( svmcaps & CL_DEVICE_SVM_COARSE_GRAIN_BUFFER   ) ? "\n\t\tCL_DEVICE_SVM_COARSE_GRAIN_BUFFER"   : "",
         ( svmcaps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER     ) ? "\n\t\tCL_DEVICE_SVM_FINE_GRAIN_BUFFER"     : "",
@@ -24,13 +24,9 @@ int main(
     int argc,
     char** argv )
 {
-    int platformIndex = 0;
-    int deviceIndex = 0;
-
     {
         popl::OptionParser op("Supported Options");
-        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
-        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+
         bool printUsage = false;
         try {
             op.parse(argc, argv);
@@ -41,7 +37,7 @@ int main(
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: usmqueries [options]\n"
+                "Usage: svmqueries [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }
@@ -50,17 +46,28 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
+    for( size_t i = 0; i < platforms.size(); i++ )
+    {
+        printf( "Platform[%zu]: %s\n",
+            i,
+            platforms[i].getInfo<CL_PLATFORM_NAME>().c_str());
 
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        std::vector<cl::Device> devices;
+        platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+        for( size_t d = 0; d < devices.size(); d++ )
+        {
+            printf("\tDevice[%zu]: %s\n",
+                d,
+                devices[d].getInfo<CL_DEVICE_NAME>().c_str());
 
-    cl_device_svm_capabilities svmcaps = devices[deviceIndex].getInfo<CL_DEVICE_SVM_CAPABILITIES>();
-    PrintSVMCaps( "CL_DEVICE_SVM_CAPABILITIES", svmcaps );
+            cl_device_svm_capabilities svmcaps =
+                devices[d].getInfo<CL_DEVICE_SVM_CAPABILITIES>();
+            PrintSVMCaps( "CL_DEVICE_SVM_CAPABILITIES", svmcaps );
+
+            printf( "\n" );
+        }
+    }
 
     printf("Cleaning up...\n");
 

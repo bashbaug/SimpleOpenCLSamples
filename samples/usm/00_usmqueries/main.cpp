@@ -12,7 +12,7 @@ void PrintUSMCaps(
     const char* label,
     cl_device_unified_shared_memory_capabilities_intel usmcaps )
 {
-    printf("%s: %s%s%s%s\n",
+    printf("\t%s: %s%s%s%s\n",
         label,
         ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL                   ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL"                   : "",
         ( usmcaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL            ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL"            : "",
@@ -24,13 +24,9 @@ int main(
     int argc,
     char** argv )
 {
-    int platformIndex = 0;
-    int deviceIndex = 0;
-
     {
         popl::OptionParser op("Supported Options");
-        op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
-        op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+
         bool printUsage = false;
         try {
             op.parse(argc, argv);
@@ -50,56 +46,41 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
+    for( size_t i = 0; i < platforms.size(); i++ )
+    {
+        printf( "Platform[%zu]: %s\n",
+            i,
+            platforms[i].getInfo<CL_PLATFORM_NAME>().c_str());
 
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        std::vector<cl::Device> devices;
+        platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+        for( size_t d = 0; d < devices.size(); d++ )
+        {
+            printf("\tDevice[%zu]: %s\n",
+                d,
+                devices[d].getInfo<CL_DEVICE_NAME>().c_str());
 
-    cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
+            cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
 
-    clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    PrintUSMCaps( "CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL", usmcaps );
+            usmcaps = devices[d].getInfo<CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL>();
+            PrintUSMCaps( "CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL", usmcaps );
 
-    clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    PrintUSMCaps( "CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL", usmcaps );
+            usmcaps = devices[d].getInfo<CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL>();
+            PrintUSMCaps( "CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL", usmcaps );
 
-    clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    PrintUSMCaps( "CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
+            usmcaps = devices[d].getInfo<CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL>();
+            PrintUSMCaps( "CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
 
-    clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    PrintUSMCaps( "CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
+            usmcaps = devices[d].getInfo<CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL>();
+            PrintUSMCaps( "CL_DEVICE_CROSS_DEVICE_SHARED_MEM_CAPABILITIES_INTEL", usmcaps );
 
-    clGetDeviceInfo(
-        devices[deviceIndex](),
-        CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL,
-        sizeof(usmcaps),
-        &usmcaps,
-        nullptr );
-    PrintUSMCaps( "CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL", usmcaps );
+            usmcaps = devices[d].getInfo<CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL>();
+            PrintUSMCaps( "CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL", usmcaps );
+
+            printf( "\n" );
+        }
+    }
 
     printf("Cleaning up...\n");
 
