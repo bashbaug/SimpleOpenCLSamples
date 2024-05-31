@@ -1,0 +1,5 @@
+https://github.com/intel/mlir-extensions/blob/main/test/Integration/Dialect/XeGPU/flash_attention_fwd.mlir
+
+https://github.com/intel/intel-extension-for-pytorch/blob/xpu-main/csrc/gpu/aten/operators/xetla/kernels/SDP/fmha_forward.hpp
+
+https://github.com/NVIDIA/cudnn-frontend/blob/main/docs/operations/Attention.md
