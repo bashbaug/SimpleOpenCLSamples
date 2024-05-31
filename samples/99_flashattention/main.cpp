@@ -522,7 +522,7 @@ int main(int argc, char** argv)
     cl::Buffer qkvr     {context, CL_MEM_READ_WRITE, B * T * 3 * C  * sizeof(float)};
     cl::Buffer preatt   {context, CL_MEM_READ_WRITE, B * NH * T * T * sizeof(float)};
     cl::Buffer att      {context, CL_MEM_READ_WRITE, B * NH * T * T * sizeof(float)};
-    cl::Buffer inp      {context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+    cl::Buffer inp      {context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
                                                      B * T * 3 * C  * sizeof(float), inp_vec.data()};
 
     printf("Running tests...\n");
