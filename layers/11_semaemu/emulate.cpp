@@ -114,6 +114,7 @@ typedef struct _cl_semaphore_khr
                             devices.push_back(((cl_device_id*)check)[0]);
                             check++;
                         }
+                        check++;
                     }
                     break;
                 default:
