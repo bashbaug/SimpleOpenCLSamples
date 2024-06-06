@@ -21,10 +21,13 @@
 
 using test_clock = std::chrono::high_resolution_clock;
 
-constexpr int B = 8;
-constexpr int T = 1024;
-constexpr int C = 768;
-constexpr int NH = 12;
+int B = 8;      // Batch Size
+int T = 1024;   // = N = Time, AKA Sequence Length???
+int C = 768;    // Channels???
+int NH = 12;    // Number of Heads
+
+// HS = D = C / NH  // Head Size, AKA Head Dimension???
+// C = Head Dimension x Number of Heads???
 
 bool zeroData = false;
 bool identityData = false;
@@ -59,8 +62,8 @@ static void setRoundRobin(cl::Kernel& kernel)
         &policy);
 }
 
-template <typename T>
-static void fill_input(std::vector<T>& M, size_t count)
+template <typename TT>
+static void fill_input(std::vector<TT>& M, size_t count)
 {
     if (zeroData) {
         std::generate(std::begin(M), std::end(M), [&]{ return 0.0f; });
@@ -80,10 +83,41 @@ static void fill_input(std::vector<T>& M, size_t count)
     }
 }
 
+template <typename TT>
+static void permute(
+    std::vector<TT>& q,
+    std::vector<TT>& k,
+    std::vector<TT>& v,
+    const std::vector<TT>& inp)
+{
+    const int N = T;
+    const int d = C / NH;
+
+    for (int idx = 0; idx < B * T * C; idx++) {
+        int b = idx / (NH * N * d);
+        int rest = idx % (NH * N * d);
+        int nh_ = rest / (N * d);
+        rest = rest % (N * d);
+        int n = rest / d;
+        int d_ = rest % d;
+
+        int inp_idx = \
+            (b * N * 3 * NH * d)
+            +   (n * 3 * NH * d)
+            +       (0 * NH * d)
+            +          (nh_ * d)
+            +                d_;
+
+        q[idx] = inp[inp_idx];
+        k[idx] = inp[inp_idx + NH * d];
+        v[idx] = inp[inp_idx + 2 * (NH * d)];
+    }
+}
+
 // ----------------------------------------------------------------------------
 // CPU code reference - adapted from llm.c
 template <typename TT>
-void attention_forward_cpu(
+void attention_forward_cpu_old(
     std::vector<TT>& out,
     std::vector<TT>& preatt,
     std::vector<TT>& att,
@@ -94,7 +128,7 @@ void attention_forward_cpu(
     // output is (B, T, C)
     int C3 = C*3;
     int hs = C / NH; // head size
-    TT scale = 1.0 / std::sqrt(hs);
+    TT scale = (TT)(1.0 / std::sqrt(hs));
 
     for (int b = 0; b < B; b++) {
         for (int t = 0; t < T; t++) {
@@ -132,7 +166,7 @@ void attention_forward_cpu(
                     expsum += expv;
                     att_bth[t2] = expv;
                 }
-                TT expsum_inv = expsum == 0.0 ? 0.0 : 1.0 / expsum;
+                TT expsum_inv = (TT)(expsum == 0.0 ? 0.0 : 1.0 / expsum);
 
                 // pass 3: normalize to get the softmax
                 for (int t2 = 0; t2 < T; t2++) {
@@ -152,6 +186,88 @@ void attention_forward_cpu(
                     const TT* value_t2 = inp.data() + b * T * C3 + t2 * C3 + h * hs + C*2; // +C*2 because it's value
                     TT att_btht2 = att_bth[t2];
                     for (int i = 0; i < hs; i++) {
+                        out_bth[i] += att_btht2 * value_t2[i];
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// CPU code reference - adapted from llm.c
+template <typename TT>
+void attention_forward_cpu(
+    std::vector<TT>& out,
+    std::vector<TT>& preatt,
+    std::vector<TT>& att,
+    const std::vector<TT>& q,
+    const std::vector<TT>& k,
+    const std::vector<TT>& v)
+{
+    const int D = C / NH; // head size
+
+    // q, k, v are (B, NH, T, D), rather than (B, T, NH, D)
+    // preatt, att are (B, NH, T, T)
+    // output is (B, T, C)
+    TT scale = (TT)(1.0 / std::sqrt(D));
+
+    for (int b = 0; b < B; b++) {
+        for (int nh = 0; nh < NH; nh++) {
+            for (int t = 0; t < T; t++) {
+                const TT* query_t = q.data() + b * NH * T * D + nh * T * D + t * D;
+                TT* preatt_bth = preatt.data() + b * NH * T * T + nh * T * T + t * T;
+                TT* att_bth = att.data() + b * NH * T * T + nh * T * T + t * T;
+
+                // pass 1: calculate query dot key and maxval
+                TT maxval = -10000.0; // TODO something better
+                for (int t2 = 0; t2 <= t; t2++) {
+                    const TT* key_t2 = k.data() + b * NH * T * D + nh * T * D + t2 * D;
+
+                    // (query_t) dot (key_t2)
+                    TT val = 0.0;
+                    for (int i = 0; i < D; i++) {
+                        val += query_t[i] * key_t2[i];
+                    }
+                    val *= scale;
+                    if (val > maxval) {
+                        maxval = val;
+                    }
+
+                    preatt_bth[t2] = val;
+                }
+                // pad with -INFINITY outside of autoregressive region for debugging comparisons
+                for (int t2 = t+1; t2 < T; t2++) {
+                    preatt_bth[t2] = -INFINITY;
+                }
+
+                // pass 2: calculate the exp and keep track of sum
+                TT expsum = 0.0;
+                for (int t2 = 0; t2 <= t; t2++) {
+                    TT expv = std::exp(preatt_bth[t2] - maxval);
+                    expsum += expv;
+                    att_bth[t2] = expv;
+                }
+                TT expsum_inv = (TT)(expsum == 0.0 ? 0.0 : 1.0 / expsum);
+
+                // pass 3: normalize to get the softmax
+                for (int t2 = 0; t2 < T; t2++) {
+                    if (t2 <= t) {
+                        att_bth[t2] *= expsum_inv;
+                    } else {
+                        // causal attention mask. not strictly necessary to set to zero here
+                        // only doing this explicitly for debugging and checking to PyTorch
+                        att_bth[t2] = 0.0f;
+                    }
+                }
+
+                // pass 4: accumulate weighted values into the output of attention
+                TT* out_bth = out.data() + b * T * C + t * C + nh * D;
+                for (int i = 0; i < D; i++) { out_bth[i] = 0.0; }
+                for (int t2 = 0; t2 <= t; t2++) {
+                    const TT* value_t2 = v.data() + b * NH * T * D + nh * T * D + t2 * D;
+                    TT att_btht2 = att_bth[t2];
+                    for (int i = 0; i < D; i++) {
                         out_bth[i] += att_btht2 * value_t2[i];
                     }
                 }
@@ -194,10 +310,10 @@ static float hw_time(cl::Event& event)
 
 // This implements the naive algorithm.
 // It has separate kernels for each of the three steps.
-static void naive_attention_forward(
+static void naive_attention_forward_old(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
-    cl::Buffer& out,
-    cl::Buffer& preatt, cl::Buffer& att, cl::Buffer& inp,
+    cl::Buffer& out, cl::Buffer& preatt, cl::Buffer& att,
+    cl::Buffer& inp,
     size_t wgSize,
     const std::vector<float>& out_ref,
     const std::vector<float>& preatt_ref,
@@ -205,9 +321,9 @@ static void naive_attention_forward(
 {
     printf("%80s: ", __FUNCTION__); fflush(stdout);
 
-    cl::Kernel naive_query_key{program, "naive_query_key"};
+    cl::Kernel naive_query_key{program, "naive_query_key_old"};
     cl::Kernel naive_softmax{program, "naive_softmax"};
-    cl::Kernel naive_value{program, "naive_value"};
+    cl::Kernel naive_value{program, "naive_value_old"};
     if (naive_query_key() == nullptr ||
         naive_softmax() == nullptr ||
         naive_value() == nullptr) {
@@ -268,9 +384,87 @@ static void naive_attention_forward(
     }
 }
 
+// This implements the naive algorithm.
+// It has separate kernels for each of the three steps.
+static void naive_attention_forward(
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& out, cl::Buffer& preatt, cl::Buffer& att,
+    cl::Buffer& inp,
+    cl::Buffer& q, cl::Buffer& k, cl::Buffer& v,
+    size_t wgSize,
+    const std::vector<float>& out_ref,
+    const std::vector<float>& preatt_ref,
+    const std::vector<float>& att_ref)
+{
+    printf("%80s: ", __FUNCTION__); fflush(stdout);
+
+    cl::Kernel naive_query_key{program, "naive_query_key"};
+    cl::Kernel naive_softmax{program, "naive_softmax"};
+    cl::Kernel naive_value{program, "naive_value"};
+    if (naive_query_key() == nullptr ||
+        naive_softmax() == nullptr ||
+        naive_value() == nullptr) {
+        printf("unsupported.\n");
+    } else {
+        size_t native_query_key_gws = B * NH * T * T;
+        naive_query_key.setArg(0, preatt);
+        naive_query_key.setArg(1, q);
+        naive_query_key.setArg(2, k);
+
+        size_t naive_softmax_gws = B * T * NH;
+        naive_softmax.setArg(0, att);
+        naive_softmax.setArg(1, preatt);
+
+        size_t naive_value_gws = B * T * NH;
+        naive_value.setArg(0, out);
+        naive_value.setArg(1, att);
+        naive_value.setArg(2, v);
+
+        if (!skipinit) {
+            queue.enqueueFillBuffer(out, 0, 0, out_ref.size() * sizeof(out_ref[0]));
+        }
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(naive_query_key, cl::NullRange,
+                cl::NDRange{native_query_key_gws});
+            queue.enqueueNDRangeKernel(naive_softmax, cl::NullRange,
+                cl::NDRange{naive_softmax_gws});
+            queue.enqueueNDRangeKernel(naive_value, cl::NullRange,
+                cl::NDRange{naive_value_gws});
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = sw_time.count();
+            best = std::min(best, elapsed);
+        }
+        printf("Best in %f seconds\n", best);
+
+        if (validate) {
+            printf("Checking results: preatt... "); fflush(stdout);
+            std::vector<float> preatt_check(preatt_ref.size());
+            queue.enqueueReadBuffer(preatt, CL_TRUE, 0, preatt_check.size() * sizeof(preatt_check[0]), preatt_check.data());
+            check_results(preatt_check, preatt_ref);
+
+            printf("Checking results: att... "); fflush(stdout);
+            std::vector<float> att_check(att_ref.size());
+            queue.enqueueReadBuffer(att, CL_TRUE, 0, att_check.size() * sizeof(att_check[0]), att_check.data());
+            check_results(preatt_check, preatt_ref);
+
+            printf("Checking results: out... "); fflush(stdout);
+            std::vector<float> out_check(out_ref.size());
+            queue.enqueueReadBuffer(out, CL_TRUE, 0, out_check.size() * sizeof(out_check[0]), out_check.data());
+            check_results(out_check, out_ref);
+
+            printf(" done!\n");
+        }
+    }
+}
+
 // This is a port of the minimal flash attention, see:
 // https://github.com/tspeterkim/flash-attention-minimal
-static void flash_attention_forward(
+static void flash_attention_forward_old(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& out,
     cl::Buffer& inp,
@@ -306,8 +500,8 @@ static void flash_attention_forward(
         const int N = T;
         const int d = C / NH;
 
-        const int Tc = std::ceil((float) N / Bc); const int Tr = std::ceil((float) N / Br);
-        const float softmax_scale = 1.0 / std::sqrt(d);
+        const int Tc = (int)std::ceil((float) N / Bc); const int Tr = (int)std::ceil((float) N / Br);
+        const float softmax_scale = 1.0f / (float)std::sqrt(d);
 
         cl::Buffer l{context, CL_MEM_READ_WRITE, B * nh * N * sizeof(float)};
         cl::Buffer m{context, CL_MEM_READ_WRITE, B * nh * N * sizeof(float)};
@@ -337,6 +531,107 @@ static void flash_attention_forward(
         flash_attention.setArg(0, Q);
         flash_attention.setArg(1, K);
         flash_attention.setArg(2, V);
+        flash_attention.setArg(3, N);
+        flash_attention.setArg(4, d);
+        flash_attention.setArg(5, Tc);
+        flash_attention.setArg(6, Tr);
+        flash_attention.setArg(7, Bc);
+        flash_attention.setArg(8, Br);
+        flash_attention.setArg(9, softmax_scale);
+        flash_attention.setArg(10, l);
+        flash_attention.setArg(11, m);
+        flash_attention.setArg(12, O);
+        flash_attention.setArg(13, cl::Local(requiredLocalMemSize));
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(flash_attention, cl::NullRange,
+                cl::NDRange{flash_attention_gws}, cl::NDRange{flash_attention_lws});
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = sw_time.count();
+            best = std::min(best, elapsed);
+        }
+        printf("Best in %f seconds\n", best);
+
+        if (!skipinit) {
+            queue.enqueueFillBuffer(out, 0, 0, out_ref.size() * sizeof(out_ref[0]));
+        }
+
+        // Postprocessing: unpermute the output tensor.
+        size_t unpermute_gws = B * T * C;
+        unpermute.setArg(0, O);
+        unpermute.setArg(1, out);
+        queue.enqueueNDRangeKernel(unpermute, cl::NullRange, cl::NDRange{unpermute_gws});
+
+        if (validate) {
+            printf("Checking results: out... "); fflush(stdout);
+            std::vector<float> out_check(out_ref.size());
+            queue.enqueueReadBuffer(out, CL_TRUE, 0, out_check.size() * sizeof(out_check[0]), out_check.data());
+            check_results(out_check, out_ref);
+            printf(" done!\n");
+        }
+    }
+}
+
+// This is a port of the minimal flash attention, see:
+// https://github.com/tspeterkim/flash-attention-minimal
+static void flash_attention_forward(
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& out,
+    cl::Buffer& q, cl::Buffer& k, cl::Buffer& v,
+    size_t wgSize,
+    const std::vector<float>& out_ref)
+{
+    printf("%80s: ", __FUNCTION__); fflush(stdout);
+
+    cl::Kernel flash_attention{program, "flash_attention"};
+    cl::Kernel permute{program, "permute"};
+    cl::Kernel unpermute{program, "unpermute"};
+    if (flash_attention() == nullptr ||
+        permute() == nullptr ||
+        unpermute() == nullptr) {
+        printf("unsupported.\n");
+    } else {
+        // Start of the port is here:
+        const int Bc = 32; const int Br = 32;
+        const int nh = NH;
+        const int N = T;
+        const int d = C / NH;
+
+        const int Tc = (int)std::ceil((float) N / Bc); const int Tr = (int)std::ceil((float) N / Br);
+        const float softmax_scale = 1.0f / (float)std::sqrt(d);
+
+        cl::Buffer l{context, CL_MEM_READ_WRITE, B * nh * N * sizeof(float)};
+        cl::Buffer m{context, CL_MEM_READ_WRITE, B * nh * N * sizeof(float)};
+        queue.enqueueFillBuffer(l,         0, 0, B * nh * N * sizeof(float));
+        queue.enqueueFillBuffer(m, -10000.0f, 0, B * nh * N * sizeof(float));
+
+        cl::Buffer O{context, CL_MEM_READ_WRITE, B * T * C * sizeof(float)};
+        queue.enqueueFillBuffer(O, 0, 0, B * T * C * sizeof(float));
+
+        const int requiredLocalMemSize =
+            (Br * d +   // Qi
+                Bc * d +   // Kj
+                Bc * d +   // Vj
+                Bc * Br    // S
+                ) * sizeof(float);
+        cl::Device device = queue.getInfo<CL_QUEUE_DEVICE>();
+        cl_ulong maxLocalMemSize = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+        if (requiredLocalMemSize > maxLocalMemSize) {
+            printf("Device max local memory size: %" PRIu64 ", required local memory size: %d\n",
+                maxLocalMemSize, requiredLocalMemSize);
+        }
+
+        // TODO: Should this be Bc or Br?
+        // Doesn't matter in practice right now, but could in the future.
+        cl::NDRange flash_attention_gws(B * Bc, nh);  // batch_size x num_heads
+        cl::NDRange flash_attention_lws(Bc);  // Bc threads per block
+        flash_attention.setArg(0, q);
+        flash_attention.setArg(1, k);
+        flash_attention.setArg(2, v);
         flash_attention.setArg(3, N);
         flash_attention.setArg(4, d);
         flash_attention.setArg(5, Tc);
@@ -511,9 +806,29 @@ int main(int argc, char** argv)
     printf("Initializing input...\n");
     fill_input(inp_vec, B * T * 3 * C);
 
+    std::vector<float>  q_vec(B * T * C);
+    std::vector<float>  k_vec(B * T * C);
+    std::vector<float>  v_vec(B * T * C);
+    permute(q_vec, k_vec, v_vec, inp_vec);
+
     if (validate) {
+        printf("Computing old reference...\n");
+        attention_forward_cpu_old(out_vec, preatt_vec, att_vec, inp_vec);
+
         printf("Computing reference...\n");
-        attention_forward_cpu(out_vec, preatt_vec, att_vec, inp_vec);
+        std::vector<float>  out2_vec(B * T * C);
+        std::vector<float>  preatt2_vec(B * NH * T * T);
+        std::vector<float>  att2_vec(B * NH * T * T);
+        attention_forward_cpu(out2_vec, preatt2_vec, att2_vec, q_vec, k_vec, v_vec);
+
+        printf("Comparing preatt...\n");
+        check_results(preatt_vec, preatt2_vec);
+
+        printf("Comparing att...\n");
+        check_results(att_vec, att2_vec);
+
+        printf("Comparing out...\n");
+        check_results(out_vec, out2_vec);
     }
 
     printf("Creating source buffers...\n");
@@ -524,15 +839,26 @@ int main(int argc, char** argv)
     cl::Buffer att      {context, CL_MEM_READ_WRITE, B * NH * T * T * sizeof(float)};
     cl::Buffer inp      {context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
                                                      B * T * 3 * C  * sizeof(float), inp_vec.data()};
+    cl::Buffer q{context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, B * T * C * sizeof(float), q_vec.data()};
+    cl::Buffer k{context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, B * T * C * sizeof(float), k_vec.data()};
+    cl::Buffer v{context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, B * T * C * sizeof(float), v_vec.data()};
 
     printf("Running tests...\n");
 
     if (mask & 0x1) {
-        naive_attention_forward(context, program, queue, out, preatt, att, inp, wgSize, out_vec, preatt_vec, att_vec);
+        naive_attention_forward_old(context, program, queue, out, preatt, att, inp, wgSize, out_vec, preatt_vec, att_vec);
     }
 
     if (mask & 0x2) {
-        flash_attention_forward(context, program, queue, out, inp, wgSize, out_vec);
+        naive_attention_forward(context, program, queue, out, preatt, att, inp, q, k, v, wgSize, out_vec, preatt_vec, att_vec);
+    }
+
+    if (mask & 0x10) {
+        flash_attention_forward_old(context, program, queue, out, inp, wgSize, out_vec);
+    }
+
+    if (mask & 0x20) {
+        flash_attention_forward(context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
     printf("Done.\n");

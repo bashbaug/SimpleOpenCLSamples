@@ -13,8 +13,10 @@
 #define NH 12
 #endif
 
-kernel void naive_query_key(global float* preatt, global const float* inp)
+kernel void naive_query_key_old(global float* preatt, global const float* inp)
 {
+    const int D = C / NH; // head size
+
     int idx = get_global_id(0);
     int total_threads = B * NH * T * T;
 
@@ -30,65 +32,93 @@ kernel void naive_query_key(global float* preatt, global const float* inp)
         int b = idx / (NH * T * T);
 
         int C3 = C*3;
-        int hs = C / NH; // head size
-        global const float* query_t = inp + b * T * C3 + t * C3 + h * hs;
-        global const float* key_t2 = inp + b * T * C3 + t2 * C3 + h * hs + C; // +C because it's key
+        global const float* query_t = inp + b * T * C3 + t * C3 + h * D;
+        global const float* key_t2 = inp + b * T * C3 + t2 * C3 + h * D + C; // +C because it's key
 
         // (query_t) dot (key_t2)
         float val = 0.0f;
-        for (int i = 0; i < hs; i++) {
+        for (int i = 0; i < D; i++) {
             val += query_t[i] * key_t2[i];
         }
-        val *= 1.0f / sqrt((float)hs);
+        val *= 1.0f / sqrt((float)D);
         preatt[idx] = val;
     }
 }
 
+kernel void naive_query_key(global float* preatt, global const float* q, global const float* k)
+{
+    // Note: q, k, v are (B, NH, N, D)
+    const int D = C / NH; // head size
+
+    // Note: Global work size is B * NH * T * T
+    int idx = get_global_id(0);
+    int total_threads = B * NH * T * T;
+
+    int t2 = idx % T;
+    int t = (idx / T) % T;
+    if (t2 > t) {
+        // autoregressive mask
+        preatt[idx] = -INFINITY;
+        return;
+    }
+    int nh = (idx / (T * T)) % NH;
+    int b = idx / (NH * T * T);
+
+    global const float* query_t = q + b * NH * T * D + nh * T * D + t * D;
+    global const float* key_t2 = k + b * NH * T * D + nh * T * D + t2 * D;
+
+    // (query_t) dot (key_t2)
+    float val = 0.0f;
+    for (int i = 0; i < D; i++) {
+        val += query_t[i] * key_t2[i];
+    }
+    val *= 1.0f / sqrt((float)D);
+    preatt[idx] = val;
+}
+
 kernel void naive_softmax(global float* att, global const float* preatt)
 {
+    // Note: Global work size is B * T * NH
     int idx = get_global_id(0);
-    int total_threads = B * T * NH;
 
-    if (idx < total_threads) {
-        int h = idx % NH;
-        int t = (idx / NH) % T;
-        int b = idx / (NH * T);
+    int h = idx % NH;
+    int t = (idx / NH) % T;
+    int b = idx / (NH * T);
 
-        global const float* preatt_bth = preatt + b*NH*T*T + h*T*T + t*T;
-        global float* att_bth = att + b*NH*T*T + h*T*T + t*T;
+    global const float* preatt_bth = preatt + b*NH*T*T + h*T*T + t*T;
+    global float* att_bth = att + b*NH*T*T + h*T*T + t*T;
 
-        // find maxval
-        float maxval = -10000.0f; // TODO something better
-        for (int t2 = 0; t2 <= t; t2++) {
-            if (preatt_bth[t2] > maxval) {
-                maxval = preatt_bth[t2];
-            }
+    // find maxval
+    float maxval = -10000.0f; // TODO something better
+    for (int t2 = 0; t2 <= t; t2++) {
+        if (preatt_bth[t2] > maxval) {
+            maxval = preatt_bth[t2];
         }
+    }
 
-        // calculate the exp and keep track of sum
-        float expsum = 0.0f;
-        for (int t2 = 0; t2 <= t; t2++) {
-            // could try native_exp...
-            float expv = exp(preatt_bth[t2] - maxval);
-            expsum += expv;
-            att_bth[t2] = expv;
-        }
-        float expsum_inv = expsum == 0.0f ? 0.0f : 1.0f / expsum;
+    // calculate the exp and keep track of sum
+    float expsum = 0.0f;
+    for (int t2 = 0; t2 <= t; t2++) {
+        // could try native_exp...
+        float expv = exp(preatt_bth[t2] - maxval);
+        expsum += expv;
+        att_bth[t2] = expv;
+    }
+    float expsum_inv = expsum == 0.0f ? 0.0f : 1.0f / expsum;
 
-        // normalize to get the softmax
-        for (int t2 = 0; t2 < T; t2++) {
-            if (t2 <= t) {
-                att_bth[t2] *= expsum_inv;
-            } else {
-                // causal attention mask. not strictly necessary to set to zero here
-                // only doing this explicitly for debugging and checking to PyTorch
-                att_bth[t2] = 0.0f;
-            }
+    // normalize to get the softmax
+    for (int t2 = 0; t2 < T; t2++) {
+        if (t2 <= t) {
+            att_bth[t2] *= expsum_inv;
+        } else {
+            // causal attention mask. not strictly necessary to set to zero here
+            // only doing this explicitly for debugging and checking to PyTorch
+            att_bth[t2] = 0.0f;
         }
     }
 }
 
-kernel void naive_value(global float* out, global const float* att, global const float* inp)
+kernel void naive_value_old(global float* out, global const float* att, global const float* inp)
 {
     int idx = get_global_id(0);
     int total_threads = B * T * NH;
@@ -99,18 +129,45 @@ kernel void naive_value(global float* out, global const float* att, global const
         int b = idx / (NH * T);
 
         int C3 = C*3;
-        int hs = C / NH; // head size
+        int D = C / NH; // head size
 
-        global float* out_bth = out + b * T * C + t * C + h * hs;
+        global float* out_bth = out + b * T * C + t * C + h * D;
         global const float* att_bth = att + b*NH*T*T + h*T*T + t*T;
 
-        for (int i = 0; i < hs; i++) { out_bth[i] = 0.0f; }
+        for (int i = 0; i < D; i++) { out_bth[i] = 0.0f; }
         for (int t2 = 0; t2 <= t; t2++) {
-            global const float* value_t2 = inp + b * T * C3 + t2 * C3 + h * hs + C*2; // +C*2 because it's value
+            global const float* value_t2 = inp + b * T * C3 + t2 * C3 + h * D + C*2; // +C*2 because it's value
             float att_btht2 = att_bth[t2];
-            for (int i = 0; i < hs; i++) {
+            for (int i = 0; i < D; i++) {
                 out_bth[i] += att_btht2 * value_t2[i];
             }
+        }
+    }
+}
+
+kernel void naive_value(global float* out, global const float* att, global const float* v)
+{
+    // Note: q, k, v are (B, NH, N, D)
+    const int D = C / NH; // head size
+
+    // Note: Global work size is B * T * NH
+    int idx = get_global_id(0);
+
+    int nh = idx % NH;
+    int t = (idx / NH) % T;
+    int b = idx / (NH * T);
+
+    global float* out_bth = out + b * T * C + t * C + nh * D;
+    global const float* att_bth = att + b*NH*T*T + nh*T*T + t*T;
+
+    for (int i = 0; i < D; i++) {
+        out_bth[i] = 0.0f;
+    }
+    for (int t2 = 0; t2 <= t; t2++) {
+        global const float* value_t2 = v +  + b * NH * T * D + nh * T * D + t2 * D;
+        float att_btht2 = att_bth[t2];
+        for (int i = 0; i < D; i++) {
+            out_bth[i] += att_btht2 * value_t2[i];
         }
     }
 }
