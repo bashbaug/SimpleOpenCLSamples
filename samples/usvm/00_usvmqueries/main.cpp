@@ -25,38 +25,40 @@ void PrintDeviceSVMCaps(
 
 void PrintSVMMemFlags(
     const char* label,
-    cl_svm_mem_flags flags)
+    cl_svm_type_exp type)
 {
-    if (flags == 0) {
+    if (type == 0) {
         printf("\t\t%s: (none)\n", label);
     } else {
-        printf("\t\t%s: %s%s%s%s%s\n",
+        printf("\t\t%s: %s%s%s%s%s%s%s\n",
             label,
-            (flags & CL_MEM_SVM_FINE_GRAIN_BUFFER) ? "\n\t\t\tCL_MEM_SVM_FINE_GRAIN_BUFFER" : "",
-            (flags & CL_MEM_SVM_ATOMICS          ) ? "\n\t\t\tCL_MEM_SVM_ATOMICS" : "",
-            (flags & CL_MEM_SVM_DEVICE_EXP       ) ? "\n\t\t\tCL_MEM_SVM_DEVICE_EXP" : "",
-            (flags & CL_MEM_SVM_HOST_EXP         ) ? "\n\t\t\tCL_MEM_SVM_HOST_EXP" : "",
-            (flags & CL_MEM_SVM_SHARED_EXP       ) ? "\n\t\t\tCL_MEM_SVM_SHARED_EXP" : "");
+            (type & CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP ) ? "\n\t\t\tCL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP" : "",
+            (type & CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP   ) ? "\n\t\t\tCL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP" : "",
+            (type & CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP   ) ? "\n\t\t\tCL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP" : "",
+            (type & CL_SVM_TYPE_ATOMICS_EXP             ) ? "\n\t\t\tCL_SVM_TYPE_ATOMICS_EXP" : "",
+            (type & CL_SVM_TYPE_DEVICE_ALLOC_EXP        ) ? "\n\t\t\tCL_SVM_TYPE_DEVICE_ALLOC_EXP" : "",
+            (type & CL_SVM_TYPE_HOST_ALLOC_EXP          ) ? "\n\t\t\tCL_SVM_TYPE_HOST_ALLOC_EXP" : "",
+            (type & CL_SVM_TYPE_SHARED_ALLOC_EXP        ) ? "\n\t\t\tCL_SVM_TYPE_SHARED_ALLOC_EXP" : "");
     }
 }
 
 void PrintUSVMCaps(
     const char* label,
-    cl_device_unified_svm_capabilities_exp usvmcaps )
+    cl_svm_type_capabilities_exp svmcaps )
 {
     printf("\t\t%s: %s%s%s%s%s%s%s%s%s%s%s\n",
         label,
-        ( usvmcaps & CL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP     ) ? "\n\t\t\tCL_UNIFIED_SVM_SINGLE_ADDRESS_SPACE_EXP"      : "",
-        ( usvmcaps & CL_UNIFIED_SVM_SYSTEM_ALLOCATOR_EXP         ) ? "\n\t\t\tCL_UNIFIED_SVM_SYSTEM_ALLOCATOR_EXP"          : "",
-        ( usvmcaps & CL_UNIFIED_SVM_DEVICE_OWNED_EXP             ) ? "\n\t\t\tCL_UNIFIED_SVM_DEVICE_OWNED_EXP"              : "",
-        ( usvmcaps & CL_UNIFIED_SVM_HOST_OWNED_EXP               ) ? "\n\t\t\tCL_UNIFIED_SVM_HOST_OWNED_EXP"                : "",
-        ( usvmcaps & CL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP          ) ? "\n\t\t\tCL_UNIFIED_SVM_HOST_ACCESSIBLE_EXP"           : "",
-        ( usvmcaps & CL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP ) ? "\n\t\t\tCL_UNIFIED_SVM_HOST_ACCESSIBLE_WITH_MAP_EXP"  : "",
-        ( usvmcaps & CL_UNIFIED_SVM_DEVICE_ACCESS_EXP            ) ? "\n\t\t\tCL_UNIFIED_SVM_DEVICE_ACCESS_EXP"             : "",
-        ( usvmcaps & CL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP     ) ? "\n\t\t\tCL_UNIFIED_SVM_DEVICE_ATOMIC_ACCESS_EXP"      : "",
-        ( usvmcaps & CL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP        ) ? "\n\t\t\tCL_UNIFIED_SVM_CONCURRENT_ACCESS_EXP"         : "",
-        ( usvmcaps & CL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP ) ? "\n\t\t\tCL_UNIFIED_SVM_CONCURRENT_ATOMIC_ACCESS_EXP"  : "",
-        ( usvmcaps & CL_UNIFIED_SVM_INDIRECT_ACCESS_EXP          ) ? "\n\t\t\tCL_UNIFIED_SVM_INDIRECT_ACCESS_EXP"           : "" );
+        ( svmcaps & CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP     ) ? "\n\t\t\tCL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP"      : "",
+        ( svmcaps & CL_SVM_CAPABILITY_SYSTEM_ALLOCATOR_EXP         ) ? "\n\t\t\tCL_SVM_CAPABILITY_SYSTEM_ALLOCATOR_EXP"          : "",
+        ( svmcaps & CL_SVM_CAPABILITY_DEVICE_OWNED_EXP             ) ? "\n\t\t\tCL_SVM_CAPABILITY_DEVICE_OWNED_EXP"              : "",
+        ( svmcaps & CL_SVM_CAPABILITY_HOST_OWNED_EXP               ) ? "\n\t\t\tCL_SVM_CAPABILITY_HOST_OWNED_EXP"                : "",
+        ( svmcaps & CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP          ) ? "\n\t\t\tCL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP"           : "",
+        ( svmcaps & CL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP ) ? "\n\t\t\tCL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP"  : "",
+        ( svmcaps & CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP            ) ? "\n\t\t\tCL_SVM_CAPABILITY_DEVICE_ACCESS_EXP"             : "",
+        ( svmcaps & CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP     ) ? "\n\t\t\tCL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP"      : "",
+        ( svmcaps & CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP        ) ? "\n\t\t\tCL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP"         : "",
+        ( svmcaps & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP ) ? "\n\t\t\tCL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP"  : "",
+        ( svmcaps & CL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP          ) ? "\n\t\t\tCL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP"           : "" );
 
 }
 
@@ -110,13 +112,13 @@ int main(
                 nullptr );
             PrintDeviceSVMCaps( "CL_DEVICE_SVM_CAPABILITIES", svmcaps );
 
-            std::vector<cl_device_unified_svm_type_exp> usmTypes =
-                devices[d].getInfo<CL_DEVICE_UNIFIED_SVM_TYPES_EXP>();
+            std::vector<cl_device_svm_type_capabilities_exp> usmTypes =
+                devices[d].getInfo<CL_DEVICE_SVM_TYPE_CAPABILITIES_EXP>();
 
             for (size_t t = 0; t < usmTypes.size(); t++)
             {
                 printf("\tUSM Type[%zu]:\n", t);
-                PrintSVMMemFlags( "mem_flags", usmTypes[t].mem_flags );
+                PrintSVMMemFlags( "type", usmTypes[t].type );
                 PrintUSVMCaps("capabilities", usmTypes[t].capabilities);
             }
 

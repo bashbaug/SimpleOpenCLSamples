@@ -41,7 +41,7 @@ clGetExtensionFunctionAddressForPlatform_override(
 {
     CHECK_RETURN_EXTENSION_FUNCTION( clSVMAllocWithPropertiesEXP );
     CHECK_RETURN_EXTENSION_FUNCTION( clSVMFreeWithPropertiesEXP );
-    CHECK_RETURN_EXTENSION_FUNCTION( clGetSVMMemInfoEXP );
+    CHECK_RETURN_EXTENSION_FUNCTION( clGetSVMInfoEXP );
     CHECK_RETURN_EXTENSION_FUNCTION( clEnqueueSVMMemAdviseEXP );
 
     return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
@@ -56,6 +56,7 @@ static void _init_dispatch()
     dispatch.clGetExtensionFunctionAddressForPlatform = clGetExtensionFunctionAddressForPlatform_override;
     dispatch.clGetPlatformInfo = clGetPlatformInfo_override;
     dispatch.clSetKernelArgSVMPointer = clSetKernelArgSVMPointer_override;
+    dispatch.clSetKernelExecInfo = clSetKernelExecInfo_override;
     dispatch.clSVMFree = clSVMFree_override;
     dispatch.clEnqueueSVMMemcpy = clEnqueueSVMMemcpy_override;
     dispatch.clEnqueueSVMMemFill = clEnqueueSVMMemFill_override;

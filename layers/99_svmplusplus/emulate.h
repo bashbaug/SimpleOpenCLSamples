@@ -12,7 +12,8 @@ extern const struct _cl_icd_dispatch* g_pNextDispatch;
 void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
     cl_context context,
     const cl_svm_alloc_properties_exp* properties,
-    cl_svm_mem_flags flags,
+    cl_svm_type_exp type,
+    cl_mem_flags flags,
     size_t size,
     cl_uint alignment,
     cl_int* errcode_ret);
@@ -23,10 +24,10 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesEXP_EMU(
     cl_svm_free_flags_exp flags,
     void* ptr);
 
-cl_int CL_API_CALL clGetSVMMemInfoEXP_EMU(
+cl_int CL_API_CALL clGetSVMInfoEXP_EMU(
     cl_context context,
     const void* ptr,
-    cl_svm_mem_info_exp param_name,
+    cl_svm_info_exp param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret);
@@ -50,6 +51,12 @@ cl_int CL_API_CALL clSetKernelArgSVMPointer_override(
     cl_uint arg_index,
     const void* arg_value);
 
+cl_int CL_API_CALL clSetKernelExecInfo_override(
+    cl_kernel kernel,
+    cl_kernel_exec_info param_name,
+    size_t param_value_size,
+    const void* param_value);
+
 void CL_API_CALL clSVMFree_override(
     cl_context context,
     void* ptr);
@@ -58,7 +65,7 @@ cl_int CL_API_CALL clEnqueueSVMMemAdviseEXP_EMU(
     cl_command_queue command_queue,
     const void* ptr,
     size_t size,
-    cl_svm_mem_advice_exp advice,
+    cl_svm_advice_exp advice,
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
     cl_event* event);

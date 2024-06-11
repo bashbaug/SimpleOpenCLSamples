@@ -1554,12 +1554,14 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL, cl_device_unified_shared_memory_capabilities_intel )
 
 #define CL_HPP_PARAM_NAME_CL_EXP_UNIFIED_SVM_(F) \
-    F(cl_device_info, CL_DEVICE_UNIFIED_SVM_TYPES_EXP, cl::vector<cl_device_unified_svm_type_exp>) \
+    F(cl_device_info, CL_DEVICE_SVM_TYPE_CAPABILITIES_EXP, cl::vector<cl_device_svm_type_capabilities_exp>) \
     \
-    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_TYPE_EXP, cl_svm_mem_type_exp) \
-    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_BASE_PTR_EXP, void*) \
-    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_SIZE_EXP, size_type) \
-    F(cl_svm_mem_info_exp, CL_SVM_MEM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP, cl::Device)
+    F(cl_svm_mem_info_exp, CL_SVM_INFO_TYPE_EXP, cl_svm_type_exp) \
+    F(cl_svm_mem_info_exp, CL_SVM_INFO_PROPERTIES_EXP, cl::vector<cl_svm_alloc_properties_exp>) \
+    F(cl_svm_mem_info_exp, CL_SVM_INFO_FLAGS_EXP, cl_mem_flags) \
+    F(cl_svm_mem_info_exp, CL_SVM_INFO_BASE_PTR_EXP, void*) \
+    F(cl_svm_mem_info_exp, CL_SVM_INFO_SIZE_EXP, size_type) \
+    F(cl_svm_mem_info_exp, CL_SVM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP, cl::Device)
 
 template <typename enum_type, cl_int Name>
 struct param_traits {};
@@ -1831,6 +1833,7 @@ CL_HPP_PARAM_NAME_CL_INTEL_UNIFIED_SHARED_MEMORY_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #if defined(cl_exp_unified_svm)
 CL_HPP_PARAM_NAME_CL_EXP_UNIFIED_SVM_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif
+
 // Convenience functions
 
 template <typename Func, typename T>

@@ -67,14 +67,16 @@ int main(
     cl_uint* h_src = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         nullptr,
-        CL_MEM_SVM_HOST_EXP,
+        CL_SVM_TYPE_HOST_ALLOC_EXP,
+        CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,
         nullptr );
     cl_uint* h_dst = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         nullptr,
-        CL_MEM_SVM_HOST_EXP,
+        CL_SVM_TYPE_HOST_ALLOC_EXP,
+        CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,
         nullptr );

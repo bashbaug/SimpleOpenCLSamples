@@ -71,14 +71,16 @@ int main(
     cl_uint* s_src = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         props,
-        CL_MEM_SVM_SHARED_EXP,
+        CL_SVM_TYPE_SHARED_ALLOC_EXP,
+        CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,
         nullptr );
     cl_uint* s_dst = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         props,
-        CL_MEM_SVM_SHARED_EXP,
+        CL_SVM_TYPE_SHARED_ALLOC_EXP,
+        CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,
         nullptr );
