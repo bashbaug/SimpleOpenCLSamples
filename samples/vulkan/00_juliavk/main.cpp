@@ -1645,10 +1645,6 @@ private:
                 CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_FD_KHR);
                 CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KHR);
                 CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_OPAQUE_WIN32_KMT_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D11_TEXTURE_KMT_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_HEAP_KHR);
-                CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_D3D12_RESOURCE_KHR);
                 CASE_TO_STRING(CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR);
                 default: printf("Unknown cl_external_memory_handle_type_khr %04X\n", type);
                 }
@@ -1686,7 +1682,6 @@ private:
             for (auto type : types) {
                 #define CASE_TO_STRING(_e) case _e: printf("\t%s\n", #_e); break;
                 switch(type) {
-                CASE_TO_STRING(CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR);
                 CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR);
                 CASE_TO_STRING(CL_SEMAPHORE_HANDLE_SYNC_FD_KHR);
                 CASE_TO_STRING(CL_SEMAPHORE_HANDLE_OPAQUE_WIN32_KHR);
