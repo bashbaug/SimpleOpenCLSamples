@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2020-2024 Ben Ashbaugh
+// Copyright (c) 2024 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -39,7 +39,7 @@ int main(
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: usmmigratemem [options]\n"
+                "Usage: dmemhelloworld [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }
@@ -57,6 +57,14 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
+    cl_device_svm_capabilities svmcaps = devices[deviceIndex].getInfo<CL_DEVICE_SVM_CAPABILITIES>();
+    if( svmcaps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER ) {
+        printf("Device supports CL_DEVICE_SVM_FINE_GRAIN_BUFFER.\n");
+    } else {
+        printf("Device does not support CL_DEVICE_SVM_FINE_GRAIN_BUFFER, exiting.\n");
+        return -1;
+    }
+
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
@@ -64,59 +72,30 @@ int main(
     program.build();
     cl::Kernel kernel = cl::Kernel{ program, "CopyBuffer" };
 
-    cl_uint* s_src = (cl_uint*)clSharedMemAllocINTEL(
+    cl_uint* src = (cl_uint*)clSVMAlloc(
         context(),
-        devices[deviceIndex](),
-        nullptr,
+        CL_MEM_READ_WRITE | CL_MEM_SVM_FINE_GRAIN_BUFFER,
         gwx * sizeof(cl_uint),
-        0,
-        nullptr );
-    cl_uint* s_dst = (cl_uint*)clSharedMemAllocINTEL(
+        0 );
+    cl_uint* dst = (cl_uint*)clSVMAlloc(
         context(),
-        devices[deviceIndex](),
-        nullptr,
+        CL_MEM_READ_WRITE | CL_MEM_SVM_FINE_GRAIN_BUFFER,
         gwx * sizeof(cl_uint),
-        0,
-        nullptr );
+        0 );
 
-    if( s_src && s_dst )
+    if( src && dst )
     {
         // initialization
         {
             for( size_t i = 0; i < gwx; i++ )
             {
-                s_src[i] = (cl_uint)(i);
+                src[i] = (cl_uint)(i);
             }
-
-            memset( s_dst, 0, gwx * sizeof(cl_uint) );
         }
 
         // execution
-        clEnqueueMigrateMemINTEL(
-            commandQueue(),
-            s_src,
-            gwx * sizeof(cl_uint),
-            0,
-            0,
-            nullptr,
-            nullptr );
-        clEnqueueMigrateMemINTEL(
-            commandQueue(),
-            s_dst,
-            gwx * sizeof(cl_uint),
-            CL_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED,
-            0,
-            nullptr,
-            nullptr );
-
-        clSetKernelArgMemPointerINTEL(
-            kernel(),
-            0,
-            s_dst );
-        clSetKernelArgMemPointerINTEL(
-            kernel(),
-            1,
-            s_src );
+        kernel.setArg( 0, dst );
+        kernel.setArg( 1, src );
         commandQueue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
@@ -130,13 +109,13 @@ int main(
 
             for( size_t i = 0; i < gwx; i++ )
             {
-                if( s_dst[i] != i )
+                if( dst[i] != i )
                 {
                     if( mismatches < 16 )
                     {
                         fprintf(stderr, "MisMatch!  dst[%d] == %08X, want %08X\n",
                             (unsigned int)i,
-                            s_dst[i],
+                            dst[i],
                             (unsigned int)i );
                     }
                     mismatches++;
@@ -157,17 +136,13 @@ int main(
     }
     else
     {
-        printf("Allocation failed - does this device support Unified Shared Memory?\n");
+        printf("Allocation failed - does this device support fine-grain SVM?\n");
     }
 
     printf("Cleaning up...\n");
 
-    clMemFreeINTEL(
-        context(),
-        s_src );
-    clMemFreeINTEL(
-        context(),
-        s_dst );
+    clSVMFree( context(), src );
+    clSVMFree( context(), dst );
 
     return 0;
 }

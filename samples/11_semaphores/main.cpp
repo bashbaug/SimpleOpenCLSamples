@@ -102,8 +102,8 @@ int main(
     PrintSemaphoreTypes(deviceSemaphoreTypes);
 
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue q0 = cl::CommandQueue{context, devices[deviceIndex]};
-    cl::CommandQueue q1 = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue q0{context, devices[deviceIndex]};
+    cl::CommandQueue q1{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
