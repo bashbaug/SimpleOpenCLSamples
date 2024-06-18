@@ -23,13 +23,23 @@ using test_clock = std::chrono::high_resolution_clock;
 
 int B = 8;      // Batch Size
 int T = 1024;   // Sequence Length
-int C = 768;    // Channels
 int NH = 12;    // Number of Heads
+int D = 64;     // Head Dimension (AKA Head Size)
 
-// D = C / NH   // Head Size, AKA Head Dimension
+int C = 0;      // Channels
 
-// C = NH * D
-// C = D * NH
+// Note:
+//  C  = NH * D
+//  C  = D * NH
+//  D  = C / NH
+//  NH = C / D
+
+// From:
+// https://github.com/Dao-AILab/flash-attention/blob/main/benchmarks/benchmark_flash_attention.py
+// B, T = bs_seqlen_vals = [(32, 512), (16, 1024), (8, 2048), (4, 4096), (2, 8192), (1, 16384)]
+// D = headdim_vals = [64, 128]
+// C = dim = 2048
+// NH = nheads = dim // headdim = [32, 16]
 
 bool zeroData = false;
 bool identityData = false;
@@ -96,8 +106,6 @@ void attention_forward_cpu(
     const std::vector<TT>& k,
     const std::vector<TT>& v)
 {
-    const int D = C / NH; // head size
-
     // q, k, v are (B, NH, T, D)
     // preatt, att are (B, NH, T, T)
     // output is (B, NH, T, D)
@@ -292,10 +300,11 @@ static void flash_attention_forward(
         printf("unsupported.\n");
     } else {
         // Start of the port is here:
-        const int Bc = 32; const int Br = 32;
-        const int D = C / NH;
+        const int Bc = 32;
+        const int Br = 32;
 
-        const int Tc = (int)std::ceil((float) T / Bc); const int Tr = (int)std::ceil((float) T / Br);
+        const int Tc = (int)std::ceil((float) T / Bc);
+        const int Tr = (int)std::ceil((float) T / Br);
         const float softmax_scale = 1.0f / (float)std::sqrt(D);
 
         cl::Buffer l{context, CL_MEM_READ_WRITE, B * NH * T * sizeof(float)};
@@ -303,12 +312,11 @@ static void flash_attention_forward(
         queue.enqueueFillBuffer(l,         0, 0, B * NH * T * sizeof(float));
         queue.enqueueFillBuffer(m, -10000.0f, 0, B * NH * T * sizeof(float));
 
+        const int Q_LMSize  = Br * D * sizeof(float);
+        const int KV_LMSize = Bc * D * sizeof(float);
+        const int S_LMSize  = Br * Bc * sizeof(float);
         const int requiredLocalMemSize =
-            (Br * D +   // Qi
-             Bc * D +   // Kj
-             Bc * D +   // Vj
-             Bc * Br    // S
-             ) * sizeof(float);
+            Q_LMSize + KV_LMSize * 2 + S_LMSize;
         cl::Device device = queue.getInfo<CL_QUEUE_DEVICE>();
         cl_ulong maxLocalMemSize = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
         if (requiredLocalMemSize > maxLocalMemSize) {
@@ -323,17 +331,18 @@ static void flash_attention_forward(
         flash_attention.setArg(0, q);
         flash_attention.setArg(1, k);
         flash_attention.setArg(2, v);
-        flash_attention.setArg(3, T);
-        flash_attention.setArg(4, D);
-        flash_attention.setArg(5, Tc);
-        flash_attention.setArg(6, Tr);
-        flash_attention.setArg(7, Bc);
-        flash_attention.setArg(8, Br);
-        flash_attention.setArg(9, softmax_scale);
-        flash_attention.setArg(10, l);
-        flash_attention.setArg(11, m);
-        flash_attention.setArg(12, out);
-        flash_attention.setArg(13, cl::Local(requiredLocalMemSize));
+        flash_attention.setArg(3, Tc);
+        flash_attention.setArg(4, Tr);
+        flash_attention.setArg(5, Bc);
+        flash_attention.setArg(6, Br);
+        flash_attention.setArg(7, softmax_scale);
+        flash_attention.setArg(8, l);
+        flash_attention.setArg(9, m);
+        flash_attention.setArg(10, out);
+        flash_attention.setArg(11, cl::Local(Q_LMSize));
+        flash_attention.setArg(12, cl::Local(KV_LMSize));
+        flash_attention.setArg(13, cl::Local(KV_LMSize));
+        flash_attention.setArg(14, cl::Local(S_LMSize));
 
         if (!skipinit) {
             queue.enqueueFillBuffer(out, 0, 0, out_ref.size() * sizeof(out_ref[0]));
@@ -377,6 +386,10 @@ int main(int argc, char** argv)
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+        op.add<popl::Value<int>>("B", "batchsize", "Batch Size", B, &B);
+        op.add<popl::Value<int>>("T", "seqlen", "Sequence Length", T, &T);
+        op.add<popl::Value<int>>("H", "numheads", "Number of Heads", NH, &NH);
+        op.add<popl::Value<int>>("D", "headdim", "Head Dimension", D, &D);
         op.add<popl::Value<std::string>>("", "file", "Kernel File Name", fileName, &fileName);
         op.add<popl::Value<std::string>>("", "options", "Program Build Options", buildOptions, &buildOptions);
         op.add<popl::Value<size_t>>("w", "wgsize", "Work-Group Size", wgSize, &wgSize);
@@ -406,6 +419,9 @@ int main(int argc, char** argv)
             return -1;
         }
     }
+
+    // Derived values:
+    C = NH * D;
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
@@ -453,10 +469,15 @@ int main(int argc, char** argv)
     buildOptions += " -DEMULATE_tN16=" + std::to_string(emulate_tN16);
     buildOptions += " -DB=" + std::to_string(B);
     buildOptions += " -DT=" + std::to_string(T);
-    buildOptions += " -DC=" + std::to_string(C);
     buildOptions += " -DNH=" + std::to_string(NH);
+    buildOptions += " -DC=" + std::to_string(C);
 
     printf("Config:\n");
+    printf("\tBatch Size B: %d\n", B);
+    printf("\tSequence Length T: %d\n", T);
+    printf("\tNumber of Heads NH: %d\n", NH);
+    printf("\tHead Dimension D: %d\n", D);
+    printf("\tChannels C: %d * %d = %d\n", NH, D, C);
     printf("\tTest Iterations: %d\n", testIterations);
     printf("\tWork-group Size: %zu\n", wgSize);
     printf("\tValidating data?: %s\n", validate ? "true" : "false");
