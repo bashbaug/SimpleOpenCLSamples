@@ -65,7 +65,6 @@ kernel void naive_softmax(global float* att, global const float* preatt)
     // calculate the exp and keep track of sum
     float expsum = 0.0f;
     for (int t2 = 0; t2 <= t; t2++) {
-        // could try native_exp...
         float expv = native_exp(preatt_bth[t2] - maxval);
         expsum += expv;
         att_bth[t2] = expv;

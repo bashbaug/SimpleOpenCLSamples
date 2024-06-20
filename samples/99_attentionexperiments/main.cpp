@@ -376,7 +376,7 @@ int main(int argc, char** argv)
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    std::string fileName("flashattention_kernels.cl");
+    std::string fileName("attention_kernels.cl");
     std::string buildOptions;
     size_t wgSize = 32;
 
