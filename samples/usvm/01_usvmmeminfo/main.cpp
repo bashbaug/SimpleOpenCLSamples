@@ -66,16 +66,20 @@ getSVM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP( cl::Context& context, const void* ptr 
     return device;
 }
 
-static const char*
-svm_type_to_string( cl_svm_type_exp type )
+#define CASE_TO_STRING(_e) case _e: return #_e;
+
+static const char* svm_type_to_string(cl_svm_type_exp type)
 {
-    if (type & CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP )return "CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP";
-    if (type & CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP )  return "CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP";
-    if (type & CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP )  return "CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP";
-    if (type & CL_SVM_TYPE_DEVICE_ALLOC_EXP )       return "CL_SVM_TYPE_DEVICE_ALLOC_EXP";
-    if (type & CL_SVM_TYPE_HOST_ALLOC_EXP )         return "CL_SVM_TYPE_HOST_ALLOC_EXP";
-    if (type & CL_SVM_TYPE_SHARED_ALLOC_EXP )       return "CL_SVM_TYPE_SHARED_ALLOC_EXP";
-    return "***Unknown SVM Type***";
+    switch (type) {
+        CASE_TO_STRING(CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP);
+        CASE_TO_STRING(CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP);
+        CASE_TO_STRING(CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP);
+        CASE_TO_STRING(CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP);
+        CASE_TO_STRING(CL_SVM_TYPE_HOST_EXP);
+        CASE_TO_STRING(CL_SVM_TYPE_DEVICE_EXP);
+        CASE_TO_STRING(CL_SVM_TYPE_SHARED_EXP);
+    default: return "Unknown cl_svm_type_exp";
+    }
 }
 
 int main(
@@ -127,7 +131,7 @@ int main(
         char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             nullptr,
-            CL_SVM_TYPE_HOST_ALLOC_EXP,
+            CL_SVM_TYPE_HOST_EXP,
             CL_MEM_READ_WRITE,
             16,
             0,
@@ -136,7 +140,7 @@ int main(
         char* ptr1 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             nullptr,
-            CL_SVM_TYPE_HOST_ALLOC_EXP,
+            CL_SVM_TYPE_HOST_EXP,
             CL_MEM_READ_WRITE,
             16,
             0,
@@ -198,7 +202,7 @@ int main(
         char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             props,
-            CL_SVM_TYPE_DEVICE_ALLOC_EXP,
+            CL_SVM_TYPE_DEVICE_EXP,
             CL_MEM_READ_WRITE,
             16,
             0,
@@ -207,7 +211,7 @@ int main(
         char* ptr1 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             props,
-            CL_SVM_TYPE_DEVICE_ALLOC_EXP,
+            CL_SVM_TYPE_DEVICE_EXP,
             CL_MEM_READ_WRITE,
             16,
             0,
@@ -269,7 +273,7 @@ int main(
         char* ptr0 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             props,
-            CL_SVM_TYPE_SHARED_ALLOC_EXP,
+            CL_SVM_TYPE_SHARED_EXP,
             CL_MEM_READ_WRITE,
             16,
             0,
@@ -278,7 +282,7 @@ int main(
         char* ptr1 = (char*)clSVMAllocWithPropertiesEXP(
             context(),
             props,
-            CL_SVM_TYPE_SHARED_ALLOC_EXP,
+            CL_SVM_TYPE_SHARED_EXP,
             CL_MEM_READ_WRITE,
             16,
             0,

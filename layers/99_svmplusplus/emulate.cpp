@@ -70,9 +70,9 @@ static cl_svm_type_exp getSVMMemType(
         &type,
         nullptr);
     switch (type) {
-    case CL_MEM_TYPE_DEVICE_INTEL:  return CL_SVM_TYPE_DEVICE_ALLOC_EXP;
-    case CL_MEM_TYPE_HOST_INTEL:    return CL_SVM_TYPE_HOST_ALLOC_EXP;
-    case CL_MEM_TYPE_SHARED_INTEL:  return CL_SVM_TYPE_SHARED_ALLOC_EXP;
+    case CL_MEM_TYPE_DEVICE_INTEL:  return CL_SVM_TYPE_DEVICE_EXP;
+    case CL_MEM_TYPE_HOST_INTEL:    return CL_SVM_TYPE_HOST_EXP;
+    case CL_MEM_TYPE_SHARED_INTEL:  return CL_SVM_TYPE_SHARED_EXP;
     default: break;
     }
     return 0;
@@ -83,9 +83,9 @@ static bool isUSMPtr(
     const void* ptr)
 {
     cl_svm_type_exp type = getSVMMemType(context, ptr);
-    return type == CL_SVM_TYPE_DEVICE_ALLOC_EXP ||
-        type == CL_SVM_TYPE_HOST_ALLOC_EXP ||
-        type == CL_SVM_TYPE_SHARED_ALLOC_EXP;
+    return type == CL_SVM_TYPE_DEVICE_EXP ||
+        type == CL_SVM_TYPE_HOST_EXP ||
+        type == CL_SVM_TYPE_SHARED_EXP;
 }
 
 static cl_device_id getAssociatedDeviceFromProperties(
@@ -127,7 +127,7 @@ static std::vector<cl_device_svm_type_capabilities_exp> getSVMTypeCaps(cl_device
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
 
-        type.type = CL_SVM_TYPE_DEVICE_ALLOC_EXP;
+        type.type = CL_SVM_TYPE_DEVICE_EXP;
         type.capabilities =
             CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
             CL_SVM_CAPABILITY_DEVICE_OWNED_EXP |
@@ -155,7 +155,7 @@ static std::vector<cl_device_svm_type_capabilities_exp> getSVMTypeCaps(cl_device
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
 
-        type.type = CL_SVM_TYPE_HOST_ALLOC_EXP;
+        type.type = CL_SVM_TYPE_HOST_EXP;
         type.capabilities =
             CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
             CL_SVM_CAPABILITY_HOST_OWNED_EXP |
@@ -184,7 +184,7 @@ static std::vector<cl_device_svm_type_capabilities_exp> getSVMTypeCaps(cl_device
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
 
-        type.type = CL_SVM_TYPE_SHARED_ALLOC_EXP;
+        type.type = CL_SVM_TYPE_SHARED_EXP;
         type.capabilities =
             CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
             CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP |
@@ -246,7 +246,7 @@ static std::vector<cl_device_svm_type_capabilities_exp> getSVMTypeCaps(cl_device
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
 
-        type.type = CL_MEM_SVM_FINE_GRAIN_BUFFER | CL_MEM_SVM_ATOMICS;
+        type.type = CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP;
         type.capabilities =
             CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
             CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP |
@@ -261,7 +261,6 @@ static std::vector<cl_device_svm_type_capabilities_exp> getSVMTypeCaps(cl_device
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
 
-        // Note: no flags are needed for the system allocator.
         type.type = CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP;
         type.capabilities =
             CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
@@ -289,7 +288,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
 {
     cl_device_id device = getAssociatedDeviceFromProperties(properties);
 
-    if (type & CL_SVM_TYPE_DEVICE_ALLOC_EXP) {
+    if (type == CL_SVM_TYPE_DEVICE_EXP) {
         // note: currently ignores flags!
         return clDeviceMemAllocINTEL(
             context,
@@ -299,7 +298,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
             alignment,
             errcode_ret);
     }
-    if (type & CL_SVM_TYPE_HOST_ALLOC_EXP) {
+    if (type == CL_SVM_TYPE_HOST_EXP) {
         // note: currently ignores flags!
         return clHostMemAllocINTEL(
             context,
@@ -308,7 +307,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
             alignment,
             errcode_ret);
     }
-    if (type & CL_SVM_TYPE_SHARED_ALLOC_EXP) {
+    if (type == CL_SVM_TYPE_SHARED_EXP) {
         // note: currently ignores flags!
         return clSharedMemAllocINTEL(
             context,
@@ -318,16 +317,17 @@ void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
             alignment,
             errcode_ret);
     }
-    if (type & CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP) {
+    if (type == CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP) {
         return g_pNextDispatch->clSVMAlloc(
             context,
             flags,
             size,
             alignment);
     }
-    if (type & CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP) {
+    if (type == CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP ||
+        type == CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP) {
         cl_svm_mem_flags svmFlags = flags | CL_MEM_SVM_FINE_GRAIN_BUFFER;
-        if (type & CL_SVM_TYPE_ATOMICS_EXP) {
+        if (type == CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP) {
             svmFlags |= CL_MEM_SVM_ATOMICS;
         }
         return g_pNextDispatch->clSVMAlloc(
@@ -726,38 +726,35 @@ cl_int CL_API_CALL clSetKernelExecInfo_override(
                 param_name == CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_ENABLE_EXP ?
                 CL_TRUE :
                 CL_FALSE;
-            cl_int error = CL_SUCCESS;
-            auto types = *(cl_svm_type_exp*)param_value;
-            if (types & (CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP | CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP)) {
+            auto type = *(cl_svm_type_exp*)param_value;
+            switch (type) {
+            case CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP:
+            case CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP:
+            case CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP:
                 assert(0 && "indirect access for coarse-grain and fine-grain SVM is currently unsupported");
-            }
-            if (types & CL_SVM_TYPE_DEVICE_ALLOC_EXP) {
-                error |= g_pNextDispatch->clSetKernelExecInfo(
-                    kernel,
-                    CL_KERNEL_EXEC_INFO_INDIRECT_DEVICE_ACCESS_INTEL,
-                    sizeof(enable),
-                    &enable);
-            }
-            if (types & CL_SVM_TYPE_HOST_ALLOC_EXP) {
-                error |= g_pNextDispatch->clSetKernelExecInfo(
+                return CL_INVALID_VALUE;
+            case  CL_SVM_TYPE_HOST_EXP:
+                return g_pNextDispatch->clSetKernelExecInfo(
                     kernel,
                     CL_KERNEL_EXEC_INFO_INDIRECT_HOST_ACCESS_INTEL,
                     sizeof(enable),
                     &enable);
-            }
-            if (types & CL_SVM_TYPE_SHARED_ALLOC_EXP) {
-                error |= g_pNextDispatch->clSetKernelExecInfo(
+            case CL_SVM_TYPE_DEVICE_EXP:
+                return g_pNextDispatch->clSetKernelExecInfo(
+                    kernel,
+                    CL_KERNEL_EXEC_INFO_INDIRECT_DEVICE_ACCESS_INTEL,
+                    sizeof(enable),
+                    &enable);
+            case CL_SVM_TYPE_SHARED_EXP:
+                return g_pNextDispatch->clSetKernelExecInfo(
                     kernel,
                     CL_KERNEL_EXEC_INFO_INDIRECT_SHARED_ACCESS_INTEL,
                     sizeof(enable),
                     &enable);
+            default: break;
             }
-            return error;
         }
-        else {
-            return CL_INVALID_VALUE;
-        }
-        break;
+        return CL_INVALID_VALUE;
     default: break;
     }
 

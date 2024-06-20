@@ -52,7 +52,7 @@ static void init( cl::Context& context, cl::Device& device )
             h_head = (Node*)clSVMAllocWithPropertiesEXP(
                 context(),
                 nullptr,
-                CL_SVM_TYPE_HOST_ALLOC_EXP,
+                CL_SVM_TYPE_HOST_EXP,
                 CL_MEM_READ_WRITE,
                 sizeof(Node),
                 0,
@@ -69,7 +69,7 @@ static void init( cl::Context& context, cl::Device& device )
                 h_cur->pNext = (Node*)clSVMAllocWithPropertiesEXP(
                     context(),
                     nullptr,
-                    CL_SVM_TYPE_HOST_ALLOC_EXP,
+                    CL_SVM_TYPE_HOST_EXP,
                     CL_MEM_READ_WRITE,
                     sizeof(Node),
                     0,
@@ -216,7 +216,7 @@ int main(
     }
 #endif
     kernel = cl::Kernel{ program, "WalkLinkedList" };
-    cl_svm_type_exp indirectSVM = CL_SVM_TYPE_HOST_ALLOC_EXP;
+    cl_svm_type_exp indirectSVM = CL_SVM_TYPE_HOST_EXP;
     clSetKernelExecInfo(
         kernel(),
         CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_ENABLE_EXP,

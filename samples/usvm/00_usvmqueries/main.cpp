@@ -8,6 +8,22 @@
 
 #include <CL/opencl.hpp>
 
+#define CASE_TO_STRING(_e) case _e: return #_e;
+
+static const char* svm_type_to_string(cl_svm_type_exp type)
+{
+    switch (type) {
+    CASE_TO_STRING(CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP);
+    CASE_TO_STRING(CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP);
+    CASE_TO_STRING(CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP);
+    CASE_TO_STRING(CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP);
+    CASE_TO_STRING(CL_SVM_TYPE_HOST_EXP);
+    CASE_TO_STRING(CL_SVM_TYPE_DEVICE_EXP);
+    CASE_TO_STRING(CL_SVM_TYPE_SHARED_EXP);
+    default: return "Unknown cl_svm_type_exp";
+    }
+}
+
 void PrintDeviceSVMCaps(
     const char* label,
     cl_device_svm_capabilities svmcaps )
@@ -23,23 +39,13 @@ void PrintDeviceSVMCaps(
         ( svmcaps & CL_DEVICE_SVM_SHARED_ALLOC_EXP   ) ? "\n\t\tCL_DEVICE_SVM_SHARED_ALLOC_EXP"    : "" );
 }
 
-void PrintSVMMemFlags(
+void PrintUSVMType(
     const char* label,
     cl_svm_type_exp type)
 {
-    if (type == 0) {
-        printf("\t\t%s: (none)\n", label);
-    } else {
-        printf("\t\t%s: %s%s%s%s%s%s%s\n",
-            label,
-            (type & CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP ) ? "\n\t\t\tCL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP" : "",
-            (type & CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP   ) ? "\n\t\t\tCL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP" : "",
-            (type & CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP   ) ? "\n\t\t\tCL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP" : "",
-            (type & CL_SVM_TYPE_ATOMICS_EXP             ) ? "\n\t\t\tCL_SVM_TYPE_ATOMICS_EXP" : "",
-            (type & CL_SVM_TYPE_DEVICE_ALLOC_EXP        ) ? "\n\t\t\tCL_SVM_TYPE_DEVICE_ALLOC_EXP" : "",
-            (type & CL_SVM_TYPE_HOST_ALLOC_EXP          ) ? "\n\t\t\tCL_SVM_TYPE_HOST_ALLOC_EXP" : "",
-            (type & CL_SVM_TYPE_SHARED_ALLOC_EXP        ) ? "\n\t\t\tCL_SVM_TYPE_SHARED_ALLOC_EXP" : "");
-    }
+    printf("\t\t%s: %s\n",
+        label,
+        svm_type_to_string(type));
 }
 
 void PrintUSVMCaps(
@@ -118,7 +124,7 @@ int main(
             for (size_t t = 0; t < usmTypes.size(); t++)
             {
                 printf("\tUSM Type[%zu]:\n", t);
-                PrintSVMMemFlags( "type", usmTypes[t].type );
+                PrintUSVMType( "type", usmTypes[t].type );
                 PrintUSVMCaps("capabilities", usmTypes[t].capabilities);
             }
 
