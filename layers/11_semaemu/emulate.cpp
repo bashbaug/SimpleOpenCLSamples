@@ -588,7 +588,7 @@ bool clGetDeviceInfo_override(
                 memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                 strcpy(extension.name, CL_KHR_SEMAPHORE_EXTENSION_NAME);
 
-                extension.version = CL_MAKE_VERSION(0, 9, 0);
+                extension.version = version_cl_khr_semaphore;
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
@@ -767,7 +767,7 @@ bool clGetPlatformInfo_override(
                 memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                 strcpy(extension.name, CL_KHR_SEMAPHORE_EXTENSION_NAME);
 
-                extension.version = CL_MAKE_VERSION(0, 9, 0);
+                extension.version = version_cl_khr_semaphore;
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
