@@ -72,7 +72,13 @@ typedef struct _cl_semaphore_khr
 
         std::vector<cl_device_id> devices;
 
-        if( properties )
+        if ( properties == nullptr )
+            errorCode = CL_INVALID_VALUE;
+
+        if ( context == nullptr )
+            errorCode =  CL_INVALID_CONTEXT;
+
+        if( errorCode == CL_SUCCESS && properties )
         {
             const cl_semaphore_properties_khr* check = properties;
             bool found_CL_SEMAPHORE_TYPE_KHR = false;
@@ -85,7 +91,7 @@ typedef struct _cl_semaphore_khr
                 case CL_SEMAPHORE_TYPE_KHR:
                     if( found_CL_SEMAPHORE_TYPE_KHR )
                     {
-                        errorCode = CL_INVALID_VALUE;
+                        errorCode = CL_INVALID_PROPERTY;
                     }
                     else
                     {
@@ -97,7 +103,7 @@ typedef struct _cl_semaphore_khr
                 case CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR:
                     if( found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR )
                     {
-                        errorCode = CL_INVALID_VALUE;
+                        errorCode = CL_INVALID_PROPERTY;
                     }
                     else
                     {
@@ -112,11 +118,14 @@ typedef struct _cl_semaphore_khr
                     }
                     break;
                 default:
-                    errorCode = CL_INVALID_VALUE;
+                    errorCode =  CL_INVALID_PROPERTY;
                     break;
                 }
             }
             numProperties = check - properties + 1;
+
+            if ( errorCode == CL_SUCCESS && type == ~0)
+                errorCode = CL_INVALID_VALUE;
 
             // validate device handles.
             if (!devices.empty()) {
@@ -139,16 +148,17 @@ typedef struct _cl_semaphore_khr
               }
             }
         }
-        switch( type )
-        {
-        case CL_SEMAPHORE_TYPE_BINARY_KHR:
+
+        if (errorCode == CL_SUCCESS) {
+          switch (type) {
+          case CL_SEMAPHORE_TYPE_BINARY_KHR:
             break;
-        default:
-            errorCode = CL_INVALID_VALUE;
+          default:
+            errorCode = CL_INVALID_PROPERTY;
+          }
         }
-        if( errcode_ret )
-        {
-            errcode_ret[0] = errorCode;
+        if (errcode_ret) {
+          errcode_ret[0] = errorCode;
         }
         if( errorCode == CL_SUCCESS )
         {
