@@ -3395,6 +3395,13 @@ server's OpenCL/api-docs repository.
             <param><type>void</type>*                           <name>ptr</name></param>
         </command>
         <command>
+            <proto><type>cl_int</type>                          <name>clGetSuggestedSVMTypeEXP</name></proto>
+            <param><type>cl_context</type>                      <name>context</name></param>
+            <param><type>cl_device_id</type>                    <name>device</name></param>
+            <param><type>cl_svm_type_capabilities_exp</type>    <name>capabilities</name></param>
+            <param><type>cl_svm_type_exp</type>*                <name>type</name></param>
+        </command>
+        <command>
             <proto><type>cl_int</type>                          <name>clGetSVMInfoEXP</name></proto>
             <param><type>cl_context</type>                      <name>context</name></param>
             <param>const <type>void</type>*                     <name>ptr</name></param>
@@ -7661,6 +7668,7 @@ server's OpenCL/api-docs repository.
             <require>
                 <command name="clSVMAllocWithPropertiesEXP"/>
                 <command name="clSVMFreeWithPropertiesEXP"/>
+                <command name="clGetSuggestedSVMTypeEXP"/>
                 <command name="clGetSVMInfoEXP"/>
                 <command name="clEnqueueSVMAdviseEXP"/>
             </require>

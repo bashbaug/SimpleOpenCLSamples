@@ -41,6 +41,7 @@ clGetExtensionFunctionAddressForPlatform_override(
 {
     CHECK_RETURN_EXTENSION_FUNCTION( clSVMAllocWithPropertiesEXP );
     CHECK_RETURN_EXTENSION_FUNCTION( clSVMFreeWithPropertiesEXP );
+    CHECK_RETURN_EXTENSION_FUNCTION( clGetSuggestedSVMTypeEXP );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetSVMInfoEXP );
     CHECK_RETURN_EXTENSION_FUNCTION( clEnqueueSVMMemAdviseEXP );
 

@@ -128,6 +128,26 @@ int main(
                 PrintUSVMCaps("capabilities", usmTypes[t].capabilities);
             }
 
+            cl::Context context{devices[d]};
+
+            cl_svm_type_exp type = 0;
+            clGetSuggestedSVMTypeEXP(
+                context(),
+                devices[d](),
+                CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP,
+                &type);
+            printf("\tSuggested SVM type with device handle is: %s\n",
+                type == 0 ? "(none)" : svm_type_to_string(type));
+
+            type = 0;
+            clGetSuggestedSVMTypeEXP(
+                context(),
+                nullptr,
+                CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP,
+                &type);
+            printf("\tSuggested SVM type NULL device handle is: %s\n",
+                type == 0 ? "(none)" : svm_type_to_string(type));
+
             printf( "\n" );
         }
     }

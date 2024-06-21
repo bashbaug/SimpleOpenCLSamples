@@ -24,6 +24,12 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesEXP_EMU(
     cl_svm_free_flags_exp flags,
     void* ptr);
 
+cl_int CL_API_CALL clGetSuggestedSVMTypeEXP_EMU(
+    cl_context context,
+    cl_device_id device,
+    cl_svm_type_capabilities_exp capabilities,
+    cl_svm_type_exp* type);
+
 cl_int CL_API_CALL clGetSVMInfoEXP_EMU(
     cl_context context,
     const void* ptr,

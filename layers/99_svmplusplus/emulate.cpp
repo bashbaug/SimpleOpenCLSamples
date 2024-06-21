@@ -19,7 +19,7 @@
 #include "emulate.h"
 
 static constexpr cl_version version_cl_exp_new_svm_extension =
-    CL_MAKE_VERSION(0, 1, 0);
+    CL_MAKE_VERSION(0, 1, 4);
 
 struct SLayerContext
 {
@@ -364,6 +364,77 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesEXP_EMU(
     g_pNextDispatch->clSVMFree(
         context,
         ptr);
+    return CL_SUCCESS;
+}
+
+static cl_svm_type_exp getSuggestedSVMTypeForDevice(
+    cl_device_id device,
+    cl_svm_type_capabilities_exp capabilities)
+{
+    auto supported = getSVMTypeCaps(device);
+    for(const auto& type : supported) {
+        if ((type.capabilities & capabilities) == capabilities) {
+            return type.type;
+        }
+    }
+
+    return 0;
+}
+
+cl_int CL_API_CALL clGetSuggestedSVMTypeEXP_EMU(
+    cl_context context,
+    cl_device_id device,
+    cl_svm_type_capabilities_exp capabilities,
+    cl_svm_type_exp* type_ret)
+{
+    if (type_ret == nullptr) {
+        return CL_INVALID_VALUE;
+    }
+
+    cl_svm_type_exp type = 0;
+    if (device) {
+        type = getSuggestedSVMTypeForDevice(
+            device,
+            capabilities);
+    } else {
+        size_t numDevices = 0;
+        g_pNextDispatch->clGetContextInfo(
+            context,
+            CL_CONTEXT_NUM_DEVICES,
+            sizeof(numDevices),
+            &numDevices,
+            nullptr);
+
+        if (numDevices == 1) {
+            g_pNextDispatch->clGetContextInfo(
+                context,
+                CL_CONTEXT_DEVICES,
+                sizeof(device),
+                &device,
+                nullptr);
+            type = getSuggestedSVMTypeForDevice(
+                device,
+                capabilities);
+        } else {
+            std::vector<cl_device_id> devices(numDevices);
+            g_pNextDispatch->clGetContextInfo(
+                context,
+                CL_CONTEXT_DEVICES,
+                numDevices * sizeof(cl_device_id),
+                devices.data(),
+                nullptr);
+            for(const auto& device : devices) {
+                type = getSuggestedSVMTypeForDevice(
+                    device,
+                    capabilities);
+                if (type != 0) {
+                    break;
+                }
+            }
+        }
+    }
+
+    type_ret[0] = type;
     return CL_SUCCESS;
 }
 
