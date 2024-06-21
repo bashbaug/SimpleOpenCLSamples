@@ -27,7 +27,7 @@
 #endif
 
 static constexpr cl_version version_cl_khr_semaphore =
-    CL_MAKE_VERSION(0, 9, 1);
+    CL_MAKE_VERSION(1, 0, 0);
 
 SLayerContext& getLayerContext(void)
 {
@@ -35,26 +35,39 @@ SLayerContext& getLayerContext(void)
     return c;
 }
 
-static bool isDeviceWithinContext(const cl_context context,
-                                  const cl_device_id device) {
-  cl_uint numDevices = 0;
-  cl_int error = g_pNextDispatch->clGetContextInfo(
-      context, CL_CONTEXT_NUM_DEVICES, sizeof(cl_uint), &numDevices, NULL);
-  if (error != CL_SUCCESS || numDevices == 0)
+static bool isDeviceWithinContext(
+    const cl_context context,
+    const cl_device_id device)
+{
+    cl_uint numDevices = 0;
+    cl_int error = g_pNextDispatch->clGetContextInfo(
+        context,
+        CL_CONTEXT_NUM_DEVICES,
+        sizeof(cl_uint),
+        &numDevices,
+        nullptr);
+    if (error != CL_SUCCESS || numDevices == 0) {
+        return false;
+    }
+
+    std::vector<cl_device_id> devices(numDevices);
+    error = g_pNextDispatch->clGetContextInfo(
+        context,
+        CL_CONTEXT_DEVICES,
+        numDevices * sizeof(cl_device_id),
+        devices.data(),
+        nullptr);
+    if (error != CL_SUCCESS) {
+        return false;
+    }
+
+    for (auto check : devices) {
+        if (check == device) {
+            return true;
+        }
+    }
+
     return false;
-
-  std::vector<cl_device_id> devices(numDevices, 0);
-  error = g_pNextDispatch->clGetContextInfo(context, CL_CONTEXT_DEVICES,
-                                            numDevices * sizeof(cl_device_id),
-                                            devices.data(), NULL);
-  if (error != CL_SUCCESS)
-    return false;
-
-  for (auto dev : devices)
-    if (dev == device)
-      return true;
-
-  return false;
 }
 
 typedef struct _cl_semaphore_khr
@@ -64,21 +77,24 @@ typedef struct _cl_semaphore_khr
         const cl_semaphore_properties_khr* properties,
         cl_int* errcode_ret)
     {
-        cl_semaphore_khr semaphore = NULL;
+        cl_semaphore_khr semaphore = nullptr;
         cl_int errorCode = CL_SUCCESS;
 
         ptrdiff_t numProperties = 0;
         cl_semaphore_type_khr type = ~0;
-
         std::vector<cl_device_id> devices;
 
-        if ( properties == nullptr )
+        if( properties == nullptr )
+        {
             errorCode = CL_INVALID_VALUE;
+        }
 
-        if ( context == nullptr )
+        if( context == nullptr )
+        {
             errorCode =  CL_INVALID_CONTEXT;
+        }
 
-        if( errorCode == CL_SUCCESS && properties )
+        if( errorCode == CL_SUCCESS )
         {
             const cl_semaphore_properties_khr* check = properties;
             bool found_CL_SEMAPHORE_TYPE_KHR = false;
@@ -111,7 +127,8 @@ typedef struct _cl_semaphore_khr
                         check++;
                         while(*check != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
                         {
-                            devices.push_back(((cl_device_id*)check)[0]);
+                            cl_device_id device = ((cl_device_id*)check)[0];
+                            devices.push_back(device);
                             check++;
                         }
                         check++;
@@ -124,41 +141,58 @@ typedef struct _cl_semaphore_khr
             }
             numProperties = check - properties + 1;
 
-            if ( errorCode == CL_SUCCESS && type == ~0)
-                errorCode = CL_INVALID_VALUE;
+            switch( type )
+            {
+            case CL_SEMAPHORE_TYPE_BINARY_KHR:
+                break;
+            default:
+                errorCode = CL_INVALID_PROPERTY;
+                break;
+            }
 
-            // validate device handles.
-            if (!devices.empty()) {
-              // for now - if CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR is specified
-              // as part of sema_props, but it does not identify exactly one
-              // valid device
-              if (devices.size() > 1) {
-                errorCode = CL_INVALID_DEVICE;
-              } else {
-                // if a device identified by CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR
-                // is not one of the devices within context
-                std::vector<cl_semaphore_type_khr> types;
-                for (auto device : devices) {
-                  if (device == nullptr ||
-                      !isDeviceWithinContext(context, device)) {
-                    errorCode = CL_INVALID_DEVICE;
-                    break;
-                  }
+            if( devices.empty() )
+            {
+                // If the device handle list is empty, the semaphore is
+                // accessible to all devices in the context, and the context
+                // must be a single-device context.
+                cl_uint numDevices = 0;
+                g_pNextDispatch->clGetContextInfo(
+                    context,
+                    CL_CONTEXT_NUM_DEVICES,
+                    sizeof(cl_uint),
+                    &numDevices,
+                    nullptr);
+                if( numDevices != 1 )
+                {
+                    errorCode = CL_INVALID_PROPERTY;
                 }
-              }
+            }
+            else
+            {
+                // If the device handle list is present, it must contain
+                // exactly one device.
+                if( devices.size() != 1 )
+                {
+                    errorCode = CL_INVALID_DEVICE;
+                }
+                else
+                {
+                    // Additionally, the device must be within the context.
+                    for( auto device : devices )
+                    {
+                        if( device == nullptr ||
+                            !isDeviceWithinContext(context, device) )
+                        {
+                            errorCode = CL_INVALID_DEVICE;
+                            break;
+                        }
+                    }
+                }
             }
         }
-
-        if (errorCode == CL_SUCCESS) {
-          switch (type) {
-          case CL_SEMAPHORE_TYPE_BINARY_KHR:
-            break;
-          default:
-            errorCode = CL_INVALID_PROPERTY;
-          }
-        }
-        if (errcode_ret) {
-          errcode_ret[0] = errorCode;
+        if( errcode_ret )
+        {
+            errcode_ret[0] = errorCode;
         }
         if( errorCode == CL_SUCCESS )
         {
@@ -168,7 +202,6 @@ typedef struct _cl_semaphore_khr
                 semaphore->Properties.begin(),
                 properties,
                 properties + numProperties );
-
             semaphore->Devices=devices;
         }
         return semaphore;
@@ -196,7 +229,7 @@ private:
         Context(context),
         Type(type),
         RefCount(1),
-        Event(NULL) {}
+        Event(nullptr) {}
 } cli_semaphore;
 
 cl_semaphore_khr CL_API_CALL clCreateSemaphoreWithPropertiesKHR_EMU(
@@ -236,7 +269,7 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
         {
             return CL_INVALID_SEMAPHORE_KHR;
         }
-        if( semaphores[i]->Event == NULL )
+        if( semaphores[i]->Event == nullptr )
         {
             // This is a semaphore that is not in a pending signal
             // or signaled state.  What should happen here?
@@ -256,7 +289,7 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
     {
         g_pNextDispatch->clReleaseEvent(
             semaphores[i]->Event);
-        semaphores[i]->Event = NULL;
+        semaphores[i]->Event = nullptr;
     }
 
     if( event )
@@ -287,7 +320,7 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
         {
             return CL_INVALID_SEMAPHORE_KHR;
         }
-        if( semaphores[i]->Event != NULL )
+        if( semaphores[i]->Event != nullptr )
         {
             // This is a semaphore that is in a pending signal or signaled
             // state.  What should happen here?
@@ -295,8 +328,8 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
         }
     }
 
-    cl_event    local_event = NULL;
-    if( event == NULL )
+    cl_event    local_event = nullptr;
+    if( event == nullptr )
     {
         event = &local_event;
     }
@@ -314,11 +347,11 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
             semaphores[i]->Event );
     }
 
-    if( local_event != NULL )
+    if( local_event != nullptr )
     {
         g_pNextDispatch->clReleaseEvent(
             local_event );
-        local_event = NULL;
+        local_event = nullptr;
     }
     else
     {
@@ -386,7 +419,7 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
             // semaphore is in the unsignaled state and one if it is in
             // the signaled state.
             cl_semaphore_payload_khr payload = 0;
-            if( semaphore->Event != NULL )
+            if( semaphore->Event != nullptr )
             {
                 cl_int  eventStatus = 0;
                 g_pNextDispatch->clGetEventInfo(
@@ -394,7 +427,7 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
                     CL_EVENT_COMMAND_EXECUTION_STATUS,
                     sizeof( eventStatus ),
                     &eventStatus,
-                    NULL );
+                    nullptr );
                 if( eventStatus == CL_COMPLETE )
                 {
                     payload = 1;
