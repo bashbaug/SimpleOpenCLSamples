@@ -35,6 +35,28 @@ SLayerContext& getLayerContext(void)
     return c;
 }
 
+static bool isDeviceWithinContext(const cl_context context,
+                                  const cl_device_id device) {
+  cl_uint numDevices = 0;
+  cl_int error = g_pNextDispatch->clGetContextInfo(
+      context, CL_CONTEXT_NUM_DEVICES, sizeof(cl_uint), &numDevices, NULL);
+  if (error != CL_SUCCESS || numDevices == 0)
+    return false;
+
+  std::vector<cl_device_id> devices(numDevices, 0);
+  error = g_pNextDispatch->clGetContextInfo(context, CL_CONTEXT_DEVICES,
+                                            numDevices * sizeof(cl_device_id),
+                                            devices.data(), NULL);
+  if (error != CL_SUCCESS)
+    return false;
+
+  for (auto dev : devices)
+    if (dev == device)
+      return true;
+
+  return false;
+}
+
 typedef struct _cl_semaphore_khr
 {
     static _cl_semaphore_khr* create(
@@ -47,6 +69,8 @@ typedef struct _cl_semaphore_khr
 
         ptrdiff_t numProperties = 0;
         cl_semaphore_type_khr type = ~0;
+
+        std::vector<cl_device_id> devices;
 
         if( properties )
         {
@@ -78,11 +102,13 @@ typedef struct _cl_semaphore_khr
                     else
                     {
                         found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR = true;
-                        ++check;
-                        while(*check++ != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
+                        check++;
+                        while(*check != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
                         {
-                            // TODO: validate device handles.
+                            devices.push_back(((cl_device_id*)check)[0]);
+                            check++;
                         }
+                        check++;
                     }
                     break;
                 default:
@@ -91,6 +117,27 @@ typedef struct _cl_semaphore_khr
                 }
             }
             numProperties = check - properties + 1;
+
+            // validate device handles.
+            if (!devices.empty()) {
+              // for now - if CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR is specified
+              // as part of sema_props, but it does not identify exactly one
+              // valid device
+              if (devices.size() > 1) {
+                errorCode = CL_INVALID_DEVICE;
+              } else {
+                // if a device identified by CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR
+                // is not one of the devices within context
+                std::vector<cl_semaphore_type_khr> types;
+                for (auto device : devices) {
+                  if (device == nullptr ||
+                      !isDeviceWithinContext(context, device)) {
+                    errorCode = CL_INVALID_DEVICE;
+                    break;
+                  }
+                }
+              }
+            }
         }
         switch( type )
         {
@@ -111,6 +158,8 @@ typedef struct _cl_semaphore_khr
                 semaphore->Properties.begin(),
                 properties,
                 properties + numProperties );
+
+            semaphore->Devices=devices;
         }
         return semaphore;
     }
@@ -124,6 +173,7 @@ typedef struct _cl_semaphore_khr
     const cl_context Context;
     const cl_semaphore_type_khr Type;
     std::vector<cl_semaphore_properties_khr> Properties;
+    std::vector<cl_device_id>   Devices;
 
     std::atomic<cl_uint> RefCount;
     cl_event Event;
@@ -345,6 +395,16 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
             return writeParamToMemory(
                 param_value_size,
                 payload,
+                param_value_size_ret,
+                ptr );
+        }
+        break;
+    case CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR:
+        {
+            auto ptr = (cl_device_id*)param_value;
+            return writeVectorToMemory(
+                param_value_size,
+                semaphore->Devices,
                 param_value_size_ret,
                 ptr );
         }
