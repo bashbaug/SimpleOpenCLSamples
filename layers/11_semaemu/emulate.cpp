@@ -114,6 +114,15 @@ typedef struct _cl_semaphore_khr
                         found_CL_SEMAPHORE_TYPE_KHR = true;
                         type = ((const cl_semaphore_type_khr*)(check + 1))[0];
                         check += 2;
+
+                        switch( type )
+                        {
+                        case CL_SEMAPHORE_TYPE_BINARY_KHR:
+                            break;
+                        default:
+                            errorCode = CL_INVALID_PROPERTY;
+                            break;
+                        }
                     }
                     break;
                 case CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR:
@@ -141,13 +150,10 @@ typedef struct _cl_semaphore_khr
             }
             numProperties = check - properties + 1;
 
-            switch( type )
+            // The semaphore type must be included in the property list.
+            if( !found_CL_SEMAPHORE_TYPE_KHR )
             {
-            case CL_SEMAPHORE_TYPE_BINARY_KHR:
-                break;
-            default:
-                errorCode = CL_INVALID_PROPERTY;
-                break;
+                errorCode = CL_INVALID_VALUE;
             }
 
             if( devices.empty() )
