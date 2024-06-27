@@ -28,6 +28,8 @@ int D = 64;     // Head Dimension (AKA Head Size)
 
 int C = 0;      // Channels
 
+bool causal = false;
+
 // Note:
 //  C  = NH * D
 //  C  = D * NH
@@ -97,14 +99,15 @@ static void fill_input(std::vector<TT>& M, size_t count)
 
 // ----------------------------------------------------------------------------
 // CPU code reference - adapted from llm.c
+// This implements the naive three-pass algorithm.
 template <typename TT>
-void attention_forward_cpu(
+void attention_forward_3p_cpu(
     std::vector<TT>& out,
     std::vector<TT>& preatt,
     std::vector<TT>& att,
-    const std::vector<TT>& q,
-    const std::vector<TT>& k,
-    const std::vector<TT>& v)
+    const std::vector<TT>& q_base,
+    const std::vector<TT>& k_base,
+    const std::vector<TT>& v_base)
 {
     // q, k, v are (B, NH, T, D)
     // preatt, att are (B, NH, T, T)
@@ -113,61 +116,427 @@ void attention_forward_cpu(
 
     for (int b = 0; b < B; b++) {
         for (int nh = 0; nh < NH; nh++) {
-            for (int t = 0; t < T; t++) {
-                const TT* query_t = q.data() + b * NH * T * D + nh * T * D + t * D;
-                TT* preatt_bth = preatt.data() + b * NH * T * T + nh * T * T + t * T;
-                TT* att_bth = att.data() + b * NH * T * T + nh * T * T + t * T;
+            for (int to = 0; to < T; to++) {    // outer t, row in the attention matrix
+                const int tCheck = causal ? to + 1 : T;
 
-                // pass 1: calculate query dot key and maxval
+                // pass 1: calculate query dot key
+                const TT* q = q_base.data() + b * NH * T * D + nh * T * D + to * D;
+                TT* preatt_bth = preatt.data() + b * NH * T * T + nh * T * T + to * T;
+                for (int ti = 0; ti < T; ti++) {// inner t, col in the attention matrix
+                    if (causal && ti > to) {
+                        preatt_bth[ti] = -INFINITY; // causal mask
+                    }
+                    else {
+                        const TT* k = k_base.data() + b * NH * T * D + nh * T * D + ti * D;
+
+                        TT val = 0.0;
+                        for (int d = 0; d < D; d++) {
+                            val += q[d] * k[d];
+                        }
+                        val *= scale;
+                        preatt_bth[ti] = val;
+                    }
+                }
+
+                // pass 2: softmax
+                TT* att_bth = att.data() + b * NH * T * T + nh * T * T + to * T;
                 TT maxval = -10000.0; // TODO something better
-                for (int t2 = 0; t2 <= t; t2++) {
-                    const TT* key_t2 = k.data() + b * NH * T * D + nh * T * D + t2 * D;
-
-                    // (query_t) dot (key_t2)
-                    TT val = 0.0;
-                    for (int i = 0; i < D; i++) {
-                        val += query_t[i] * key_t2[i];
-                    }
-                    val *= scale;
-                    if (val > maxval) {
-                        maxval = val;
-                    }
-
-                    preatt_bth[t2] = val;
-                }
-                // pad with -INFINITY outside of autoregressive region for debugging comparisons
-                for (int t2 = t+1; t2 < T; t2++) {
-                    preatt_bth[t2] = -INFINITY;
+                for (int ti = 0; ti < tCheck; ti++) {
+                    TT val = preatt_bth[ti];
+                    maxval = std::fmax(val, maxval);
                 }
 
-                // pass 2: calculate the exp and keep track of sum
                 TT expsum = 0.0;
-                for (int t2 = 0; t2 <= t; t2++) {
-                    TT expv = std::exp(preatt_bth[t2] - maxval);
+                for (int ti = 0; ti < tCheck; ti++) {
+                    TT expv = std::exp(preatt_bth[ti] - maxval);
                     expsum += expv;
-                    att_bth[t2] = expv;
+                    att_bth[ti] = expv;
                 }
                 TT expsum_inv = (TT)(expsum == 0.0 ? 0.0 : 1.0 / expsum);
 
-                // pass 3: normalize to get the softmax
-                for (int t2 = 0; t2 < T; t2++) {
-                    if (t2 <= t) {
-                        att_bth[t2] *= expsum_inv;
+                for (int ti = 0; ti < T; ti++) {
+                    if (ti < tCheck) {
+                        att_bth[ti] *= expsum_inv;
                     } else {
                         // causal attention mask. not strictly necessary to set to zero here
                         // only doing this explicitly for debugging and checking to PyTorch
-                        att_bth[t2] = 0.0f;
+                        att_bth[ti] = 0.0f;
                     }
                 }
 
-                // pass 4: accumulate weighted values into the output of attention
-                TT* out_bth = out.data() + b * NH * T * D + nh * T * D + t * D;
-                for (int i = 0; i < D; i++) { out_bth[i] = 0.0; }
-                for (int t2 = 0; t2 <= t; t2++) {
-                    const TT* value_t2 = v.data() + b * NH * T * D + nh * T * D + t2 * D;
-                    TT att_btht2 = att_bth[t2];
-                    for (int i = 0; i < D; i++) {
-                        out_bth[i] += att_btht2 * value_t2[i];
+                // pass 3: accumulate weighted values into the output of attention
+                TT* out_bth = out.data() + b * NH * T * D + nh * T * D + to * D;
+                for (int d = 0; d < D; d++) {
+                    out_bth[d] = 0.0;
+                }
+                for (int ti = 0; ti < tCheck; ti++) {
+                    const TT* v = v_base.data() + b * NH * T * D + nh * T * D + ti * D;
+                    TT att_btht2 = att_bth[ti];
+                    for (int d = 0; d < D; d++) {
+                        out_bth[d] += att_btht2 * v[d];
+                    }
+                }
+            }
+        }
+    }
+}
+
+// This implements a two-pass algorithm.
+template <typename TT>
+void attention_forward_2p_cpu(
+    std::vector<TT>& out,
+    std::vector<TT>& preatt,
+    std::vector<TT>& att,
+    const std::vector<TT>& q_base,
+    const std::vector<TT>& k_base,
+    const std::vector<TT>& v_base)
+{
+    // q, k, v are (B, NH, T, D)
+    // preatt, att are (B, NH, T, T)
+    // output is (B, NH, T, D)
+    TT scale = (TT)(1.0 / std::sqrt(D));
+
+    for (int b = 0; b < B; b++) {
+        for (int nh = 0; nh < NH; nh++) {
+            for (int to = 0; to < T; to++) {
+                // pass 1: calculate query dot key / max / surrogate
+                const TT* q = q_base.data() + b * NH * T * D + nh * T * D + to * D;
+                TT* p = preatt.data() + b * NH * T * T + nh * T * T + to * T;
+                TT mi = -INFINITY;
+                TT di = 0.0;
+                for (int ti = 0; ti < T; ti++) {
+                    const TT* k = k_base.data() + b * NH * T * D + nh * T * D + ti * D;
+                    TT xi = 0.0;
+                    if (causal && ti > to) {
+                        xi = -INFINITY; // causal mask
+                    }
+                    else {
+                        for (int d = 0; d < D; d++) {
+                            xi += q[d] * k[d];
+                        }
+                        xi *= scale;
+
+                        TT mim1 = mi;
+                        mi = fmax(mim1, xi);
+
+                        TT smxi = std::exp(xi - mi);
+                        TT exp_dmim1mi = std::exp(mim1 - mi);
+                        di = di * exp_dmim1mi + smxi;
+                    }
+
+                    p[ti] = xi;
+                }
+
+                // pass 2: softmax / output
+                TT* o = out.data() + b * NH * T * D + nh * T * D + to * D;
+                TT* a = att.data() + b * NH * T * T + nh * T * T + to * T;
+                for (int d = 0; d < D; d++) {
+                    o[d] = 0.0;
+                }
+                for (int ti = 0; ti < T; ti++) {
+                    const TT* v = v_base.data() + b * NH * T * D + nh * T * D + ti * D;
+                    if (causal && ti > to) {
+                        a[ti] = 0.0f;
+                    }
+                    else {
+                        TT att = std::exp(p[ti] - mi) / di;
+                        a[ti] = att;
+                        for (int d = 0; d < D; d++) {
+                            o[d] += att * v[d];
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// This implements the one-pass flash attention algorithm without any blocking.
+template <typename TT>
+void attention_forward_1p_cpu(
+    std::vector<TT>& out,
+    const std::vector<TT>& q_base,
+    const std::vector<TT>& k_base,
+    const std::vector<TT>& v_base)
+{
+    // q, k, v are (B, NH, T, D)
+    // output is (B, NH, T, D)
+    const TT scale = (TT)(1.0 / std::sqrt(D));
+
+    for (int b = 0; b < B; b++) {
+        for (int nh = 0; nh < NH; nh++) {
+            for (int to = 0; to < T; to++) {
+                // Note: we multiply the initial output value by zero, so we do not
+                // need to initialize it.
+
+                TT* o = out.data() + b * NH * T * D + nh * T * D + to * D;
+
+                const TT* q = q_base.data() + b * NH * T * D + nh * T * D + to * D;
+                TT mi = -INFINITY;
+                TT di = 0.0;
+
+                for (int ti = 0; ti < T; ti++) {
+                    const TT* k = k_base.data() + b * NH * T * D + nh * T * D + ti * D;
+                    const TT* v = v_base.data() + b * NH * T * D + nh * T * D + ti * D;
+
+                    // Compute xi = QK^T
+                    // There is only one value, so it is trivially the row maximum
+                    TT xi = 0.0;
+                    if (causal && to < ti) {
+                        xi = -INFINITY;
+                    }
+                    else {
+                        for (int d = 0; d < D; d++) {
+                            xi += q[d] * k[d];
+                        }
+                        xi *= scale;
+                    }
+
+                    // Update the running maximum
+                    TT mim1 = mi;
+                    mi = std::fmax(mim1, xi);
+
+                    // softmax(xi)
+                    TT smxi = std::exp(xi - mi);
+
+                    // Update di
+                    TT dim1 = di;
+                    TT exp_dmim1mi = std::exp(mim1 - mi);
+                    di = dim1 * exp_dmim1mi + smxi;
+
+                    // Compute the output from dim1, di, softmax(xi), and V
+                    TT om = dim1 * exp_dmim1mi / di;
+                    TT vm = smxi / di;
+                    for (int d = 0; d < D; d++) {
+                        o[d] = o[d] * om + vm * v[d];
+                    }
+                }
+            }
+        }
+    }
+}
+
+// This implements the one-pass flash attention algorithm with column blocking.
+template <typename TT>
+void attention_forward_1p_colblock_cpu(
+    std::vector<TT>& out,
+    const std::vector<TT>& q_base,
+    const std::vector<TT>& k_base,
+    const std::vector<TT>& v_base)
+{
+    const int BC = 32;
+
+    // q, k, v are (B, NH, T, D)
+    // output is (B, NH, T, D)
+    const TT scale = (TT)(1.0 / std::sqrt(D));
+
+    std::vector<TT> xi(BC);     // BC columns
+    std::vector<TT> smxi(BC);   // BC columns
+
+    // This currently only works if T is evenly divisible by BR and BC
+    if (T % BC != 0) {
+        printf("currently requires sequence length to evenly divide block columns!\n");
+        return;
+    }
+
+    for (int b = 0; b < B; b++) {
+        for (int nh = 0; nh < NH; nh++) {
+            for (int to = 0; to < T; to++) {
+                // Note: we multiply the initial output value by zero, so we do not
+                // need to initialize it.
+
+                TT* o = out.data() + b * NH * T * D + nh * T * D + to * D;
+
+                const TT* q = q_base.data() + b * NH * T * D + nh * T * D + to * D;
+                TT mi = -INFINITY;
+                TT di = 0.0;
+
+                for (int ti = 0; ti < T; ti+=BC) {
+                    const TT* k = k_base.data() + b * NH * T * D + nh * T * D + ti * D;
+                    const TT* v = v_base.data() + b * NH * T * D + nh * T * D + ti * D;
+
+                    // Compute xi = QK^T and rowmax
+                    TT rowmax = -INFINITY;
+                    for (int c = 0; c < BC; c++) {
+                        TT val = 0.0;
+                        if (causal && to < ti + c) {
+                            val = -INFINITY;
+                        }
+                        else {
+                            for (int d = 0; d < D; d++) {
+                                val += q[d] * k[c * D + d];
+                            }
+                            val *= scale;
+                        }
+                        xi[c] = val;
+                        rowmax = std::fmax(rowmax, xi[c]);
+                    }
+
+                    // Update the running maximum from the row maximum
+                    TT mim1 = mi;
+                    mi = std::fmax(mim1, rowmax);
+
+                    // softmax and rowsum
+                    TT rowsum = 0.0;
+                    for (int c = 0; c < BC; c++) {
+                        smxi[c] = std::exp(xi[c] - mi);
+                        rowsum += smxi[c];
+                    }
+
+                    // Update di
+                    TT dim1 = di;
+                    TT exp_dim1mi = std::exp(mim1 - mi);
+                    di = dim1 * exp_dim1mi + rowsum;
+
+                    // Compute the output from dim1, di, softmax(xi), and V
+                    TT om = dim1 * exp_dim1mi / di;
+                    TT vm = (TT)1.0 / di;
+                    for (int d = 0; d < D; d++) {
+                        TT val = 0.0;
+                        for (int c = 0; c < BC; c++) {
+                            val += smxi[c] * v[c * D + d];
+                        }
+                        o[d] = o[d] * om + vm * val;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// This implements the one-pass flash attention algorithm with row and column blocking.
+template <typename TT>
+void attention_forward_1p_rcblock_cpu(
+    std::vector<TT>& out,
+    const std::vector<TT>& q_base,
+    const std::vector<TT>& k_base,
+    const std::vector<TT>& v_base)
+{
+    const int BR = 32;
+    const int BC = 32;
+
+    // q, k, v are (B, NH, T, D)
+    // output is (B, NH, T, D)
+    const TT scale = (TT)(1.0 / std::sqrt(D));
+
+    // All of these caches can go into registers or SLM
+    std::vector<TT> Qcache(BR * D); // BR rows and D columns
+    std::vector<TT> Kcache(BC * D); // BC rows and D columns
+    std::vector<TT> Vcache(BC * D); // BC rows and D columns
+    std::vector<TT> Ocache(BR * D); // BR rows and D columns
+
+    std::vector<TT> xi(BR * BC);    // BR rows and BC columns
+    std::vector<TT> rowmax(BR);     // BR x local maximum
+    std::vector<TT> rowsum(BR);     // BR x local sum
+    std::vector<TT> mim1(BR);       // BR x previous maximum
+    std::vector<TT> mi(BR);         // BR x running maximum
+    std::vector<TT> dim1(BR);       // BR x previous surrogate
+    std::vector<TT> di(BR);         // BR x surrogate
+
+    // This currently only works if T is evenly divisible by BR and BC
+    if (T % BR != 0 || T % BC != 0) {
+        printf("currently requires sequence length to evenly divide block rows and columns!\n");
+        return;
+    }
+
+    for (int b = 0; b < B; b++) {
+        for (int nh = 0; nh < NH; nh++) {
+            for (int to = 0; to < T; to+=BR) {
+                // Note: we multiply the initial output value by zero, so we do not
+                // need to initialize it.
+
+                // Load Q data into the Qcache
+                {
+                    const TT* q = q_base.data() + b * NH * T * D + nh * T * D + to * D;
+                    for (int r = 0; r < BR; r++) {
+                        for (int d = 0; d < D; d++) {
+                            Qcache[r * D + d] = q[r * D + d];
+                        }
+                    }
+                }
+
+                // Initialize the maximum and surrogate
+                for (int r = 0; r < BR; r++) {
+                    mi[r] = -INFINITY;
+                    di[r] = 0.0;
+                }
+
+                for (int ti = 0; ti < T; ti+=BC) {
+                    // Load K and V data into the Kcache and Vcache
+                    {
+                        const TT* k = k_base.data() + b * NH * T * D + nh * T * D + ti * D;
+                        const TT* v = v_base.data() + b * NH * T * D + nh * T * D + ti * D;
+                        for (int c = 0; c < BC; c++) {
+                            for (int d = 0; d < D; d++) {
+                                Kcache[c * D + d] = k[c * D + d];
+                                Vcache[c * D + d] = v[c * D + d];
+                            }
+                        }
+                    }
+
+                    // Compute xi = QK^T and rowmax
+                    for (int r = 0; r < BR; r++) {
+                        rowmax[r] = -INFINITY;
+                        for (int c = 0; c < BC; c++) {
+                            TT val = 0.0;
+                            if (causal && to + r < ti + c) {
+                                val = -INFINITY;
+                            }
+                            else {
+                                for (int d = 0; d < D; d++) {
+                                    val += Qcache[r * D + d] * Kcache[c * D + d];
+                                }
+                                val *= scale;
+                            }
+                            xi[r * BC + c] = val;
+                            rowmax[r] = std::fmax(rowmax[r], val);
+                        }
+                    }
+
+                    // Update the running maximum from the row maximum
+                    for (int r = 0; r < BR; r++) {
+                        mim1[r] = mi[r];
+                        mi[r] = std::fmax(mim1[r], rowmax[r]);
+                    }
+
+                    // softmax and rowsum
+                    for (int r = 0; r < BR; r++) {
+                        rowsum[r] = 0.0;
+                        for (int c = 0; c < BC; c++) {
+                            TT val = xi[r * BC + c];
+                            val = std::exp(val - mi[r]); //std::exp(val - rowmax[r]);
+                            xi[r * BC + c] = val;
+                            rowsum[r] += val;
+                        }
+                    }
+
+                    // Update di
+                    for (int r = 0; r < BR; r++) {
+                        dim1[r] = di[r];
+                        di[r] = dim1[r] * std::exp(mim1[r] - mi[r]) +
+                            rowsum[r]; // * std::exp(rowmax[r] - mi[r]);
+                    }
+
+                    // Compute the new running output from xi and V
+                    for (int r = 0; r < BR; r++) {
+                        TT om = dim1[r] * std::exp(mim1[r] - mi[r]) / di[r];
+                        TT vm = (TT)1.0 / di[r]; //std::exp(rowmax[r] - mi[r]) / di[r];
+                        for (int d = 0; d < D; d++) {
+                            TT val = 0.0;
+                            for (int c = 0; c < BC; c++) {
+                                val += xi[r * BC + c] * Vcache[c * D + d];
+                            }
+                            Ocache[r * D + d] = Ocache[r * D + d] * om + vm * val;
+                        }
+                    }
+                }
+
+                {
+                    TT* o = out.data() + b * NH * T * D + nh * T * D + to * D;
+                    for (int r = 0; r < BR; r++) {
+                        for (int d = 0; d < D; d++) {
+                            o[r * D + d] = Ocache[r * D + d];
+                        }
                     }
                 }
             }
@@ -179,7 +548,7 @@ template <typename TT>
 void check_results(
     const std::vector<TT>& check,
     const std::vector<TT>& reference,
-    TT tolerance = 1e-4)
+    TT tolerance = 1e-5)
 {
     if (check.size() != reference.size()) {
         printf("Size mismatch?  %zu vs %zu\n", check.size(), reference.size());
@@ -207,9 +576,9 @@ static float hw_time(cl::Event& event)
     return ns / 1e9f;
 }
 
-// This implements the naive algorithm.
+// This implements the naive three pass algorithm.
 // It has separate kernels for each of the three steps.
-static void naive_attention_forward(
+static void naive_3p_attention_forward(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& out, cl::Buffer& preatt, cl::Buffer& att,
     cl::Buffer& q, cl::Buffer& k, cl::Buffer& v,
@@ -220,9 +589,9 @@ static void naive_attention_forward(
 {
     printf("%80s: ", __FUNCTION__); fflush(stdout);
 
-    cl::Kernel naive_query_key{program, "naive_query_key"};
-    cl::Kernel naive_softmax{program, "naive_softmax"};
-    cl::Kernel naive_value{program, "naive_value"};
+    cl::Kernel naive_query_key{program, "naive_3p_query_key"};
+    cl::Kernel naive_softmax{program, "naive_3p_softmax"};
+    cl::Kernel naive_value{program, "naive_3p_value"};
     if (naive_query_key() == nullptr ||
         naive_softmax() == nullptr ||
         naive_value() == nullptr) {
@@ -286,7 +655,7 @@ static void naive_attention_forward(
 
 // This is a port of the minimal flash attention, see:
 // https://github.com/tspeterkim/flash-attention-minimal
-static void flash_attention_forward(
+static void flash_attention_minimal_forward(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& out,
     cl::Buffer& q, cl::Buffer& k, cl::Buffer& v,
@@ -295,7 +664,7 @@ static void flash_attention_forward(
 {
     printf("%80s: ", __FUNCTION__); fflush(stdout);
 
-    cl::Kernel flash_attention{program, "flash_attention"};
+    cl::Kernel flash_attention{program, "flash_attention_minimal"};
     if (flash_attention() == nullptr) {
         printf("unsupported.\n");
     } else {
@@ -371,6 +740,54 @@ static void flash_attention_forward(
     }
 }
 
+static void flash_attention_short_forward(
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& out,
+    cl::Buffer& q, cl::Buffer& k, cl::Buffer& v,
+    size_t wgSize,
+    const std::vector<float>& out_ref)
+{
+    printf("%80s: ", __FUNCTION__); fflush(stdout);
+
+    cl::Kernel flash_attention{program, "flash_attention"};
+    if (flash_attention() == nullptr) {
+        printf("unsupported.\n");
+    } else {
+        const float softmax_scale = 1.0f / (float)std::sqrt(D);
+
+        cl::NDRange flash_attention_gws(B, NH, T);
+        flash_attention.setArg(0, q);
+        flash_attention.setArg(1, k);
+        flash_attention.setArg(2, v);
+        flash_attention.setArg(3, out);
+        flash_attention.setArg(4, softmax_scale);
+
+        if (!skipinit) {
+            queue.enqueueFillBuffer(out, 0, 0, out_ref.size() * sizeof(out_ref[0]));
+        }
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(flash_attention, cl::NullRange, flash_attention_gws);
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = sw_time.count();
+            best = std::min(best, elapsed);
+        }
+        printf("Best in %f seconds\n", best);
+
+        if (validate) {
+            printf("Checking results: out... "); fflush(stdout);
+            std::vector<float> out_check(out_ref.size());
+            queue.enqueueReadBuffer(out, CL_TRUE, 0, out_check.size() * sizeof(out_check[0]), out_check.data());
+            check_results(out_check, out_ref);
+            printf(" done!\n");
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     int platformIndex = 0;
@@ -390,6 +807,7 @@ int main(int argc, char** argv)
         op.add<popl::Value<int>>("T", "seqlen", "Sequence Length", T, &T);
         op.add<popl::Value<int>>("H", "numheads", "Number of Heads", NH, &NH);
         op.add<popl::Value<int>>("D", "headdim", "Head Dimension", D, &D);
+        op.add<popl::Switch>("", "causal", "Compute Causal Attention", &causal);
         op.add<popl::Value<std::string>>("", "file", "Kernel File Name", fileName, &fileName);
         op.add<popl::Value<std::string>>("", "options", "Program Build Options", buildOptions, &buildOptions);
         op.add<popl::Value<size_t>>("w", "wgsize", "Work-Group Size", wgSize, &wgSize);
@@ -471,6 +889,7 @@ int main(int argc, char** argv)
     buildOptions += " -DT=" + std::to_string(T);
     buildOptions += " -DNH=" + std::to_string(NH);
     buildOptions += " -DC=" + std::to_string(C);
+    buildOptions += " -DCAUSAL=" + std::to_string(causal ? 1 : 0);
 
     printf("Config:\n");
     printf("\tBatch Size B: %d\n", B);
@@ -516,8 +935,88 @@ int main(int argc, char** argv)
     fill_input(v_vec, v_vec.size());
 
     if (validate) {
-        printf("Computing reference...\n");
-        attention_forward_cpu(out_vec, preatt_vec, att_vec, q_vec, k_vec, v_vec);
+        {
+            printf("Computing 3p reference... "); fflush(stdout);
+            auto start = test_clock::now();
+            attention_forward_3p_cpu(out_vec, preatt_vec, att_vec, q_vec, k_vec, v_vec);
+            std::chrono::duration<float> sw_time = test_clock::now() - start;
+            auto elapsed = sw_time.count();
+            printf("done in %f seconds.\n", elapsed);
+        }
+
+#if 0
+        {
+            std::vector<float> tout_vec   (B * T * C);
+            std::vector<float> tpreatt_vec(B * NH * T * T);
+            std::vector<float> tatt_vec   (B * NH * T * T);
+
+            printf("Computing 2p reference... "); fflush(stdout);
+            auto start = test_clock::now();
+            attention_forward_2p_cpu(tout_vec, tpreatt_vec, tatt_vec, q_vec, k_vec, v_vec);
+            std::chrono::duration<float> sw_time = test_clock::now() - start;
+            auto elapsed = sw_time.count();
+            printf("done in %f seconds.\n", elapsed);
+
+            printf("Checking results: preatt... "); fflush(stdout);
+            check_results(tpreatt_vec, preatt_vec);
+            printf("Checking results: att... "); fflush(stdout);
+            check_results(tatt_vec, att_vec);
+            printf("Checking results: out... "); fflush(stdout);
+            check_results(tout_vec, out_vec);
+            printf(" done!\n");
+        }
+#endif
+
+#if 1
+        {
+            std::vector<float> tout_vec   (B * T * C);
+
+            printf("Computing 1p reference... "); fflush(stdout);
+            auto start = test_clock::now();
+            attention_forward_1p_cpu(tout_vec, q_vec, k_vec, v_vec);
+            std::chrono::duration<float> sw_time = test_clock::now() - start;
+            auto elapsed = sw_time.count();
+            printf("done in %f seconds.\n", elapsed);
+
+            printf("Checking results: out... "); fflush(stdout);
+            check_results(tout_vec, out_vec);
+            printf(" done!\n");
+        }
+#endif
+
+#if 1
+        {
+            std::vector<float> tout_vec   (B * T * C);
+
+            printf("Computing 1p column blocked reference... "); fflush(stdout);
+            auto start = test_clock::now();
+            attention_forward_1p_colblock_cpu(tout_vec, q_vec, k_vec, v_vec);
+            std::chrono::duration<float> sw_time = test_clock::now() - start;
+            auto elapsed = sw_time.count();
+            printf("done in %f seconds.\n", elapsed);
+
+            printf("Checking results: out... "); fflush(stdout);
+            check_results(tout_vec, out_vec);
+            printf(" done!\n");
+        }
+#endif
+
+#if 1
+        {
+            std::vector<float> tout_vec   (B * T * C);
+
+            printf("Computing 1p row and column blocked reference... "); fflush(stdout);
+            auto start = test_clock::now();
+            attention_forward_1p_rcblock_cpu(tout_vec, q_vec, k_vec, v_vec);
+            std::chrono::duration<float> sw_time = test_clock::now() - start;
+            auto elapsed = sw_time.count();
+            printf("done in %f seconds.\n", elapsed);
+
+            printf("Checking results: out... "); fflush(stdout);
+            check_results(tout_vec, out_vec);
+            printf(" done!\n");
+        }
+#endif
     }
 
     printf("Creating source buffers...\n");
@@ -532,11 +1031,15 @@ int main(int argc, char** argv)
     printf("Running tests...\n");
 
     if (mask & 0x2) {
-        naive_attention_forward(context, program, queue, out, preatt, att, q, k, v, wgSize, out_vec, preatt_vec, att_vec);
+        naive_3p_attention_forward(context, program, queue, out, preatt, att, q, k, v, wgSize, out_vec, preatt_vec, att_vec);
     }
 
     if (mask & 0x20) {
-        flash_attention_forward(context, program, queue, out, q, k, v, wgSize, out_vec);
+        flash_attention_minimal_forward(context, program, queue, out, q, k, v, wgSize, out_vec);
+    }
+
+    if (mask & 0x20) {
+        flash_attention_short_forward(context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
     printf("Done.\n");

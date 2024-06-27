@@ -13,7 +13,7 @@
 #define NH 12
 #endif
 
-kernel void naive_query_key(global float* preatt, global const float* q_base, global const float* k_base)
+kernel void naive_3p_query_key(global float* preatt, global const float* q_base, global const float* k_base)
 {
     const int D = C / NH; // head size
 
@@ -29,7 +29,7 @@ kernel void naive_query_key(global float* preatt, global const float* q_base, gl
     global const float* q = q_base + ((b * NH + nh) * T + tq) * D;
     global const float* k = k_base + ((b * NH + nh) * T + tk) * D;
 
-    if (tk > tq) {
+    if (CAUSAL && tk > tq) {
         preatt[idx] = -INFINITY;    // causal mask
     }
     else {
@@ -42,7 +42,7 @@ kernel void naive_query_key(global float* preatt, global const float* q_base, gl
     }
 }
 
-kernel void naive_softmax(global float* att, global const float* preatt)
+kernel void naive_3p_softmax(global float* att, global const float* preatt)
 {
     // Note: Global work size is B * T * NH
     int idx = get_global_id(0);
@@ -51,20 +51,21 @@ kernel void naive_softmax(global float* att, global const float* preatt)
     int t = (idx / NH) % T;
     int b = idx / (NH * T);
 
+    const int tCheck = CAUSAL ? t + 1 : T;
+
     global const float* preatt_bth = preatt + b*NH*T*T + h*T*T + t*T;
     global float* att_bth = att + b*NH*T*T + h*T*T + t*T;
 
     // find maxval
     float maxval = -10000.0f; // TODO something better
-    for (int t2 = 0; t2 <= t; t2++) {
-        if (preatt_bth[t2] > maxval) {
-            maxval = preatt_bth[t2];
-        }
+    for (int t2 = 0; t2 < tCheck; t2++) {
+        float val = preatt_bth[t2];
+        maxval = fmax(val, maxval);
     }
 
     // calculate the exp and keep track of sum
     float expsum = 0.0f;
-    for (int t2 = 0; t2 <= t; t2++) {
+    for (int t2 = 0; t2 < tCheck; t2++) {
         float expv = native_exp(preatt_bth[t2] - maxval);
         expsum += expv;
         att_bth[t2] = expv;
@@ -73,7 +74,7 @@ kernel void naive_softmax(global float* att, global const float* preatt)
 
     // normalize to get the softmax
     for (int t2 = 0; t2 < T; t2++) {
-        if (t2 <= t) {
+        if (t2 < tCheck) {
             att_bth[t2] *= expsum_inv;
         } else {
             // causal attention mask. not strictly necessary to set to zero here
@@ -83,7 +84,7 @@ kernel void naive_softmax(global float* att, global const float* preatt)
     }
 }
 
-kernel void naive_value(global float* out, global const float* att, global const float* v)
+kernel void naive_3p_value(global float* out, global const float* att, global const float* v_base)
 {
     const int D = C / NH; // head size
 
@@ -93,6 +94,8 @@ kernel void naive_value(global float* out, global const float* att, global const
     int t = (idx / NH) % T;
     int b = idx / (NH * T);
 
+    const int tCheck = CAUSAL ? t + 1 : T;
+
     // Note: out is (B, NH, T, D)
     global float* out_bth = out + b * NH * T * D + nh * T * D + t * D;
     global const float* att_bth = att + b*NH*T*T + nh*T*T + t*T;
@@ -100,20 +103,22 @@ kernel void naive_value(global float* out, global const float* att, global const
     for (int i = 0; i < D; i++) {
         out_bth[i] = 0.0f;
     }
-    for (int t2 = 0; t2 <= t; t2++) {
+    for (int t2 = 0; t2 < tCheck; t2++) {
         // Note: q, k, v are (B, NH, T, D)
-        global const float* value_t2 = v + + b * NH * T * D + nh * T * D + t2 * D;
+        global const float* v = v_base + + b * NH * T * D + nh * T * D + t2 * D;
         float att_btht2 = att_bth[t2];
         for (int i = 0; i < D; i++) {
-            out_bth[i] += att_btht2 * value_t2[i];
+            out_bth[i] += att_btht2 * v[i];
         }
     }
 }
 
-kernel void flash_attention(
+// This is a port of the minimal flash attention, see:
+// https://github.com/tspeterkim/flash-attention-minimal
+kernel void flash_attention_minimal(
     global const float* Q, global const float* K, global const float* V,
     const int Tc, const int Tr,
-    const int Bc, const int Br,
+    const int Bc, const int Br, // Note: this implementation requires Bc == Br!!
     const float softmax_scale,
     global float* l, global float* m, global float* O,
     local float* Qc,
@@ -126,9 +131,10 @@ kernel void flash_attention(
     // Note: Global Work Size is (B * Bc, NH)
     // Note: Local Work Size is (Bc, 1)
     //  --> Group ID is (batch index, head index)
-    const int tx = get_local_id(0);
     const int b = get_group_id(0);
     const int nh = get_group_id(1);
+    //  --> Local ID is row or column index
+    const int rc = get_local_id(0);
 
     // Note: q, k, v are (B, NH, T, D)
     const int qkv_offset = (b * NH * T * D) + (nh * T * D);
@@ -138,83 +144,129 @@ kernel void flash_attention(
 
     for (int j = 0; j < Tc; j++) {
         // Load K, V to SLM
-        for (int x = 0; x < D; x++) {
-            Kc[(tx * D) + x] = K[qkv_offset + ((Bc * j + tx) * D) + x];
-            Vc[(tx * D) + x] = V[qkv_offset + ((Bc * j + tx) * D) + x];
+        // Each work-item loads one row of Kc and Vc.
+        for (int d = 0; d < D; d++) {
+            Kc[(rc * D) + d] = K[qkv_offset + ((Bc * j + rc) * D) + d];
+            Vc[(rc * D) + d] = V[qkv_offset + ((Bc * j + rc) * D) + d];
         }
         barrier(CLK_LOCAL_MEM_FENCE);
 
         for (int i = 0; i < Tr; i++)  {
-            // if past the end of the sequence, break
-            if (i * Br + tx >= T) {
-                break;
+            // Load Q to SLM
+            // Each work-item loads one row of Qc
+            for (int d = 0; d < D; d++) {
+                Qc[(rc * D) + d] = Q[qkv_offset + ((Bc * i + rc) * D) + d];
             }
 
-            // Load Q to SRAM
-            for (int x = 0; x < D; x++) {
-                Qc[(tx * D) + x] = Q[qkv_offset + ((Bc * i + tx) * D) + x];
-            }
-
-            // SP = QK^T, row_m = rowmax(SP)
-            // with causal masking
-            float row_m = -INFINITY;
+            // Compute SP = QK^T, mi_local = rowmax(SP)
+            // Each work-item computes one row of S,
+            // from one row of Qc and Kc.
+            float mi_local = -INFINITY;
             for (int y = 0; y < Bc; y++) {
-                //if (j * Bc + y >= T) {
-                //    break;
-                //}
-                float sum = 0;
-                for (int x = 0; x < D; x++) {
-                    sum += Qc[(tx * D) + x] * Kc[(y * D) + x];
+                float xi = 0;
+                if (CAUSAL && i * Br + rc < j * Bc + y) {
+                    xi = -INFINITY;
                 }
-                sum *= softmax_scale;
-                if (i * Br + tx < j * Bc + y)
-                    sum = -INFINITY;
-                SP[(Bc * tx) + y] = sum;
-
-                if (sum > row_m)
-                    row_m = sum;
+                else {
+                    for (int d = 0; d < D; d++) {
+                        xi += Qc[(rc * D) + d] * Kc[(y * D) + d];
+                    }
+                    xi *= softmax_scale;
+                }
+                SP[(Bc * rc) + y] = xi;
+                mi_local = fmax(xi, mi_local);
             }
 
-            // SP = exp(SP - row_m), row_l = rowsum(SP)
+            // SP = exp(SP - mi_local), vm = rowsum(SP)
             // implement softmax with causal masking
-            float row_l = 0;
+            float vm = 0;
             for (int y = 0; y < Bc; y++) {
-                //if (j * Bc + y >= T) {
-                //    break;
-                //}
-                if (i * Br + tx < j * Bc + y)
-                    SP[(Bc * tx) + y] = 0;
-                else
-                    SP[(Bc * tx) + y] = native_exp(SP[(Bc * tx) + y] - row_m);
-                row_l += SP[(Bc * tx) + y];
+                SP[(Bc * rc) + y] = native_exp(SP[(Bc * rc) + y] - mi_local);
+                vm += SP[(Bc * rc) + y];
             }
 
             // Compute new m and l
-            float row_m_prev = m[lm_offset + (Br * i) + tx];
-            float row_l_prev = l[lm_offset + (Br * i) + tx];
+            float mim1 = m[lm_offset + (Br * i) + rc];
+            float dim1 = l[lm_offset + (Br * i) + rc];
 
-            float row_m_new = max(row_m_prev, row_m);
-            float row_l_new = row_l_prev * native_exp(row_m_prev - row_m_new) + row_l * native_exp(row_m - row_m_new);
+            float mi = fmax(mim1, mi_local);
+            float di = dim1 * native_exp(mim1 - mi) + vm * native_exp(mi_local - mi);
+
+            float om = dim1 * native_exp(mim1 - mi) / di;
+            vm = native_exp(mi_local - mi) / di;
 
             // Write O, l, m to HBM
-            for (int x = 0; x < D; x++) {
+            for (int d = 0; d < D; d++) {
                 float pv = 0;  // Pij * Vc
                 for (int y = 0; y < Bc; y++) {
-                    if (j * Bc + y >= T) {
-                        break;
-                    }
-                    pv += SP[(Bc * tx) + y] * Vc[(y * D) + x];
+                    //if (j * Bc + y >= T) {
+                    //    break;
+                    //}
+                    pv += SP[(Bc * rc) + y] * Vc[(y * D) + d];
                 }
                 // O is (B, NH, T, D)
-                O[qkv_offset + ((Bc * i + tx) * D) + x] =
-                    (1 / row_l_new) *
-                    (row_l_prev * native_exp(row_m_prev - row_m_new) * O[qkv_offset + ((Bc * i + tx) * D) + x] + 
-                        native_exp(row_m - row_m_new) * pv);
+                O[qkv_offset + ((Bc * i + rc) * D) + d] =
+                    om * O[qkv_offset + ((Bc * i + rc) * D) + d] +
+                     vm * pv;
             }
 
-            m[lm_offset + (Br * i) + tx] = row_m_new;
-            l[lm_offset + (Br * i) + tx] = row_l_new;
+            m[lm_offset + (Br * i) + rc] = mi;
+            l[lm_offset + (Br * i) + rc] = di;
         }
         barrier(CLK_LOCAL_MEM_FENCE); // otherwise, thread can use the wrong Kc, Vc in inner loop
+    }
+}
+
+kernel void flash_attention(
+    global const float* Q, global const float* K, global const float* V,
+    global float* O,
+    const float scale)
+{
+    const int D = C / NH; // head size
+
+    int b = get_global_id(0);
+    int nh = get_global_id(1);
+    int to = get_global_id(2);
+
+    float* o = O + b * NH * T * D + nh * T * D + to * D;
+
+    const float* q = Q + b * NH * T * D + nh * T * D + to * D;
+    float mi = -INFINITY;
+    float di = 0.0f;
+
+    for (int ti = 0; ti < T; ti++) {
+        const float* k = K + b * NH * T * D + nh * T * D + ti * D;
+        const float* v = V + b * NH * T * D + nh * T * D + ti * D;
+
+        // Compute xi = QK^T
+        float xi = 0.0;
+        if (CAUSAL && to < ti) {
+            xi = -INFINITY;
+        }
+        else {
+            for (int d = 0; d < D; d++) {
+                xi += q[d] * k[d];
+            }
+            xi *= scale;
+        }
+
+        // Update the running maximum
+        float mim1 = mi;
+        mi = fmax(mim1, xi);
+
+        // softmax(xi)
+        float smxi = native_exp(xi - mi);
+
+        // Update di
+        float dim1 = di;
+        float exp_dmim1mi = native_exp(mim1 - mi);
+        di = dim1 * exp_dmim1mi + smxi;
+
+        // Compute the output from dim1, di, softmax(xi), and v
+        float om = dim1 * exp_dmim1mi / di;
+        float vm = smxi / di;
+        for (int d = 0; d < D; d++) {
+            o[d] = o[d] * om + vm * v[d];
+        }
     }
 }
