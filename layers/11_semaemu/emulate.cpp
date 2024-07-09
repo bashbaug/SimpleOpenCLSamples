@@ -450,7 +450,7 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
         event = &local_event;
     }
 
-    cl_int retVal = g_pNextDispatch->clEnqueueMarkerWithWaitList(
+    retVal = g_pNextDispatch->clEnqueueMarkerWithWaitList(
         command_queue,
         num_events_in_wait_list,
         event_wait_list,
