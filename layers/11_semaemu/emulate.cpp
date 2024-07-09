@@ -258,9 +258,58 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
     const cl_event *event_wait_list,
     cl_event *event)
 {
+    cl_int retVal = CL_SUCCESS;
     if( num_semaphores == 0 )
     {
         return CL_INVALID_VALUE;
+    }
+
+    cl_context q_context;
+    retVal = g_pNextDispatch->clGetCommandQueueInfo(
+        command_queue, CL_QUEUE_CONTEXT, sizeof(q_context), &q_context, nullptr);
+    if (retVal != CL_SUCCESS)
+      return retVal;
+
+    // CL_INVALID_EVENT_WAIT_LIST
+    // -event_wait_list is NULL and num_events_in_wait_list is not 0, or
+    // -event_wait_list is not NULL and num_events_in_wait_list is 0, or
+    if((num_events_in_wait_list>0&&event_wait_list==nullptr) ||
+       (num_events_in_wait_list==0&&event_wait_list!=nullptr))
+    {
+        return CL_INVALID_EVENT_WAIT_LIST;
+    }
+    else
+    {
+        for (cl_uint i=0; i<num_events_in_wait_list; i++)
+        {
+          // CL_INVALID_EVENT_WAIT_LIST - event objects in event_wait_list are
+          // not valid events.
+          if (event_wait_list[i] == nullptr)
+            return CL_INVALID_EVENT_WAIT_LIST;
+
+          // CL_INVALID_CONTEXT - the context associated with command_queue and
+          // that associated with events in event_wait_list are not the same
+          cl_context e_context;
+          retVal = g_pNextDispatch->clGetEventInfo(
+              event_wait_list[i], CL_EVENT_CONTEXT, sizeof(e_context),
+              &e_context, nullptr);
+          if (retVal != CL_SUCCESS)
+            return retVal;
+          if (q_context != e_context)
+            return CL_INVALID_CONTEXT;
+
+          // CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST - the execution status
+          // of any of the events in event_wait_list is a negative integer
+          // value.
+          cl_int status = 0;
+          retVal = g_pNextDispatch->clGetEventInfo(
+              event_wait_list[i], CL_EVENT_COMMAND_EXECUTION_STATUS,
+              sizeof(status), &status, nullptr);
+          if (retVal != CL_SUCCESS)
+            return retVal;
+          if (status < 0)
+            return CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST;
+        }
     }
 
     std::vector<cl_event> combinedWaitList;
@@ -275,6 +324,12 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
         {
             return CL_INVALID_SEMAPHORE_KHR;
         }
+        if( semaphores[i]->Context != q_context)
+        {
+          // CL_INVALID_CONTEXT - the context associated with command_queue and
+          // any of the semaphore objects in sema_objects are not the same
+          return CL_INVALID_CONTEXT;
+        }
         if( semaphores[i]->Event == nullptr )
         {
             // This is a semaphore that is not in a pending signal
@@ -285,7 +340,7 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
             semaphores[i]->Event);
     }
 
-    cl_int retVal = g_pNextDispatch->clEnqueueMarkerWithWaitList(
+    retVal = g_pNextDispatch->clEnqueueMarkerWithWaitList(
         command_queue,
         (cl_uint)combinedWaitList.size(),
         combinedWaitList.data(),
@@ -315,9 +370,58 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
     const cl_event *event_wait_list,
     cl_event *event)
 {
+    cl_int retVal = CL_SUCCESS;
     if( num_semaphores == 0 )
     {
         return CL_INVALID_VALUE;
+    }
+
+    cl_context q_context;
+    retVal = g_pNextDispatch->clGetCommandQueueInfo(
+        command_queue, CL_QUEUE_CONTEXT, sizeof(q_context), &q_context, nullptr);
+    if (retVal != CL_SUCCESS)
+      return retVal;
+
+    // CL_INVALID_EVENT_WAIT_LIST
+    // -event_wait_list is NULL and num_events_in_wait_list is not 0, or
+    // -event_wait_list is not NULL and num_events_in_wait_list is 0, or
+    if((num_events_in_wait_list>0&&event_wait_list==nullptr) ||
+       (num_events_in_wait_list==0&&event_wait_list!=nullptr))
+    {
+        return CL_INVALID_EVENT_WAIT_LIST;
+    }
+    else
+    {
+        for (cl_uint i=0; i<num_events_in_wait_list; i++)
+        {
+            // CL_INVALID_EVENT_WAIT_LIST - event objects in event_wait_list are
+            // not valid events.
+            if (event_wait_list[i] == nullptr)
+              return CL_INVALID_EVENT_WAIT_LIST;
+
+            // CL_INVALID_CONTEXT - the context associated with command_queue and
+            // that associated with events in event_wait_list are not the same
+            cl_context e_context;
+            retVal = g_pNextDispatch->clGetEventInfo(
+                event_wait_list[i], CL_EVENT_CONTEXT, sizeof(e_context),
+                &e_context, nullptr);
+            if (retVal != CL_SUCCESS)
+              return retVal;
+            if (q_context != e_context)
+              return CL_INVALID_CONTEXT;
+
+            // CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST - the execution status
+            // of any of the events in event_wait_list is a negative integer
+            // value.
+            cl_int status = 0;
+            retVal = g_pNextDispatch->clGetEventInfo(
+                event_wait_list[i], CL_EVENT_COMMAND_EXECUTION_STATUS,
+                sizeof(status), &status, nullptr);
+            if (retVal != CL_SUCCESS)
+              return retVal;
+            if (status < 0)
+              return CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST;
+        }
     }
 
     for( cl_uint i = 0; i < num_semaphores; i++ )
@@ -325,6 +429,12 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
         if( !cli_semaphore::isValid(semaphores[i]) )
         {
             return CL_INVALID_SEMAPHORE_KHR;
+        }
+        if( semaphores[i]->Context != q_context)
+        {
+          // CL_INVALID_CONTEXT - the context associated with command_queue and
+          // any of the semaphore objects in sema_objects are not the same
+          return CL_INVALID_CONTEXT;
         }
         if( semaphores[i]->Event != nullptr )
         {
