@@ -280,7 +280,6 @@ void attention_forward_1p_cpu(
                     const TT* v = v_base.data() + b * NH * T * D + nh * T * D + ti * D;
 
                     // Compute xi = QK^T
-                    // There is only one value, so it is trivially the row maximum
                     TT xi = 0.0;
                     if (causal && to < ti) {
                         xi = -INFINITY;
@@ -300,16 +299,18 @@ void attention_forward_1p_cpu(
                     TT smxi = std::exp(xi - mi);
 
                     // Update di
-                    TT dim1 = di;
-                    TT exp_dmim1mi = std::exp(mim1 - mi);
-                    di = dim1 * exp_dmim1mi + smxi;
+                    TT alpha = std::exp(mim1 - mi);
+                    di = di * alpha + smxi;
 
-                    // Compute the output from dim1, di, softmax(xi), and V
-                    TT om = dim1 * exp_dmim1mi / di;
-                    TT vm = smxi / di;
+                    // Update the un-scaled output from softmax(xi) and V
                     for (int d = 0; d < D; d++) {
-                        o[d] = o[d] * om + vm * v[d];
+                        o[d] = o[d] * alpha + smxi * v[d];
                     }
+                }
+
+                // Epilog scaling (flash attention 2)
+                for (int d = 0; d < D; d++) {
+                    o[d] = o[d] / di;
                 }
             }
         }
@@ -384,20 +385,22 @@ void attention_forward_1p_colblock_cpu(
                     }
 
                     // Update di
-                    TT dim1 = di;
-                    TT exp_dim1mi = std::exp(mim1 - mi);
-                    di = dim1 * exp_dim1mi + rowsum;
+                    TT alpha = std::exp(mim1 - mi);
+                    di = di * alpha + rowsum;
 
-                    // Compute the output from dim1, di, softmax(xi), and V
-                    TT om = dim1 * exp_dim1mi / di;
-                    TT vm = (TT)1.0 / di;
+                    // Update the un-scaled output from softmax(xi) and V
                     for (int d = 0; d < D; d++) {
                         TT val = 0.0;
                         for (int c = 0; c < BC; c++) {
                             val += smxi[c] * v[c * D + d];
                         }
-                        o[d] = o[d] * om + vm * val;
+                        o[d] = o[d] * alpha + val;
                     }
+                }
+
+                // Epilog scaling (flash attention 2)
+                for (int d = 0; d < D; d++) {
+                    o[d] = o[d] / di;
                 }
             }
         }
@@ -430,7 +433,7 @@ void attention_forward_1p_rcblock_cpu(
     std::vector<TT> rowsum(BR);     // BR x local sum
     std::vector<TT> mim1(BR);       // BR x previous maximum
     std::vector<TT> mi(BR);         // BR x running maximum
-    std::vector<TT> dim1(BR);       // BR x previous surrogate
+    std::vector<TT> alpha(BR);      // BR x exponential
     std::vector<TT> di(BR);         // BR x surrogate
 
     // This currently only works if T is evenly divisible by BR and BC
@@ -504,7 +507,7 @@ void attention_forward_1p_rcblock_cpu(
                         rowsum[r] = 0.0;
                         for (int c = 0; c < BC; c++) {
                             TT val = xi[r * BC + c];
-                            val = std::exp(val - mi[r]); //std::exp(val - rowmax[r]);
+                            val = std::exp(val - mi[r]);
                             xi[r * BC + c] = val;
                             rowsum[r] += val;
                         }
@@ -512,30 +515,28 @@ void attention_forward_1p_rcblock_cpu(
 
                     // Update di
                     for (int r = 0; r < BR; r++) {
-                        dim1[r] = di[r];
-                        di[r] = dim1[r] * std::exp(mim1[r] - mi[r]) +
-                            rowsum[r]; // * std::exp(rowmax[r] - mi[r]);
+                        alpha[r] = std::exp(mim1[r] - mi[r]);
+                        di[r] = di[r] * alpha[r] + rowsum[r];
                     }
 
-                    // Compute the new running output from xi and V
+                    // Update the un-scaled output from softmax(xi) and V
                     for (int r = 0; r < BR; r++) {
-                        TT om = dim1[r] * std::exp(mim1[r] - mi[r]) / di[r];
-                        TT vm = (TT)1.0 / di[r]; //std::exp(rowmax[r] - mi[r]) / di[r];
                         for (int d = 0; d < D; d++) {
                             TT val = 0.0;
                             for (int c = 0; c < BC; c++) {
                                 val += xi[r * BC + c] * Vcache[c * D + d];
                             }
-                            Ocache[r * D + d] = Ocache[r * D + d] * om + vm * val;
+                            Ocache[r * D + d] = Ocache[r * D + d] * alpha[r] + val;
                         }
                     }
                 }
 
+                // Epilog scaling and store
                 {
                     TT* o = out.data() + b * NH * T * D + nh * T * D + to * D;
                     for (int r = 0; r < BR; r++) {
                         for (int d = 0; d < D; d++) {
-                            o[r * D + d] = Ocache[r * D + d];
+                            o[r * D + d] = Ocache[r * D + d] / di[r];
                         }
                     }
                 }
@@ -740,14 +741,20 @@ static void flash_attention_minimal_forward(
     }
 }
 
-static void flash_attention_short_forward(
+static void flash_attention_forward(
+    const std::string& kernelName,
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& out,
     cl::Buffer& q, cl::Buffer& k, cl::Buffer& v,
     size_t wgSize,
     const std::vector<float>& out_ref)
 {
-    printf("%80s: ", __FUNCTION__); fflush(stdout);
+    std::string label(__FUNCTION__);
+    label += "(";
+    label += kernelName;
+    label += ")";
+
+    printf("%80s: ", label.c_str()); fflush(stdout);
 
     cl::Kernel flash_attention{program, "flash_attention"};
     if (flash_attention() == nullptr) {
@@ -1039,7 +1046,11 @@ int main(int argc, char** argv)
     }
 
     if (mask & 0x20) {
-        flash_attention_short_forward(context, program, queue, out, q, k, v, wgSize, out_vec);
+        flash_attention_forward("flash_attention", context, program, queue, out, q, k, v, wgSize, out_vec);
+    }
+
+    if (mask & 0x20) {
+        flash_attention_forward("flash_attention_colblock", context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
     printf("Done.\n");

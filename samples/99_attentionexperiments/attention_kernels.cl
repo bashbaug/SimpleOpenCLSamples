@@ -258,15 +258,73 @@ kernel void flash_attention(
         float smxi = native_exp(xi - mi);
 
         // Update di
-        float dim1 = di;
-        float exp_dmim1mi = native_exp(mim1 - mi);
-        di = dim1 * exp_dmim1mi + smxi;
+        float alpha = native_exp(mim1 - mi);
+        di = di * alpha + smxi;
 
-        // Compute the output from dim1, di, softmax(xi), and v
-        float om = dim1 * exp_dmim1mi / di;
-        float vm = smxi / di;
+        // Update the un-scaled output from softmax(xi) and V
         for (int d = 0; d < D; d++) {
-            o[d] = o[d] * om + vm * v[d];
+            o[d] = o[d] * alpha + smxi * v[d];
         }
+    }
+
+    // Epilog scaling (flash attention 2)
+    for (int d = 0; d < D; d++) {
+        o[d] = o[d] * native_recip(di);
+    }
+}
+
+kernel void flash_attention_colblock(
+    global const float* Q, global const float* K, global const float* V,
+    global float* O,
+    const float scale)
+{
+    const int D = C / NH; // head size
+
+    int b = get_global_id(0);
+    int nh = get_global_id(1);
+    int to = get_global_id(2);
+
+    float* o = O + b * NH * T * D + nh * T * D + to * D;
+
+    const float* q = Q + b * NH * T * D + nh * T * D + to * D;
+    float mi = -INFINITY;
+    float di = 0.0f;
+
+    for (int ti = 0; ti < T; ti++) {
+        const float* k = K + b * NH * T * D + nh * T * D + ti * D;
+        const float* v = V + b * NH * T * D + nh * T * D + ti * D;
+
+        // Compute xi = QK^T
+        float xi = 0.0;
+        if (CAUSAL && to < ti) {
+            xi = -INFINITY;
+        }
+        else {
+            for (int d = 0; d < D; d++) {
+                xi += q[d] * k[d];
+            }
+            xi *= scale;
+        }
+
+        // Update the running maximum
+        float mim1 = mi;
+        mi = fmax(mim1, xi);
+
+        // softmax(xi)
+        float smxi = native_exp(xi - mi);
+
+        // Update di
+        float alpha = native_exp(mim1 - mi);
+        di = di * alpha + smxi;
+
+        // Update the un-scaled output from softmax(xi) and V
+        for (int d = 0; d < D; d++) {
+            o[d] = o[d] * alpha + smxi * v[d];
+        }
+    }
+
+    // Epilog scaling (flash attention 2)
+    for (int d = 0; d < D; d++) {
+        o[d] = o[d] * native_recip(di);
     }
 }
