@@ -1556,7 +1556,7 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
 #define CL_HPP_PARAM_NAME_CL_EXP_UNIFIED_SVM_(F) \
     F(cl_device_info, CL_DEVICE_SVM_TYPE_CAPABILITIES_EXP, cl::vector<cl_device_svm_type_capabilities_exp>) \
     \
-    F(cl_svm_mem_info_exp, CL_SVM_INFO_TYPE_EXP, cl_svm_type_exp) \
+    F(cl_svm_mem_info_exp, CL_SVM_INFO_CAPABILITIES_EXP, cl_svm_capabilities_exp) \
     F(cl_svm_mem_info_exp, CL_SVM_INFO_PROPERTIES_EXP, cl::vector<cl_svm_alloc_properties_exp>) \
     F(cl_svm_mem_info_exp, CL_SVM_INFO_FLAGS_EXP, cl_mem_flags) \
     F(cl_svm_mem_info_exp, CL_SVM_INFO_BASE_PTR_EXP, void*) \

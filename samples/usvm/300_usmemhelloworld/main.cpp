@@ -71,7 +71,7 @@ int main(
     cl_uint* s_src = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         props,
-        CL_SVM_TYPE_SHARED_EXP,
+        CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP | CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP,
         CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,
@@ -79,7 +79,7 @@ int main(
     cl_uint* s_dst = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         props,
-        CL_SVM_TYPE_SHARED_EXP,
+        CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP | CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP,
         CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,

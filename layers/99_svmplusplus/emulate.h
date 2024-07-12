@@ -12,7 +12,7 @@ extern const struct _cl_icd_dispatch* g_pNextDispatch;
 void* CL_API_CALL clSVMAllocWithPropertiesEXP_EMU(
     cl_context context,
     const cl_svm_alloc_properties_exp* properties,
-    cl_svm_type_exp type,
+    cl_svm_capabilities_exp capabilities,
     cl_mem_flags flags,
     size_t size,
     cl_uint alignment,
@@ -24,11 +24,12 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesEXP_EMU(
     cl_svm_free_flags_exp flags,
     void* ptr);
 
-cl_int CL_API_CALL clGetSuggestedSVMTypeEXP_EMU(
+cl_int CL_API_CALL clGetSuggestedSVMCapabilitiesEXP_EMU(
     cl_context context,
-    cl_device_id device,
-    cl_svm_type_capabilities_exp capabilities,
-    cl_svm_type_exp* type);
+    cl_uint num_devices,
+    const cl_device_id* devices,
+    cl_svm_capabilities_exp required_capabilities,
+    cl_svm_capabilities_exp* suggested_capabilities);
 
 cl_int CL_API_CALL clGetSVMInfoEXP_EMU(
     cl_context context,

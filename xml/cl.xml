@@ -255,8 +255,7 @@ server's OpenCL/api-docs repository.
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_platform_command_buffer_capabilities_khr</name>;</type>
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_mutable_dispatch_asserts_khr</name></type>
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_device_kernel_clock_capabilities_khr</name>;</type>
-        <type category="define">typedef <type>cl_uint</type>          <name>cl_svm_type_exp</name>;</type>
-        <type category="define">typedef <type>cl_bitfield</type>      <name>cl_svm_type_capabilities_exp</name>;</type>
+        <type category="define">typedef <type>cl_bitfield</type>      <name>cl_svm_capabilities_exp</name>;</type>
         <type category="define">typedef <type>cl_properties</type>    <name>cl_svm_alloc_properties_exp</name>;</type>
         <type category="define">typedef <type>cl_bitfield</type>      <name>cl_svm_alloc_flags_exp</name>;</type>
         <type category="define">typedef <type>cl_properties</type>    <name>cl_svm_free_properties_exp</name>;</type>
@@ -401,8 +400,8 @@ server's OpenCL/api-docs repository.
         </type>
 
         <type category="struct" name="cl_device_svm_type_capabilities_exp">
-            <member><type>cl_svm_type_exp</type>                         <name>type</name></member>
-            <member><type>cl_svm_type_capabilities_exp</type>            <name>capabilities</name></member>
+            <member><type>cl_svm_capabilities_exp</type>            <name>capabilities</name></member>
+            <member><type>cl_svm_capabilities_exp</type>            <name>toggleable_capabilities</name></member>
         </type>
     </types>
 
@@ -837,10 +836,7 @@ server's OpenCL/api-docs repository.
         <enum bitpos="1"            name="CL_DEVICE_SVM_FINE_GRAIN_BUFFER"/>
         <enum bitpos="2"            name="CL_DEVICE_SVM_FINE_GRAIN_SYSTEM"/>
         <enum bitpos="3"            name="CL_DEVICE_SVM_ATOMICS"/>
-        <enum bitpos="4"            name="CL_DEVICE_SVM_DEVICE_ALLOC_EXP"/>
-        <enum bitpos="5"            name="CL_DEVICE_SVM_HOST_ALLOC_EXP"/>
-        <enum bitpos="6"            name="CL_DEVICE_SVM_SHARED_ALLOC_EXP"/>
-            <unused start="7" end="31"/>
+            <unused start="4" end="31"/>
     </enums>
 
     <enums name="cl_device_atomic_capabilities" vendor="Khronos" type="bitmask">
@@ -1258,18 +1254,20 @@ server's OpenCL/api-docs repository.
         <enum bitpos="3"            name="CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL"/>
     </enums>
 
-    <enums name="cl_svm_type_capabilities_exp" vendor="Experimental" type="bitmask">
+    <enums name="cl_svm_capabilities_exp" vendor="Experimental" type="bitmask">
         <enum bitpos="0"            name="CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP"/>
         <enum bitpos="1"            name="CL_SVM_CAPABILITY_SYSTEM_ALLOCATOR_EXP"/>
         <enum bitpos="2"            name="CL_SVM_CAPABILITY_DEVICE_OWNED_EXP"/>
-        <enum bitpos="3"            name="CL_SVM_CAPABILITY_HOST_OWNED_EXP"/>
-        <enum bitpos="4"            name="CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP"/>
-        <enum bitpos="5"            name="CL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP"/>
-        <enum bitpos="6"            name="CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP"/>
-        <enum bitpos="7"            name="CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP"/>
-        <enum bitpos="8"            name="CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP"/>
-        <enum bitpos="9"            name="CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP"/>
-        <enum bitpos="10"           name="CL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP"/>
+        <enum bitpos="3"            name="CL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_EXP"/>
+        <enum bitpos="4"            name="CL_SVM_CAPABILITY_OTHER_DEVICES_ACCESSIBLE_EXP"/>
+        <enum bitpos="5"            name="CL_SVM_CAPABILITY_HOST_OWNED_EXP"/>
+        <enum bitpos="6"            name="CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP"/>
+        <enum bitpos="7"            name="CL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP"/>
+        <enum bitpos="8"            name="CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP"/>
+        <enum bitpos="9"            name="CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP"/>
+        <enum bitpos="10"           name="CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP"/>
+        <enum bitpos="11"           name="CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP"/>
+        <enum bitpos="12"           name="CL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP"/>
     </enums>
 
     <enums name="cl_mem_alloc_flags_intel" vendor="Intel" type="bitmask">
@@ -1777,9 +1775,8 @@ server's OpenCL/api-docs repository.
         <enum value="0x11B8"        name="CL_KERNEL_LOCAL_SIZE_FOR_SUB_GROUP_COUNT"/>
         <enum value="0x11B9"        name="CL_KERNEL_MAX_NUM_SUB_GROUPS"/>
         <enum value="0x11BA"        name="CL_KERNEL_COMPILE_NUM_SUB_GROUPS"/>
-        <enum value="0x11BB"        name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_ENABLE_EXP"/>
-        <enum value="0x11BC"        name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_DISABLE_EXP"/>
-            <unused start="0x11BD" end="0x11CF" comment="Reserved for cl_kernel_info / cl_kernel_work_group_info / cl_kernel_exec_info / cl_kernel_sub_group_info"/>
+        <enum value="0x11BB"        name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_EXP"/>
+            <unused start="0x11BC" end="0x11CF" comment="Reserved for cl_kernel_info / cl_kernel_work_group_info / cl_kernel_exec_info / cl_kernel_sub_group_info"/>
         <enum value="0x11D0"        name="CL_EVENT_COMMAND_QUEUE"/>
         <enum value="0x11D1"        name="CL_EVENT_COMMAND_TYPE"/>
         <enum value="0x11D2"        name="CL_EVENT_REFERENCE_COUNT"/>
@@ -1942,16 +1939,10 @@ server's OpenCL/api-docs repository.
             <unused start="0x2063" end="0x2066" comment="Reserved to Khronos for interop"/>
         <enum value="0x2067"        name="CL_EXTERNAL_MEMORY_HANDLE_DMA_BUF_KHR"/>
             <unused start="0x2068" end="0x206F" comment="Reserved to Khronos for interop"/>
-        <enum value="0x2070"        name="CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP"/>
-        <enum value="0x2071"        name="CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP"/>
-        <enum value="0x2072"        name="CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP"/>
-        <enum value="0x2073"        name="CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP"/>
-            <unused start="0x2074" end="0x2077" comment="Reserved for cl_exp_unified_svm cl_svm_type_exp"/>
+            <unused start="0x2070" end="0x2077" comment="Reserved for cl_exp_unified_svm"/>
         <enum value="0x2078"        name="CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_EXP"/>
-            <unused start="0x2079" end="0x2085" comment="Reserved for cl_exp_unified_svm cl_svm_alloc_properties_exp"/>
-        <enum value="0x2086"        name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_ENABLE_EXP"/>
-        <enum value="0x2087"        name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_DISABLE_EXP"/>
-        <enum value="0x2088"        name="CL_SVM_INFO_TYPE_EXP"/>
+            <unused start="0x2079" end="0x2087" comment="Reserved for cl_exp_unified_svm cl_svm_alloc_properties_exp"/>
+        <enum value="0x2088"        name="CL_SVM_INFO_CAPABILITIES_EXP"/>
         <enum value="0x2089"        name="CL_SVM_INFO_PROPERTIES_EXP"/>
         <enum value="0x208A"        name="CL_SVM_INFO_FLAGS_EXP"/>
             <unused start="0x208B" end="0x208F" comment="Reserved for cl_exp_unified_svm cl_svm_info_exp, etc."/>
@@ -2257,11 +2248,8 @@ server's OpenCL/api-docs repository.
         <enum value="0x4195"        name="CL_SVM_ALLOC_FLAGS_EXP"/>
         <enum value="0x4196"        name="CL_MEM_TYPE_UNKNOWN_INTEL"/>
         <enum value="0x4197"        name="CL_MEM_TYPE_HOST_INTEL"/>
-        <enum value="0x4197"        name="CL_SVM_TYPE_HOST_EXP"/>
         <enum value="0x4198"        name="CL_MEM_TYPE_DEVICE_INTEL"/>
-        <enum value="0x4198"        name="CL_SVM_TYPE_DEVICE_EXP"/>
         <enum value="0x4199"        name="CL_MEM_TYPE_SHARED_INTEL"/>
-        <enum value="0x4199"        name="CL_SVM_TYPE_SHARED_EXP"/>
         <enum value="0x419A"        name="CL_MEM_ALLOC_TYPE_INTEL"/>
         <enum value="0x419B"        name="CL_MEM_ALLOC_BASE_PTR_INTEL"/>
         <enum value="0x419B"        name="CL_SVM_INFO_BASE_PTR_EXP"/>
@@ -3381,7 +3369,7 @@ server's OpenCL/api-docs repository.
             <proto><type>void</type>*                           <name>clSVMAllocWithPropertiesEXP</name></proto>
             <param><type>cl_context</type>                      <name>context</name></param>
             <param>const <type>cl_svm_alloc_properties_exp</type>*  <name>properties</name></param>
-            <param><type>cl_svm_type_exp</type>                 <name>type</name></param>
+            <param><type>cl_svm_capabilities_exp</type>         <name>capabilities</name></param>
             <param><type>cl_mem_flags</type>                    <name>flags</name></param>
             <param><type>size_t</type>                          <name>size</name></param>
             <param><type>cl_uint</type>                         <name>alignment</name></param>
@@ -3395,11 +3383,12 @@ server's OpenCL/api-docs repository.
             <param><type>void</type>*                           <name>ptr</name></param>
         </command>
         <command>
-            <proto><type>cl_int</type>                          <name>clGetSuggestedSVMTypeEXP</name></proto>
+            <proto><type>cl_int</type>                          <name>clGetSuggestedSVMCapabilitiesEXP</name></proto>
             <param><type>cl_context</type>                      <name>context</name></param>
-            <param><type>cl_device_id</type>                    <name>device</name></param>
-            <param><type>cl_svm_type_capabilities_exp</type>    <name>capabilities</name></param>
-            <param><type>cl_svm_type_exp</type>*                <name>type</name></param>
+            <param><type>cl_uint</type>                         <name>num_devices</name></param>
+            <param>const <type>cl_device_id</type>*             <name>devices</name></param>
+            <param><type>cl_svm_capabilities_exp</type>         <name>required_capabilities</name></param>
+            <param><type>cl_svm_capabilities_exp</type>*        <name>suggested_capabilities</name></param>
         </command>
         <command>
             <proto><type>cl_int</type>                          <name>clGetSVMInfoEXP</name></proto>
@@ -7592,35 +7581,20 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_DEVICE_KERNEL_CLOCK_SCOPE_SUB_GROUP_KHR"/>
             </require>
         </extension>
-        <extension name="cl_exp_unified_svm" revision="0.1.0" condition="defined(CL_VERSION_2_0)" comment="very early version" supported="opencl">
-            <require comment="cl_device_svm_capabilities">
-                <enum name="CL_DEVICE_SVM_DEVICE_ALLOC_EXP"/>
-                <enum name="CL_DEVICE_SVM_HOST_ALLOC_EXP"/>
-                <enum name="CL_DEVICE_SVM_SHARED_ALLOC_EXP"/>
-            </require>
-            <require>
-                <type name="cl_svm_type_exp"/>
-            </require>
-            <require comment="cl_svm_type_exp">
-                <enum name="CL_SVM_TYPE_COARSE_GRAIN_BUFFER_EXP"/>
-                <enum name="CL_SVM_TYPE_FINE_GRAIN_BUFFER_EXP"/>
-                <enum name="CL_SVM_TYPE_FINE_GRAIN_BUFFER_WITH_ATOMICS_EXP"/>
-                <enum name="CL_SVM_TYPE_FINE_GRAIN_SYSTEM_EXP"/>
-                <enum name="CL_SVM_TYPE_HOST_EXP"/>
-                <enum name="CL_SVM_TYPE_DEVICE_EXP"/>
-                <enum name="CL_SVM_TYPE_SHARED_EXP"/>
-            </require>
+        <extension name="cl_exp_unified_svm" revision="0.1.6" condition="defined(CL_VERSION_2_0)" comment="very early version" supported="opencl">
             <require comment="cl_device_info">
                 <enum name="CL_DEVICE_SVM_TYPE_CAPABILITIES_EXP"/>
             </require>
             <require>
-                <type name="cl_svm_type_capabilities_exp"/>
+                <type name="cl_svm_capabilities_exp"/>
                 <type name="cl_device_svm_type_capabilities_exp"/>
             </require>
-            <require comment="cl_svm_type_capabilities_exp - bitfield">
+            <require comment="cl_svm_capabilities_exp - bitfield">
                 <enum name="CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP"/>
                 <enum name="CL_SVM_CAPABILITY_SYSTEM_ALLOCATOR_EXP"/>
                 <enum name="CL_SVM_CAPABILITY_DEVICE_OWNED_EXP"/>
+                <enum name="CL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_EXP"/>
+                <enum name="CL_SVM_CAPABILITY_OTHER_DEVICES_ACCESSIBLE_EXP"/>
                 <enum name="CL_SVM_CAPABILITY_HOST_OWNED_EXP"/>
                 <enum name="CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP"/>
                 <enum name="CL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP"/>
@@ -7651,7 +7625,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_SVM_FREE_BLOCKING_EXP"/>
             </require>
             <require comment="cl_svm_info_exp">
-                <enum name="CL_SVM_INFO_TYPE_EXP"/>
+                <enum name="CL_SVM_INFO_CAPABILITIES_EXP"/>
                 <enum name="CL_SVM_INFO_PROPERTIES_EXP"/>
                 <enum name="CL_SVM_INFO_FLAGS_EXP"/>
                 <enum name="CL_SVM_INFO_BASE_PTR_EXP"/>
@@ -7659,8 +7633,7 @@ server's OpenCL/api-docs repository.
                 <enum name="CL_SVM_INFO_ASSOCIATED_DEVICE_HANDLE_EXP"/>
             </require>
             <require comment="cl_kernel_exec_info">
-                <enum name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_ENABLE_EXP"/>
-                <enum name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_DISABLE_EXP"/>
+                <enum name="CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_EXP"/>
             </require>
             <require comment="cl_command_type - aliases for USM">
                 <enum name="CL_COMMAND_SVM_MEMADVISE_EXP"/>
@@ -7668,7 +7641,7 @@ server's OpenCL/api-docs repository.
             <require>
                 <command name="clSVMAllocWithPropertiesEXP"/>
                 <command name="clSVMFreeWithPropertiesEXP"/>
-                <command name="clGetSuggestedSVMTypeEXP"/>
+                <command name="clGetSuggestedSVMCapabilitiesEXP"/>
                 <command name="clGetSVMInfoEXP"/>
                 <command name="clEnqueueSVMAdviseEXP"/>
             </require>

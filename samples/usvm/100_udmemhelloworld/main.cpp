@@ -73,7 +73,7 @@ int main(
     cl_uint* d_src = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         props,
-        CL_SVM_TYPE_DEVICE_EXP,
+        CL_SVM_CAPABILITY_DEVICE_OWNED_EXP,
         CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,
@@ -81,7 +81,7 @@ int main(
     cl_uint* d_dst = (cl_uint*)clSVMAllocWithPropertiesEXP(
         context(),
         props,
-        CL_SVM_TYPE_DEVICE_EXP,
+        CL_SVM_CAPABILITY_DEVICE_OWNED_EXP,
         CL_MEM_READ_WRITE,
         gwx * sizeof(cl_uint),
         0,
