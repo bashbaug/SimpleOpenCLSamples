@@ -121,16 +121,11 @@ static cl_svm_capabilities_exp getDeviceUSMCaps(cl_device_id device)
         nullptr);
 
     if (usmCaps != 0) {
-        ret =
-            CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
-            CL_SVM_CAPABILITY_DEVICE_OWNED_EXP |
-            CL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP;
-        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL ) {
-            ret |= CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP;
-        }
-        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL) {
-            ret |= CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP;
-        }
+        ret = CL_SVM_TYPE_MACRO_DEVICE_EXP;
+
+        assert(usmCaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL);
+        assert(usmCaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL);
+
         if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ACCESS_INTEL) {
             ret |= CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP;
         }
@@ -155,16 +150,10 @@ static cl_svm_capabilities_exp getHostUSMCaps(cl_device_id device)
         nullptr);
 
     if (usmCaps != 0) {
-        ret =
-            CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
-            CL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_EXP |
-            CL_SVM_CAPABILITY_OTHER_DEVICES_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_HOST_OWNED_EXP |
-            CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP;
-        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL ) {
-            ret |= CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP;
-        }
+        ret = CL_SVM_TYPE_MACRO_HOST_EXP;
+
+        assert(usmCaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL);
+
         if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL) {
             ret |= CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP;
         }
@@ -192,13 +181,10 @@ static cl_svm_capabilities_exp getSingleDeviceSharedUSMCaps(cl_device_id device)
         nullptr);
 
     if (usmCaps != 0) {
-        ret =
-            CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
-            CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP;
-        if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL ) {
-            ret |= CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP;
-        }
+        ret = CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_EXP;
+
+        assert(usmCaps & CL_UNIFIED_SHARED_MEMORY_ACCESS_INTEL);
+
         if (usmCaps & CL_UNIFIED_SHARED_MEMORY_ATOMIC_ACCESS_INTEL) {
             ret |= CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP;
         }
@@ -208,6 +194,75 @@ static cl_svm_capabilities_exp getSingleDeviceSharedUSMCaps(cl_device_id device)
         if (usmCaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL) {
             ret |= CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP;
         }
+    }
+
+    return ret;
+}
+
+static cl_svm_capabilities_exp getCoarseGrainSVMCaps(cl_device_id device)
+{
+    cl_svm_capabilities_exp ret = 0;
+
+    cl_device_svm_capabilities svmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_SVM_CAPABILITIES,
+        sizeof(svmCaps),
+        &svmCaps,
+        nullptr);
+
+    if (svmCaps & CL_DEVICE_SVM_COARSE_GRAIN_BUFFER) {
+        ret = CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_EXP;
+    }
+
+    return ret;
+}
+
+static cl_svm_capabilities_exp getFineGrainSVMCaps(cl_device_id device)
+{
+    cl_svm_capabilities_exp ret = 0;
+
+    cl_device_svm_capabilities svmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_SVM_CAPABILITIES,
+        sizeof(svmCaps),
+        &svmCaps,
+        nullptr);
+
+    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) {
+        ret = CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_EXP;
+
+        if (svmCaps & CL_DEVICE_SVM_ATOMICS) {
+            ret |= CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP;
+        }
+    }
+
+    return ret;
+}
+
+static cl_svm_capabilities_exp getSystemSVMCaps(cl_device_id device)
+{
+    cl_svm_capabilities_exp ret = 0;
+
+    cl_device_svm_capabilities svmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_SVM_CAPABILITIES,
+        sizeof(svmCaps),
+        &svmCaps,
+        nullptr);
+
+    cl_device_unified_shared_memory_capabilities_intel usmCaps = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL,
+        sizeof(usmCaps),
+        &usmCaps,
+        nullptr);
+
+    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_SYSTEM || usmCaps != 0) {
+        ret = CL_SVM_TYPE_MACRO_SYSTEM_EXP;
     }
 
     return ret;
@@ -223,90 +278,59 @@ static std::vector<cl_device_svm_type_capabilities_exp> getSVMTypeCaps(cl_device
     if (caps != 0) {
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
-        type.capabilities = caps;
-        type.toggleable_capabilities = 0;
+        type.capabilities = caps & CL_SVM_TYPE_MACRO_DEVICE_EXP;
+        type.optional_capabilities = caps & (
+            CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP |
+            CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP);
     }
 
     caps = getHostUSMCaps(device);
     if (caps != 0) {
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
-        type.capabilities = caps;
-        type.toggleable_capabilities = 0;
+        type.capabilities = caps & CL_SVM_TYPE_MACRO_HOST_EXP;
+        type.optional_capabilities = caps & (
+            CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP |
+            CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP |
+            CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP);
     }
 
     caps = getSingleDeviceSharedUSMCaps(device);
     if (caps != 0) {
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
-        type.capabilities = caps;
-        type.toggleable_capabilities = 0;
+        type.capabilities = caps & CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_EXP;
+        type.optional_capabilities = caps & (
+            CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP |
+            CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP |
+            CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP);
     }
 
     // SVM Types
 
-    cl_device_svm_capabilities svmCaps = 0;
-    g_pNextDispatch->clGetDeviceInfo(
-        device,
-        CL_DEVICE_SVM_CAPABILITIES,
-        sizeof(svmCaps),
-        &svmCaps,
-        nullptr);
-    if (svmCaps & CL_DEVICE_SVM_COARSE_GRAIN_BUFFER) {
+    caps = getCoarseGrainSVMCaps(device);
+    if (caps != 0) {
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
-
-        type.capabilities =
-            CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
-            CL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_EXP |
-            CL_SVM_CAPABILITY_OTHER_DEVICES_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP |
-            CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP |
-            CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP;
-        type.toggleable_capabilities = 0;
+        type.capabilities = CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_EXP;
+        type.optional_capabilities = 0;
     }
 
-    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) {
+    caps = getFineGrainSVMCaps(device);
+    if (caps != 0) {
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
-
-        type.capabilities =
-            CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
-            CL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_EXP |
-            CL_SVM_CAPABILITY_OTHER_DEVICES_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP |
-            CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP |
-            CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP |
-            CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP;
-        if (svmCaps & CL_DEVICE_SVM_ATOMICS) {
-            type.toggleable_capabilities = CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP;
-        }
+        type.capabilities = CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_EXP;
+        type.optional_capabilities = caps & (
+            CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP);
     }
 
-    cl_device_unified_shared_memory_capabilities_intel usmCaps = 0;
-    g_pNextDispatch->clGetDeviceInfo(
-        device,
-        CL_DEVICE_SHARED_SYSTEM_MEM_CAPABILITIES_INTEL,
-        sizeof(usmCaps),
-        &usmCaps,
-        nullptr);
-    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_SYSTEM || usmCaps != 0) {
+    caps = getSystemSVMCaps(device);
+    if (caps != 0) {
         types.emplace_back();
         cl_device_svm_type_capabilities_exp& type = types.back();
-
-        type.capabilities =
-            CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_EXP |
-            CL_SVM_CAPABILITY_SYSTEM_ALLOCATOR_EXP |
-            CL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_EXP |
-            CL_SVM_CAPABILITY_OTHER_DEVICES_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP |
-            CL_SVM_CAPABILITY_HOST_ACCESSIBLE_WITH_MAP_EXP |
-            CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP |
-            CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_EXP |
-            CL_SVM_CAPABILITY_CONCURRENT_ACCESS_EXP |
-            CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_EXP |
-            CL_SVM_CAPABILITY_INDIRECT_ACCESS_EXP;
+        type.capabilities = CL_SVM_TYPE_MACRO_SYSTEM_EXP;
+        type.optional_capabilities = 0;
     }
 
     return types;
@@ -446,7 +470,7 @@ static cl_svm_capabilities_exp getSuggestedSVMCapabilitiesForDevice(
 {
     auto supported = getSVMTypeCaps(device);
     for(const auto& type : supported) {
-        auto supported_caps = type.capabilities | type.toggleable_capabilities;
+        auto supported_caps = type.capabilities | type.optional_capabilities;
         if ((supported_caps & capabilities) == capabilities) {
             return supported_caps;
         }
@@ -476,6 +500,7 @@ cl_int CL_API_CALL clGetSuggestedSVMCapabilitiesEXP_EMU(
 
 cl_int CL_API_CALL clGetSVMInfoEXP_EMU(
     cl_context context,
+    cl_device_id device,
     const void* ptr,
     cl_svm_info_exp param_name,
     size_t param_value_size,
@@ -492,23 +517,30 @@ cl_int CL_API_CALL clGetSVMInfoEXP_EMU(
             sizeof(type),
             &type,
             nullptr);
-        cl_device_id device = nullptr;
+        cl_device_id associatedDevice = nullptr;
         clGetMemAllocInfoINTEL(
             context,
             ptr,
             CL_MEM_ALLOC_DEVICE_INTEL,
-            sizeof(device),
-            &device,
+            sizeof(associatedDevice),
+            &associatedDevice,
+            nullptr);
+        cl_device_id contextDevice = nullptr;
+        clGetContextInfo(
+            context, // note: assumes single-device context!
+            CL_CONTEXT_DEVICES,
+            sizeof(contextDevice),
+            &contextDevice,
             nullptr);
         switch (type) {
         case CL_MEM_TYPE_DEVICE_INTEL:
-            caps = getDeviceUSMCaps(device);
+            caps = getDeviceUSMCaps(associatedDevice);
             break;
         case CL_MEM_TYPE_HOST_INTEL:
-            caps = getHostUSMCaps(device);
+            caps = getHostUSMCaps(contextDevice);
             break;
         case CL_MEM_TYPE_SHARED_INTEL:
-            caps = getSingleDeviceSharedUSMCaps(device);
+            caps = getSingleDeviceSharedUSMCaps(associatedDevice);
             break;
         default:
             break;
@@ -531,6 +563,7 @@ cl_int CL_API_CALL clGetSVMInfoEXP_EMU(
             param_value_size_ret);
     }
 
+    // Note: do not currently support querying SVM pointers!
     return CL_INVALID_OPERATION;
 }
 

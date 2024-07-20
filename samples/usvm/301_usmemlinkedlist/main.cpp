@@ -57,7 +57,7 @@ static void init( cl::Context& context, cl::Device& device )
             s_head = (Node*)clSVMAllocWithPropertiesEXP(
                 context(),
                 props,
-                CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP | CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP,
+                CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_EXP,
                 CL_MEM_READ_WRITE,
                 sizeof(Node),
                 0,
@@ -74,7 +74,7 @@ static void init( cl::Context& context, cl::Device& device )
                 s_cur->pNext = (Node*)clSVMAllocWithPropertiesEXP(
                     context(),
                     props,
-                    CL_SVM_CAPABILITY_HOST_ACCESSIBLE_EXP | CL_SVM_CAPABILITY_DEVICE_ACCESS_EXP,
+                    CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_EXP,
                     CL_MEM_READ_WRITE,
                     sizeof(Node),
                     0,

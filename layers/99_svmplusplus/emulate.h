@@ -33,6 +33,7 @@ cl_int CL_API_CALL clGetSuggestedSVMCapabilitiesEXP_EMU(
 
 cl_int CL_API_CALL clGetSVMInfoEXP_EMU(
     cl_context context,
+    cl_device_id device,
     const void* ptr,
     cl_svm_info_exp param_name,
     size_t param_value_size,
