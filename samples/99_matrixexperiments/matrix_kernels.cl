@@ -396,7 +396,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m1_n16(global float* C, global usho
     float sum = 0;
     for (int k = 0; k < K; k += tK) {
         short   aData = as_short(intel_sub_group_block_read_16b_1r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -418,7 +418,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m2_n16(global float* C, global usho
     float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short2  aData = as_short2(intel_sub_group_block_read_16b_2r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -440,7 +440,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m4_n16(global float* C, global usho
     float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short4  aData = as_short4(intel_sub_group_block_read_16b_4r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -462,7 +462,7 @@ kernel void bfloat16_dpas_blockread_rowmajor_m8_n16(global float* C, global usho
     float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short8  aData = as_short8(intel_sub_group_block_read_16b_8r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_subgroup_block_read_transform_u16_k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
