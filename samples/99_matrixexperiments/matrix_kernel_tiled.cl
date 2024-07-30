@@ -533,8 +533,11 @@ void HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(global ushort* A, int tM
         //if (get_sub_group_local_id() == 0) {
         //    printf("atile block prefetch: %d, %d, %2d: sg_x = %d, m = %3d, k = %3d, mm = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), sg_index_x, m, k, mm, kk, k + kk * tK, m + mm * tM);
         //}
-        //intel_sub_group_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+#ifdef USE_32C
         intel_sub_group_block_prefetch_16b_8r32c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+#else
+        intel_sub_group_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+#endif
     } else if (KK % 2 == 0 & MM % 4 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm+=4) {
@@ -577,8 +580,11 @@ void HELPER_NAME(btile_block_prefetch_rowmajor, MM, NN)(global ushort* B, int tN
         //if (get_sub_group_local_id() == 0) {
         //    printf("btile block prefetch: %d, %d, %2d: sg_y = %d, n = %3d, k = %3d, nn = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), sg_index_y, n, k, nn, kk, n + nn * tN, k + kk * tK);
         //}
-        //intel_sub_group_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+#ifdef USE_32C
         intel_sub_group_block_prefetch_16b_16r32c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+#else
+        intel_sub_group_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+#endif
     } else if (KK % 2 == 0 & NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn += 2) {
