@@ -27,12 +27,47 @@
 #endif
 
 static constexpr cl_version version_cl_khr_semaphore =
-    CL_MAKE_VERSION(0, 9, 1);
+    CL_MAKE_VERSION(1, 0, 0);
 
 SLayerContext& getLayerContext(void)
 {
     static SLayerContext c;
     return c;
+}
+
+static bool isDeviceWithinContext(
+    const cl_context context,
+    const cl_device_id device)
+{
+    cl_uint numDevices = 0;
+    cl_int error = g_pNextDispatch->clGetContextInfo(
+        context,
+        CL_CONTEXT_NUM_DEVICES,
+        sizeof(cl_uint),
+        &numDevices,
+        nullptr);
+    if (error != CL_SUCCESS || numDevices == 0) {
+        return false;
+    }
+
+    std::vector<cl_device_id> devices(numDevices);
+    error = g_pNextDispatch->clGetContextInfo(
+        context,
+        CL_CONTEXT_DEVICES,
+        numDevices * sizeof(cl_device_id),
+        devices.data(),
+        nullptr);
+    if (error != CL_SUCCESS) {
+        return false;
+    }
+
+    for (auto check : devices) {
+        if (check == device) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 typedef struct _cl_semaphore_khr
@@ -42,13 +77,24 @@ typedef struct _cl_semaphore_khr
         const cl_semaphore_properties_khr* properties,
         cl_int* errcode_ret)
     {
-        cl_semaphore_khr semaphore = NULL;
+        cl_semaphore_khr semaphore = nullptr;
         cl_int errorCode = CL_SUCCESS;
 
         ptrdiff_t numProperties = 0;
         cl_semaphore_type_khr type = ~0;
+        std::vector<cl_device_id> devices;
 
-        if( properties )
+        if( properties == nullptr )
+        {
+            errorCode = CL_INVALID_VALUE;
+        }
+
+        if( context == nullptr )
+        {
+            errorCode =  CL_INVALID_CONTEXT;
+        }
+
+        if( errorCode == CL_SUCCESS )
         {
             const cl_semaphore_properties_khr* check = properties;
             bool found_CL_SEMAPHORE_TYPE_KHR = false;
@@ -61,43 +107,94 @@ typedef struct _cl_semaphore_khr
                 case CL_SEMAPHORE_TYPE_KHR:
                     if( found_CL_SEMAPHORE_TYPE_KHR )
                     {
-                        errorCode = CL_INVALID_VALUE;
+                        errorCode = CL_INVALID_PROPERTY;
                     }
                     else
                     {
                         found_CL_SEMAPHORE_TYPE_KHR = true;
                         type = ((const cl_semaphore_type_khr*)(check + 1))[0];
                         check += 2;
+
+                        switch( type )
+                        {
+                        case CL_SEMAPHORE_TYPE_BINARY_KHR:
+                            break;
+                        default:
+                            errorCode = CL_INVALID_PROPERTY;
+                            break;
+                        }
                     }
                     break;
                 case CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR:
                     if( found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR )
                     {
-                        errorCode = CL_INVALID_VALUE;
+                        errorCode = CL_INVALID_PROPERTY;
                     }
                     else
                     {
                         found_CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR = true;
-                        ++check;
-                        while(*check++ != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
+                        check++;
+                        while(*check != CL_SEMAPHORE_DEVICE_HANDLE_LIST_END_KHR)
                         {
-                            // TODO: validate device handles.
+                            cl_device_id device = ((cl_device_id*)check)[0];
+                            devices.push_back(device);
+                            check++;
                         }
+                        check++;
                     }
                     break;
                 default:
-                    errorCode = CL_INVALID_VALUE;
+                    errorCode =  CL_INVALID_PROPERTY;
                     break;
                 }
             }
             numProperties = check - properties + 1;
-        }
-        switch( type )
-        {
-        case CL_SEMAPHORE_TYPE_BINARY_KHR:
-            break;
-        default:
-            errorCode = CL_INVALID_VALUE;
+
+            // The semaphore type must be included in the property list.
+            if( !found_CL_SEMAPHORE_TYPE_KHR )
+            {
+                errorCode = CL_INVALID_VALUE;
+            }
+
+            if( devices.empty() )
+            {
+                // If the device handle list is empty, the semaphore is
+                // accessible to all devices in the context, and the context
+                // must be a single-device context.
+                cl_uint numDevices = 0;
+                g_pNextDispatch->clGetContextInfo(
+                    context,
+                    CL_CONTEXT_NUM_DEVICES,
+                    sizeof(cl_uint),
+                    &numDevices,
+                    nullptr);
+                if( numDevices != 1 )
+                {
+                    errorCode = CL_INVALID_PROPERTY;
+                }
+            }
+            else
+            {
+                // If the device handle list is present, it must contain
+                // exactly one device.
+                if( devices.size() != 1 )
+                {
+                    errorCode = CL_INVALID_DEVICE;
+                }
+                else
+                {
+                    // Additionally, the device must be within the context.
+                    for( auto device : devices )
+                    {
+                        if( device == nullptr ||
+                            !isDeviceWithinContext(context, device) )
+                        {
+                            errorCode = CL_INVALID_DEVICE;
+                            break;
+                        }
+                    }
+                }
+            }
         }
         if( errcode_ret )
         {
@@ -111,6 +208,7 @@ typedef struct _cl_semaphore_khr
                 semaphore->Properties.begin(),
                 properties,
                 properties + numProperties );
+            semaphore->Devices=devices;
         }
         return semaphore;
     }
@@ -124,6 +222,7 @@ typedef struct _cl_semaphore_khr
     const cl_context Context;
     const cl_semaphore_type_khr Type;
     std::vector<cl_semaphore_properties_khr> Properties;
+    std::vector<cl_device_id>   Devices;
 
     std::atomic<cl_uint> RefCount;
     cl_event Event;
@@ -136,7 +235,7 @@ private:
         Context(context),
         Type(type),
         RefCount(1),
-        Event(NULL) {}
+        Event(nullptr) {}
 } cli_semaphore;
 
 cl_semaphore_khr CL_API_CALL clCreateSemaphoreWithPropertiesKHR_EMU(
@@ -176,7 +275,7 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
         {
             return CL_INVALID_SEMAPHORE_KHR;
         }
-        if( semaphores[i]->Event == NULL )
+        if( semaphores[i]->Event == nullptr )
         {
             // This is a semaphore that is not in a pending signal
             // or signaled state.  What should happen here?
@@ -196,7 +295,7 @@ cl_int CL_API_CALL clEnqueueWaitSemaphoresKHR_EMU(
     {
         g_pNextDispatch->clReleaseEvent(
             semaphores[i]->Event);
-        semaphores[i]->Event = NULL;
+        semaphores[i]->Event = nullptr;
     }
 
     if( event )
@@ -227,7 +326,7 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
         {
             return CL_INVALID_SEMAPHORE_KHR;
         }
-        if( semaphores[i]->Event != NULL )
+        if( semaphores[i]->Event != nullptr )
         {
             // This is a semaphore that is in a pending signal or signaled
             // state.  What should happen here?
@@ -235,8 +334,8 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
         }
     }
 
-    cl_event    local_event = NULL;
-    if( event == NULL )
+    cl_event    local_event = nullptr;
+    if( event == nullptr )
     {
         event = &local_event;
     }
@@ -254,11 +353,11 @@ cl_int CL_API_CALL clEnqueueSignalSemaphoresKHR_EMU(
             semaphores[i]->Event );
     }
 
-    if( local_event != NULL )
+    if( local_event != nullptr )
     {
         g_pNextDispatch->clReleaseEvent(
             local_event );
-        local_event = NULL;
+        local_event = nullptr;
     }
     else
     {
@@ -326,7 +425,7 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
             // semaphore is in the unsignaled state and one if it is in
             // the signaled state.
             cl_semaphore_payload_khr payload = 0;
-            if( semaphore->Event != NULL )
+            if( semaphore->Event != nullptr )
             {
                 cl_int  eventStatus = 0;
                 g_pNextDispatch->clGetEventInfo(
@@ -334,7 +433,7 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
                     CL_EVENT_COMMAND_EXECUTION_STATUS,
                     sizeof( eventStatus ),
                     &eventStatus,
-                    NULL );
+                    nullptr );
                 if( eventStatus == CL_COMPLETE )
                 {
                     payload = 1;
@@ -345,6 +444,16 @@ cl_int CL_API_CALL clGetSemaphoreInfoKHR_EMU(
             return writeParamToMemory(
                 param_value_size,
                 payload,
+                param_value_size_ret,
+                ptr );
+        }
+        break;
+    case CL_SEMAPHORE_DEVICE_HANDLE_LIST_KHR:
+        {
+            auto ptr = (cl_device_id*)param_value;
+            return writeVectorToMemory(
+                param_value_size,
+                semaphore->Devices,
                 param_value_size_ret,
                 ptr );
         }
@@ -485,7 +594,7 @@ bool clGetDeviceInfo_override(
                 memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                 strcpy(extension.name, CL_KHR_SEMAPHORE_EXTENSION_NAME);
 
-                extension.version = CL_MAKE_VERSION(0, 9, 0);
+                extension.version = version_cl_khr_semaphore;
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
@@ -664,7 +773,7 @@ bool clGetPlatformInfo_override(
                 memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
                 strcpy(extension.name, CL_KHR_SEMAPHORE_EXTENSION_NAME);
 
-                extension.version = CL_MAKE_VERSION(0, 9, 0);
+                extension.version = version_cl_khr_semaphore;
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
