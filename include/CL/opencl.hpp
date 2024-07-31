@@ -1490,9 +1490,6 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR,      cl::vector<cl_external_semaphore_handle_type_khr>) \
     F(cl_semaphore_info_khr, CL_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR,      cl::vector<cl_external_semaphore_handle_type_khr>) \
 
-#define CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_DX_FENCE_EXT(F) \
-    F(cl_external_semaphore_handle_type_khr, CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR, void*) \
-
 #define CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_OPAQUE_FD_EXT(F) \
     F(cl_external_semaphore_handle_type_khr, CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR, int) \
 
@@ -1818,7 +1815,7 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_FEATURE_CAPABILITIES_INTE
 
 #if defined(cl_intel_unified_shared_memory)
 CL_HPP_PARAM_NAME_CL_INTEL_UNIFIED_SHARED_MEMORY_(CL_HPP_DECLARE_PARAM_TRAITS_)
-#endif // cl_intel_command_queue_families
+#endif // cl_intel_unified_shared_memory
 
 // Convenience functions
 
