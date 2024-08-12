@@ -58,7 +58,7 @@ static void init( cl::Context& context, cl::Device& device )
             d_head = (Node*)clSVMAllocWithPropertiesEXP(
                 context(),
                 props,
-                CL_SVM_CAPABILITY_DEVICE_OWNED_EXP,
+                CL_SVM_TYPE_MACRO_DEVICE_EXP,
                 CL_MEM_READ_WRITE,
                 sizeof(Node),
                 0,
@@ -75,7 +75,7 @@ static void init( cl::Context& context, cl::Device& device )
                 h_cur.pNext = (Node*)clSVMAllocWithPropertiesEXP(
                     context(),
                     props,
-                    CL_SVM_CAPABILITY_DEVICE_OWNED_EXP,
+                    CL_SVM_TYPE_MACRO_DEVICE_EXP,
                     CL_MEM_READ_WRITE,
                     sizeof(Node),
                     0,
