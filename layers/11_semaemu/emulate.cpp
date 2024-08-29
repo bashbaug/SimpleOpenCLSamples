@@ -172,6 +172,17 @@ typedef struct _cl_semaphore_khr
                 {
                     errorCode = CL_INVALID_PROPERTY;
                 }
+                else
+                {
+                    cl_device_id device=0;
+                    g_pNextDispatch->clGetContextInfo(
+                        context,
+                        CL_CONTEXT_DEVICES,
+                        sizeof(cl_device_id),
+                        &device,
+                        nullptr);
+                    devices.push_back(device);
+                }
             }
             else
             {
