@@ -174,7 +174,7 @@ typedef struct _cl_semaphore_khr
                 }
                 else
                 {
-                    cl_device_id device=0;
+                    cl_device_id device=nullptr;
                     g_pNextDispatch->clGetContextInfo(
                         context,
                         CL_CONTEXT_DEVICES,
