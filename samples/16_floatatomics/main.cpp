@@ -8,13 +8,15 @@
 
 #include <CL/opencl.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cinttypes>
+#include <vector>
 
 #include "util.hpp"
 
 static const char kernelString[] = R"CLC(
-inline float atomic_add_f(volatile global float* addr, float val)
+float atomic_add_f(volatile global float* addr, float val)
 {
     #if defined(__opencl_c_ext_fp32_global_atomic_add) && !defined(EMULATE)
         //#pragma message("using cl_ext_float_atomics")
@@ -28,18 +30,20 @@ inline float atomic_add_f(volatile global float* addr, float val)
         return __builtin_amdgcn_global_atomic_fadd_f32(addr, val);
     #else // fallback, see: https://forums.developer.nvidia.com/t/atomicadd-float-float-atomicmul-float-float/14639/7
         //#pragma message("using emulated float atomics")
-        float ret = atomic_xchg(addr, 0.0f);
-        float old = ret + val;
-        while((old = atomic_xchg(addr, old)) != 0.0f) {
-            old = atomic_xchg(addr, 0.0f) + old;
-        }
-        return ret;
+        float old = val; while((old=atomic_xchg(addr, atomic_xchg(addr, 0.0f)+old))!=0.0f);
+        // Note: this emulated version cannot reliably return the previous value!
+        // This makes it unsuitable for general-purpose use, but it is sufficient
+        // for some cases, such as reductions.
+        // A more reliable version would use a compare-exchange loop, though it
+        // would be much slower.
+        return 0.0f;
     #endif
 }
 
-kernel void FloatAtomicTest(global float* dst)
+kernel void FloatAtomicTest(global float* dst, global float* results)
 {
-    atomic_add_f(dst, 1.0f);
+    int index = get_global_id(0);
+    results[index] = atomic_add_f(dst, 1.0f);
 }
 )CLC";
 
@@ -73,9 +77,10 @@ int main(
     int deviceIndex = 0;
 
     size_t iterations = 16;
-    size_t gwx = 1024 * 1024;
+    size_t gwx = 64 * 1024;
 
     bool emulate = false;
+    bool check = false;
 
     {
         popl::OptionParser op("Supported Options");
@@ -84,6 +89,7 @@ int main(
         op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Number of Atomics", gwx, &gwx);
         op.add<popl::Switch>("e", "emulate", "Unconditionally Emulate Float Atomics", &emulate);
+        op.add<popl::Switch>("c", "check", "Check Intermediate Results", &check);
 
         bool printUsage = false;
         try {
@@ -113,7 +119,15 @@ int main(
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
-    if (checkDeviceForExtension(devices[deviceIndex], CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME)) {
+    // On some implementations, the feature test macros for float atomics are
+    // only defined when compiling for OpenCL C 3.0 or newer.
+    std::string buildOptions = "-cl-std=CL3.0";
+    if (emulate) {
+        printf("Forcing emulation.\n");
+        buildOptions += " -DEMULATE";
+    } else if (!checkDeviceForExtension(devices[deviceIndex], CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME)) {
+        printf("Device does not support " CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME ".\n");
+    } else {
         printf("Device supports " CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME ".\n");
 
         cl_device_fp_atomic_capabilities_ext spcaps =
@@ -130,41 +144,29 @@ int main(
             devices[deviceIndex].getInfo<CL_DEVICE_HALF_FP_ATOMIC_CAPABILITIES_EXT>();
         printf("CL_DEVICE_HALF_FP_ATOMIC_CAPABILITIES_EXT:\n");
         PrintFloatAtomicCapabilities(hpcaps);
-
-        if (spcaps & CL_DEVICE_GLOBAL_FP_ATOMIC_ADD_EXT == 0) {
-            printf("Device does not support fp32 atomic add.\n");
-        }
-    } else {
-        printf("Device does not support " CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME ".\n");
     }
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
-
-    // On some implementations, the feature test macros for float atomics are
-    // only defined when compiling for OpenCL C 3.0 or newer.
-    std::string buildOptions = "-cl-std=CL3.0";
-    if (emulate) {
-        printf("Forcing emulation.\n");
-        buildOptions += " -DEMULATE";
-    }
-
     program.build(buildOptions);
     cl::Kernel kernel = cl::Kernel{ program, "FloatAtomicTest" };
 
-    cl::Buffer deviceMemDst = cl::Buffer{
+    cl::Buffer dst = cl::Buffer{
         context,
         CL_MEM_READ_WRITE,
         sizeof(cl_float) };
+    cl::Buffer intermediates = cl::Buffer{
+        context,
+        CL_MEM_READ_WRITE,
+        gwx * sizeof(cl_float) };
 
     // execution
     {
-        kernel.setArg(0, deviceMemDst);
+        kernel.setArg(0, dst);
+        kernel.setArg(1, intermediates);
 
-        // Ensure the queue is empty and no processing is happening
-        // on the device before starting the timer.
         commandQueue.finish();
 
         auto start = std::chrono::system_clock::now();
@@ -172,7 +174,7 @@ int main(
         {
             cl_float zero = 0.0f;
             commandQueue.enqueueFillBuffer(
-                deviceMemDst,
+                dst,
                 zero,
                 0,
                 sizeof(zero));
@@ -182,7 +184,6 @@ int main(
                 cl::NDRange{gwx});
         }
 
-        // Ensure all processing is complete before stopping the timer.
         commandQueue.finish();
 
         auto end = std::chrono::system_clock::now();
@@ -190,11 +191,11 @@ int main(
         printf("Finished in %f seconds\n", elapsed_seconds.count());
     }
 
-    // validation
+    // basic validation
     {
         cl_float result = 0.0f;
         commandQueue.enqueueReadBuffer(
-            deviceMemDst,
+            dst,
             CL_TRUE,
             0,
             sizeof(result),
@@ -202,7 +203,45 @@ int main(
         if (result != (float)gwx) {
             printf("Error: expected %f, got %f!\n", (float)gwx, result);
         } else {
-            printf("Success.\n");
+            printf("Basic Validation: Success.\n");
+        }
+    }
+
+    // intermediate results validation
+    if (check) {
+        if (emulate) {
+            printf("Skipping The emulated float atomic add does not support intermediate results.\n");
+        } else {
+            std::vector<cl_float> test(gwx);
+            commandQueue.enqueueReadBuffer(
+                intermediates,
+                CL_TRUE,
+                0,
+                gwx * sizeof(cl_float),
+                test.data());
+
+            std::sort(test.begin(), test.end());
+
+            size_t mismatches = 0;
+            for (size_t i = 0; i < gwx; i++) {
+                if (i == 0 && !(test[i] == 0.0f)) {
+                    if (mismatches < 16) {
+                        printf("Error at index %zu: expected %f, got %f!\n", i, 0.0f, test[i]);
+                    }
+                    mismatches++;
+                } else if (i > 0 && !(test[i] > test[i-1])) {
+                    if (mismatches < 16) {
+                        printf("Error at index %zu: expected %f > %f!\n", i, test[i], test[i-1]);
+                    }
+                    mismatches++;
+                }
+            }
+
+            if (mismatches) {
+                printf("Intermediate Results Validation: Found %zu mismatches / %zu values!!!\n", mismatches, gwx);
+            } else {
+                printf("Intermediate Results Validation: Success.\n");
+            }
         }
     }
 
