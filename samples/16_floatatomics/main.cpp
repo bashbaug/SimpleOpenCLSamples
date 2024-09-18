@@ -23,6 +23,9 @@ inline float atomic_add_f(volatile global float* addr, float val)
         //#pragma message("using PTX atomics")
         float ret; asm volatile("atom.global.add.f32 %0,[%1],%2;":"=f"(ret):"l"(addr),"f"(val):"memory");
         return ret;
+    #elif __has_builtin(__builtin_amdgcn_global_atomic_fadd_f32) && !defined(EMULATE)
+        //#pragma message("using AMD atomics")
+        return __builtin_amdgcn_global_atomic_fadd_f32(addr, val);
     #else // fallback, see: https://forums.developer.nvidia.com/t/atomicadd-float-float-atomicmul-float-float/14639/7
         //#pragma message("using emulated float atomics")
         float ret = atomic_xchg(addr, 0.0f);
@@ -139,8 +142,10 @@ int main(
     cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
-    std::string buildOptions = "-cl-std=CL3.0";
 
+    // On some implementations, the feature test macros for float atomics are
+    // only defined when compiling for OpenCL C 3.0 or newer.
+    std::string buildOptions = "-cl-std=CL3.0";
     if (emulate) {
         printf("Forcing emulation.\n");
         buildOptions += " -DEMULATE";
