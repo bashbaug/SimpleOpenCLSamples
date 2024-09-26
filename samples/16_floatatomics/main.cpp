@@ -29,6 +29,7 @@ float atomic_add_f(volatile global float* addr, float val)
         //#pragma message("using AMD atomics")
         return __builtin_amdgcn_global_atomic_fadd_f32(addr, val);
     #else // fallback, see: https://forums.developer.nvidia.com/t/atomicadd-float-float-atomicmul-float-float/14639/7
+        #if 0
         //#pragma message("using emulated float atomics")
         float old = val; while((old=atomic_xchg(addr, atomic_xchg(addr, 0.0f)+old))!=0.0f);
         // Note: this emulated version cannot reliably return the previous value!
@@ -37,6 +38,12 @@ float atomic_add_f(volatile global float* addr, float val)
         // A more reliable version would use a compare-exchange loop, though it
         // would be much slower.
         return 0.0f;
+        #else
+        float old = val;
+        float ret = 0.0f;
+        while ((old = atomic_xchg(addr, ret = atomic_xchg(addr, 0.0f) + old)) != 0.0f);
+        return ret;
+        #endif
     #endif
 }
 
@@ -209,7 +216,7 @@ int main(
 
     // intermediate results validation
     if (check) {
-        if (emulate) {
+        if (false && emulate) {
             printf("Skipping The emulated float atomic add does not support intermediate results.\n");
         } else {
             std::vector<cl_float> test(gwx);
