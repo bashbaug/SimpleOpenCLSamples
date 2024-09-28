@@ -2,7 +2,5 @@
 #
 # SPDX-License-Identifier: MIT
 
-# Require OpenCL 2.0, for read-write images:
-set(SAMPLES_CL_VERSION 200)
-
 add_subdirectory( 00_enumimageformats )
+add_subdirectory( 10_mipmapimage )
