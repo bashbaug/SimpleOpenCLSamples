@@ -177,8 +177,7 @@ int main(
         commandQueue.finish();
 
         auto start = std::chrono::system_clock::now();
-        for( size_t i = 0; i < iterations; i++ )
-        {
+        for (size_t i = 0; i < iterations; i++) {
             cl_float zero = 0.0f;
             commandQueue.enqueueFillBuffer(
                 dst,
@@ -200,6 +199,11 @@ int main(
 
     // basic validation
     {
+        cl_float check = 0.0f;
+        for (size_t i = 0; i < gwx; i++) {
+            check += 1.0f;
+        }
+
         cl_float result = 0.0f;
         commandQueue.enqueueReadBuffer(
             dst,
@@ -207,8 +211,8 @@ int main(
             0,
             sizeof(result),
             &result);
-        if (result != (float)gwx) {
-            printf("Error: expected %f, got %f!\n", (float)gwx, result);
+        if (result != check) {
+            printf("Error: expected %f, got %f!\n", check, result);
         } else {
             printf("Basic Validation: Success.\n");
         }
