@@ -40,14 +40,15 @@ float atomic_add_f(volatile global float* addr, float val)
         // This is the traditional fallback that uses a compare and exchange loop.
         // It is much slower, but it supports returning the previous value.
         //#pragma message("using slow emulated float atomics")
-        volatile global atomic_float* faddr = (volatile global atomic_float*)addr;
-        float old;
-        float new;
+        volatile global int* iaddr = (volatile global int*)addr;
+        int old;
+        int check;
         do {
-            old = atomic_load_explicit(faddr, memory_order_relaxed);
-            new = old + val;
-        } while (!atomic_compare_exchange_strong_explicit(faddr, &old, new, memory_order_relaxed, memory_order_relaxed));
-        return old;
+            old = atomic_or(iaddr, 0);  // emulated atomic load
+            int new = as_int(as_float(old) + val);
+            check = atomic_cmpxchg(iaddr, old, new);
+        } while (check != old);
+        return as_float(old);
     #endif
 }
 
