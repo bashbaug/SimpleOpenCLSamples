@@ -28,22 +28,26 @@ float atomic_add_f(volatile global float* addr, float val)
     #elif __has_builtin(__builtin_amdgcn_global_atomic_fadd_f32) && !defined(EMULATE)
         //#pragma message("using AMD atomics")
         return __builtin_amdgcn_global_atomic_fadd_f32(addr, val);
-    #else // fallback, see: https://forums.developer.nvidia.com/t/atomicadd-float-float-atomicmul-float-float/14639/7
-        #if 0
+    #elif !defined(SLOW_EMULATE)
+        // fallback, see: https://forums.developer.nvidia.com/t/atomicadd-float-float-atomicmul-float-float/14639/7
         //#pragma message("using emulated float atomics")
         float old = val; while((old=atomic_xchg(addr, atomic_xchg(addr, 0.0f)+old))!=0.0f);
         // Note: this emulated version cannot reliably return the previous value!
         // This makes it unsuitable for general-purpose use, but it is sufficient
         // for some cases, such as reductions.
-        // A more reliable version would use a compare-exchange loop, though it
-        // would be much slower.
         return 0.0f;
-        #else
-        float old = val;
-        float ret = 0.0f;
-        while ((old = atomic_xchg(addr, ret = atomic_xchg(addr, 0.0f) + old)) != 0.0f);
-        return ret;
-        #endif
+    #else
+        // This is the traditional fallback that uses a compare and exchange loop.
+        // It is much slower, but it supports returning the previous value.
+        //#pragma message("using slow emulated float atomics")
+        volatile global atomic_float* faddr = (volatile global atomic_float*)addr;
+        float old;
+        float new;
+        do {
+            old = atomic_load_explicit(faddr, memory_order_relaxed);
+            new = old + val;
+        } while (!atomic_compare_exchange_strong_explicit(faddr, &old, new, memory_order_relaxed, memory_order_relaxed));
+        return old;
     #endif
 }
 
@@ -87,6 +91,7 @@ int main(
     size_t gwx = 64 * 1024;
 
     bool emulate = false;
+    bool slowEmulate = false;
     bool check = false;
 
     {
@@ -96,6 +101,7 @@ int main(
         op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Number of Atomics", gwx, &gwx);
         op.add<popl::Switch>("e", "emulate", "Unconditionally Emulate Float Atomics", &emulate);
+        op.add<popl::Switch>("s", "slow-emulate", "Unconditionally Emulate Float Atomics with Return Support", &slowEmulate);
         op.add<popl::Switch>("c", "check", "Check Intermediate Results", &check);
 
         bool printUsage = false;
@@ -129,7 +135,10 @@ int main(
     // On some implementations, the feature test macros for float atomics are
     // only defined when compiling for OpenCL C 3.0 or newer.
     std::string buildOptions = "-cl-std=CL3.0";
-    if (emulate) {
+    if (slowEmulate) {
+        printf("Forcing slow and safe emulation.\n");
+        buildOptions += " -DEMULATE -DSLOW_EMULATE";
+    } else if (emulate) {
         printf("Forcing emulation.\n");
         buildOptions += " -DEMULATE";
     } else if (!checkDeviceForExtension(devices[deviceIndex], CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME)) {
@@ -220,8 +229,8 @@ int main(
 
     // intermediate results validation
     if (check) {
-        if (false && emulate) {
-            printf("Skipping The emulated float atomic add does not support intermediate results.\n");
+        if (emulate && !slowEmulate) {
+            printf("The emulated float atomic add does not support intermediate results.\n");
         } else {
             std::vector<cl_float> test(gwx);
             commandQueue.enqueueReadBuffer(
