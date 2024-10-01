@@ -17,7 +17,7 @@ static const char kernelString[] = R"CLC(
 
 // For this sample, we can simply use an inline sampler, with
 // default values for sampling mipmaps.  A more complicated
-// sampler would need to create a sampler with properties on
+// sample would need to create a sampler with properties on
 // the host and pass it into the kernel.
 
 const sampler_t sampler =
@@ -62,7 +62,7 @@ int main(
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: copybufferkernel [options]\n"
+                "Usage: mipmapimage [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }
@@ -134,6 +134,7 @@ int main(
     // Things to add, things to test:
     // - How do you create a sampler with float properties?
     // - FillImage to nonzero mip levels.
+    // - What should get_image_num_mip_levels return when num_mip_levels is zero?
 
     mipLevels = std::max(mipLevels, 1U);
 
