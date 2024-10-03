@@ -102,7 +102,7 @@ int main(
         op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size X AKA Number of Atomics", gwx, &gwx);
         op.add<popl::Switch>("e", "emulate", "Unconditionally Emulate Float Atomics", &emulate);
-        op.add<popl::Switch>("s", "slow-emulate", "Unconditionally Emulate Float Atomics with Return Support", &slowEmulate);
+        op.add<popl::Switch>("s", "slow-emulate", "Unconditionally Emulate Float Atomics (slowly and safely)", &slowEmulate);
         op.add<popl::Switch>("c", "check", "Check Intermediate Results", &check);
 
         bool printUsage = false;
