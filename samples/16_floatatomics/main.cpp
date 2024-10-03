@@ -259,7 +259,8 @@ int main(
             }
 
             if (mismatches) {
-                printf("Intermediate Results Validation: Found %zu mismatches / %zu values!!!\n", mismatches, gwx);
+                printf("Intermediate Results Validation: Found %zu mismatches / %zu values!!!\n",
+                    mismatches, gwx);
             } else {
                 printf("Intermediate Results Validation: Success.\n");
             }
