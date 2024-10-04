@@ -2732,6 +2732,22 @@ bool clGetDeviceInfo_override(
                 caps |= CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR;
             }
 
+            auto ptr = (cl_device_command_buffer_capabilities_khr*)param_value;
+            cl_int errorCode = writeParamToMemory(
+                param_value_size,
+                caps,
+                param_value_size_ret,
+                ptr );
+
+            if( errcode_ret )
+            {
+                errcode_ret[0] = errorCode;
+            }
+            return true;
+        }
+        break;
+    case CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR:
+        {
             cl_command_queue_properties cqProps = 0;
             g_pNextDispatch->clGetDeviceInfo(
                 device,
@@ -2739,15 +2755,22 @@ bool clGetDeviceInfo_override(
                 sizeof(cqProps),
                 &cqProps,
                 nullptr );
-            if( cqProps & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE )
+
+            cl_command_queue_properties cbProps = 0;
+            if(cqProps & CL_QUEUE_PROFILING_ENABLE)
             {
-                caps |= CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR;
+                cbProps |= CL_QUEUE_PROFILING_ENABLE;
             }
 
-            auto ptr = (cl_device_command_buffer_capabilities_khr*)param_value;
+            if(cqProps & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
+            {
+                cbProps |= CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+            }
+
+            auto ptr = (cl_command_queue_properties*)param_value;
             cl_int errorCode = writeParamToMemory(
                 param_value_size,
-                caps,
+                cbProps,
                 param_value_size_ret,
                 ptr );
 
