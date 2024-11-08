@@ -20,7 +20,7 @@
 #include "emulate.h"
 
 static constexpr cl_version version_cl_khr_unified_svm =
-    CL_MAKE_VERSION(0, 1, 11);
+    CL_MAKE_VERSION(0, 2, 0);
 
 static cl_svm_capabilities_khr getDeviceUSMCaps(cl_device_id device)
 {
