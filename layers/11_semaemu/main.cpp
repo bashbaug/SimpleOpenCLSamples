@@ -88,7 +88,17 @@ clGetEventInfo_layer(
 
     return errorCode;
 }
-
+static cl_int CL_API_CALL
+clGetSemaphoreHandleForTypeKHR_EMU(
+    cl_semaphore_khr sema_object,
+    cl_device_id device,
+    cl_external_semaphore_handle_type_khr handle_type,
+    size_t handle_size,
+    void* handle_ptr,
+    size_t* handle_size_ret)
+{
+    return CL_INVALID_OPERATION;
+}
 
 #define CHECK_RETURN_EXTENSION_FUNCTION( _funcname )                        \
     if (strcmp(func_name, #_funcname) == 0) {                               \
@@ -108,6 +118,11 @@ clGetExtensionFunctionAddressForPlatform_layer(
     CHECK_RETURN_EXTENSION_FUNCTION( clGetSemaphoreInfoKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clRetainSemaphoreKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clReleaseSemaphoreKHR );
+
+    // This is currently required to run the semaphore conformance tests,
+    // although it is part of cl_khr_external_semaphore, and not part of
+    // cl_khr_semaphore.
+    CHECK_RETURN_EXTENSION_FUNCTION( clGetSemaphoreHandleForTypeKHR );
 
     return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
         platform,

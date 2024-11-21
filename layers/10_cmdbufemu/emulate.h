@@ -50,6 +50,7 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
 cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_uint num_sync_points_in_wait_list,
     const cl_sync_point_khr* sync_point_wait_list,
     cl_sync_point_khr* sync_point,
@@ -58,6 +59,7 @@ cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
 cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_buffer,
     cl_mem dst_buffer,
     size_t src_offset,
@@ -71,6 +73,7 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
 cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_buffer,
     cl_mem dst_buffer,
     const size_t* src_origin,
@@ -88,6 +91,7 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
 cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_buffer,
     cl_mem dst_image,
     size_t src_offset,
@@ -101,6 +105,7 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
 cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_image,
     cl_mem dst_image,
     const size_t* src_origin,
@@ -114,6 +119,7 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
 cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_image,
     cl_mem dst_buffer,
     const size_t* src_origin,
@@ -127,6 +133,7 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
 cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem buffer,
     const void* pattern,
     size_t pattern_size,
@@ -140,6 +147,7 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
 cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem image,
     const void* fill_color,
     const size_t* origin,
@@ -152,6 +160,7 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
 cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     void* dst_ptr,
     const void* src_ptr,
     size_t size,
@@ -163,6 +172,7 @@ cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
 cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     void* svm_ptr,
     const void* pattern,
     size_t pattern_size,
@@ -175,7 +185,7 @@ cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
 cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_command_queue command_queue,
-    const cl_ndrange_kernel_command_properties_khr* properties,
+    const cl_command_properties_khr* properties,
     cl_kernel kernel,
     cl_uint work_dim,
     const size_t* global_work_offset,
@@ -211,7 +221,9 @@ cl_command_buffer_khr CL_API_CALL clRemapCommandBufferKHR_EMU(
 
 cl_int CL_API_CALL clUpdateMutableCommandsKHR_EMU(
     cl_command_buffer_khr command_buffer,
-    const cl_mutable_base_config_khr* mutable_config);
+    cl_uint num_configs,
+    const cl_command_buffer_update_type_khr* config_types,
+    const void** configs );
 
 cl_int CL_API_CALL clGetMutableCommandInfoKHR_EMU(
     cl_mutable_command_khr command,

@@ -20,9 +20,9 @@
 #include "emulate.h"
 
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 4);
+    CL_MAKE_VERSION(0, 9, 5);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
-    CL_MAKE_VERSION(0, 9, 1);
+    CL_MAKE_VERSION(0, 9, 3);
 
 SLayerContext& getLayerContext(void)
 {
@@ -106,11 +106,9 @@ typedef struct _cl_mutable_command_khr
                     ptr );
             }
             break;
-        // These are only valid for clCommandNDRangeKernel, but the spec says
-        // they should return size = 0 rather than an error.
-        case CL_MUTABLE_DISPATCH_PROPERTIES_ARRAY_KHR:
+        case CL_MUTABLE_COMMAND_PROPERTIES_ARRAY_KHR:
             {
-                auto ptr = (cl_ndrange_kernel_command_properties_khr*)param_value;
+                auto ptr = (cl_command_properties_khr*)param_value;
                 return writeVectorToMemory(
                     param_value_size,
                     {}, // No properties are currently supported.
@@ -811,7 +809,7 @@ private:
 struct NDRangeKernel : Command
 {
     static std::unique_ptr<NDRangeKernel> create(
-        const cl_ndrange_kernel_command_properties_khr* properties,
+        const cl_command_properties_khr* properties,
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
         cl_kernel kernel,
@@ -836,9 +834,10 @@ struct NDRangeKernel : Command
     {
         switch( param_name )
         {
-        case CL_MUTABLE_DISPATCH_PROPERTIES_ARRAY_KHR:
+        // TODO: eventually this should move to the base Command class.
+        case CL_MUTABLE_COMMAND_PROPERTIES_ARRAY_KHR:
             {
-                auto ptr = (cl_ndrange_kernel_command_properties_khr*)param_value;
+                auto ptr = (cl_command_properties_khr*)param_value;
                 return writeVectorToMemory(
                     param_value_size,
                     properties,
@@ -1101,7 +1100,7 @@ struct NDRangeKernel : Command
     cl_mutable_dispatch_asserts_khr mutableAsserts = 0;
     size_t  numWorkGroups = 0;
 #endif // defined(cl_khr_command_buffer_mutable_dispatch)
-    std::vector<cl_command_buffer_properties_khr> properties;
+    std::vector<cl_command_properties_khr> properties;
     std::vector<size_t> global_work_offset;
     std::vector<size_t> global_work_size;
     std::vector<size_t> local_work_size;
@@ -1557,7 +1556,10 @@ typedef struct _cl_command_buffer_khr
     }
 
 #if defined(cl_khr_command_buffer_mutable_dispatch)
-    cl_int  mutate( const cl_mutable_base_config_khr* mutable_config )
+    cl_int  mutate(
+                cl_uint numUpdates,
+                const cl_command_buffer_update_type_khr* updateTypes,
+                const void** updateConfigs )
     {
         if( State != CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR )
         {
@@ -1568,48 +1570,32 @@ typedef struct _cl_command_buffer_khr
             return CL_INVALID_OPERATION;
         }
 
-        if( mutable_config == nullptr )
+        if( ( numUpdates > 0 && updateTypes == nullptr ) ||
+            ( numUpdates == 0 && updateTypes != nullptr ) )
         {
             return CL_INVALID_VALUE;
         }
-        if( mutable_config->type != CL_STRUCTURE_TYPE_MUTABLE_BASE_CONFIG_KHR )
-        {
-            return CL_INVALID_VALUE;
-        }
-        if( mutable_config->next == nullptr && mutable_config->mutable_dispatch_list == nullptr )
-        {
-            return CL_INVALID_VALUE;
-        }
-        if( ( mutable_config->num_mutable_dispatch > 0 && mutable_config->mutable_dispatch_list == nullptr ) ||
-            ( mutable_config->num_mutable_dispatch == 0 && mutable_config->mutable_dispatch_list != nullptr ) )
-        {
-            return CL_INVALID_VALUE;
-        }
-        // No "next" extensions are currently supported.
-        if( mutable_config->next != nullptr )
+        if( ( numUpdates > 0 && updateConfigs == nullptr ) ||
+            ( numUpdates == 0 && updateConfigs != nullptr ) )
         {
             return CL_INVALID_VALUE;
         }
 
-        for( cl_uint i = 0; i < mutable_config->num_mutable_dispatch; i++ )
+        for( cl_uint i = 0; i < numUpdates; i++ )
         {
-            const cl_mutable_dispatch_config_khr* dispatchConfig =
-                &mutable_config->mutable_dispatch_list[i];
-            if( !Command::isValid(dispatchConfig->command) ||
-                dispatchConfig->command->getCmdBuf() != this )
+            if( updateTypes[i] == CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR &&
+                updateConfigs[i] != nullptr )
             {
-                return CL_INVALID_MUTABLE_COMMAND_KHR;
-            }
-            if( dispatchConfig->type == CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR )
-            {
-                if( dispatchConfig->command->getType() != CL_COMMAND_NDRANGE_KERNEL )
+                auto config = (const cl_mutable_dispatch_config_khr*)updateConfigs[i];
+                if( !Command::isValid(config->command) ||
+                    config->command->getCmdBuf() != this ||
+                    config->command->getType() != CL_COMMAND_NDRANGE_KERNEL )
                 {
                     return CL_INVALID_MUTABLE_COMMAND_KHR;
                 }
-                
-                if( cl_int errorCode = ((NDRangeKernel*)dispatchConfig->command)->mutate(
+                if( cl_int errorCode = ((NDRangeKernel*)config->command)->mutate(
                         MutableDispatchAsserts,
-                        dispatchConfig ) )
+                        config ) )
                 {
                     return errorCode;
                 }
@@ -1746,7 +1732,7 @@ _cl_mutable_command_khr::_cl_mutable_command_khr(
     Queue(queue ? queue : cmdbuf->getQueue()) {}
 
 std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
-    const cl_ndrange_kernel_command_properties_khr* properties,
+    const cl_command_properties_khr* properties,
     cl_command_buffer_khr cmdbuf,
     cl_command_queue queue,
     cl_kernel kernel,
@@ -1766,7 +1752,7 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
 
     if( properties )
     {
-        const cl_ndrange_kernel_command_properties_khr* check = properties;
+        const cl_command_properties_khr* check = properties;
         bool found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR = false;
         bool found_CL_MUTABLE_DISPATCH_ASSERTS_KHR = false;
         while( errorCode == CL_SUCCESS && check[0] != 0 )
@@ -2012,6 +1998,7 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
 cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_uint num_sync_points_in_wait_list,
     const cl_sync_point_khr* sync_point_wait_list,
     cl_sync_point_khr* sync_point,
@@ -2027,6 +2014,10 @@ cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2048,6 +2039,7 @@ cl_int CL_API_CALL clCommandBarrierWithWaitListKHR_EMU(
 cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_buffer,
     cl_mem dst_buffer,
     size_t src_offset,
@@ -2068,6 +2060,10 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2113,6 +2109,7 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
 cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_buffer,
     cl_mem dst_buffer,
     const size_t* src_origin,
@@ -2137,6 +2134,10 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2189,6 +2190,7 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
 cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_buffer,
     cl_mem dst_image,
     size_t src_offset,
@@ -2209,6 +2211,10 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2253,6 +2259,7 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
 cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_image,
     cl_mem dst_image,
     const size_t* src_origin,
@@ -2273,6 +2280,10 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2317,6 +2328,7 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
 cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem src_image,
     cl_mem dst_buffer,
     const size_t* src_origin,
@@ -2337,6 +2349,10 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2381,6 +2397,7 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
 cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem buffer,
     const void* pattern,
     size_t pattern_size,
@@ -2401,6 +2418,10 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2445,6 +2466,7 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
 cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     cl_mem image,
     const void* fill_color,
     const size_t* origin,
@@ -2464,6 +2486,10 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2506,6 +2532,7 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
 cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     void* dst_ptr,
     const void* src_ptr,
     size_t size,
@@ -2524,6 +2551,10 @@ cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2565,6 +2596,7 @@ cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
 cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
+    const cl_command_properties_khr* properties,
     void* dst_ptr,
     const void* pattern,
     size_t pattern_size,
@@ -2584,6 +2616,10 @@ cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( properties != nullptr && properties[0] != 0 )
+    {
+        return CL_INVALID_PROPERTY;
     }
     if( mutable_handle != nullptr )
     {
@@ -2626,7 +2662,7 @@ cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
 cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue command_queue,
-    const cl_ndrange_kernel_command_properties_khr* properties,
+    const cl_command_properties_khr* properties,
     cl_kernel kernel,
     cl_uint work_dim,
     const size_t* global_work_offset,
@@ -2748,14 +2784,18 @@ cl_command_buffer_khr CL_API_CALL clRemapCommandBufferKHR_EMU(
 // cl_khr_command_buffer_mutable_dispatch
 cl_int CL_API_CALL clUpdateMutableCommandsKHR_EMU(
     cl_command_buffer_khr cmdbuf,
-    const cl_mutable_base_config_khr* mutable_config)
+    cl_uint num_configs,
+    const cl_command_buffer_update_type_khr* config_types,
+    const void** configs )
 {
     if( !CommandBuffer::isValid(cmdbuf) )
     {
         return CL_INVALID_COMMAND_BUFFER_KHR;
     }
     if( cl_int errorCode = cmdbuf->mutate(
-            mutable_config ) )
+            num_configs,
+            config_types,
+            configs ) )
     {
         return errorCode;
     }

@@ -164,11 +164,11 @@ int main(
 
     kernel.setArg(0, deviceMemDst);
     kernel.setArg(1, deviceMemSrc);
-    const cl_ndrange_kernel_command_properties_khr cmdprops[] = {
+    const cl_command_properties_khr cmdprops[] = {
         CL_MUTABLE_DISPATCH_ASSERTS_KHR,
         noCmdAssert
             ? 0
-            : (cl_ndrange_kernel_command_properties_khr)
+            : (cl_command_properties_khr)
                   CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR,
         0,
     };
@@ -196,18 +196,22 @@ int main(
     {
         const size_t gwx_x4 = gwx * 4;
         cl_mutable_dispatch_config_khr dispatchConfig = {};
-        dispatchConfig.type = CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR;
         dispatchConfig.command = command;
         dispatchConfig.global_work_size = &gwx_x4;
 
-        cl_mutable_base_config_khr baseConfig = {};
-        baseConfig.type = CL_STRUCTURE_TYPE_MUTABLE_BASE_CONFIG_KHR;
-        baseConfig.num_mutable_dispatch = 1;
-        baseConfig.mutable_dispatch_list = &dispatchConfig;
+        const cl_uint updateCount = 1;
+        const cl_command_buffer_update_type_khr updateTypes[updateCount] = {
+            CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR,
+        };
+        const void* updateConfigs[updateCount] = {
+            &dispatchConfig,
+        };
 
         cl_int check = clUpdateMutableCommandsKHR(
             cmdbuf,
-            &baseConfig );
+            updateCount,
+            updateTypes,
+            updateConfigs );
         printf("clUpdateMutableCommandsKHR() to increase work-groups returned %s.\n",
             check == CL_SUCCESS ? "SUCCESS" : "an ERROR");
     }
@@ -216,18 +220,22 @@ int main(
     // This should not generate an error even with mutable dispatch asserts.
     {
         cl_mutable_dispatch_config_khr dispatchConfig = {};
-        dispatchConfig.type = CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR;
         dispatchConfig.command = command;
         dispatchConfig.global_work_size = &gwx;
 
-        cl_mutable_base_config_khr baseConfig = {};
-        baseConfig.type = CL_STRUCTURE_TYPE_MUTABLE_BASE_CONFIG_KHR;
-        baseConfig.num_mutable_dispatch = 1;
-        baseConfig.mutable_dispatch_list = &dispatchConfig;
+        const cl_uint updateCount = 1;
+        const cl_command_buffer_update_type_khr updateTypes[updateCount] = {
+            CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR,
+        };
+        const void* updateConfigs[updateCount] = {
+            &dispatchConfig,
+        };
 
         cl_int check = clUpdateMutableCommandsKHR(
             cmdbuf,
-            &baseConfig );
+            updateCount,
+            updateTypes,
+            updateConfigs );
         printf("clUpdateMutableCommandsKHR() to reduce work-groups returned %s.\n",
             check == CL_SUCCESS ? "SUCCESS" : "an ERROR");
     }
