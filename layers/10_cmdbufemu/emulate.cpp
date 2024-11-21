@@ -1462,10 +1462,41 @@ typedef struct _cl_command_buffer_khr
         {
             return CL_INVALID_VALUE;
         }
+        if( ( event_wait_list == NULL && num_events_in_wait_list > 0 ) ||
+            ( event_wait_list != NULL && num_events_in_wait_list == 0 ) )
+        {
+            return CL_INVALID_EVENT_WAIT_LIST;
+        }
+
+        cl_context cmdbuf_context = nullptr;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            getQueue(),
+            CL_QUEUE_CONTEXT,
+            sizeof(cmdbuf_context),
+            &cmdbuf_context,
+            nullptr);
+
+        for( cl_uint q = 0; q < num_queues && queues; q++ )
+        {
+            if( queues[q] == NULL )
+            {
+                return CL_INVALID_COMMAND_QUEUE;
+            }
+
+            cl_context queue_context = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queues[q],
+                CL_QUEUE_CONTEXT,
+                sizeof(queue_context),
+                &queue_context,
+                nullptr);
+            if( queue_context != cmdbuf_context )
+            {
+                return CL_INVALID_CONTEXT;
+            }
+        }
 
         // CL_INCOMPATIBLE_COMMAND_QUEUE_KHR if any element of queues is not compatible with the command-queue set on command_buffer creation at the same list index.
-        // CL_INVALID_CONTEXT if any element of queues does not have the same context as the command-queue set on command_buffer creation at the same list indes.
-        // CL_INVALID_CONTEXT if the context associated with the command buffer and events in event_wait_list are not the same.
 
         return CL_SUCCESS;
     }
