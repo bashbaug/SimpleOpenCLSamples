@@ -22,7 +22,7 @@ extern const struct _cl_icd_dispatch* g_pNextDispatch;
 ///////////////////////////////////////////////////////////////////////////////
 // Override Functions
 
-cl_int clBuildProgram_override(
+cl_int clBuildProgram_fallback(
     cl_program program,
     cl_uint num_devices,
     const cl_device_id* device_list,
@@ -38,7 +38,7 @@ cl_program clCreateProgramWithSource_override(
     const size_t* lengths,
     cl_int* errcode_ret);
 
-cl_int clGetDeviceInfo_override(
+cl_int clGetDeviceInfo_fallback(
     cl_device_id device,
     cl_device_info param_name,
     size_t param_value_size,
@@ -46,7 +46,7 @@ cl_int clGetDeviceInfo_override(
     size_t* param_value_size_ret,
     cl_int errorCode);
 
-cl_int clGetKernelSubGroupInfo_override(
+cl_int clGetKernelSubGroupInfo_fallback(
     cl_kernel kernel,
     cl_device_id device,
     cl_kernel_sub_group_info param_name,

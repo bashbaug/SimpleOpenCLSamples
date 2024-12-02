@@ -46,7 +46,7 @@ clBuildProgram_layer(
         pfn_notify,
         user_data);
     if (errorCode != CL_SUCCESS) {
-        errorCode = clBuildProgram_override(
+        errorCode = clBuildProgram_fallback(
             program,
             num_devices,
             device_list,
@@ -94,7 +94,7 @@ clGetDeviceInfo_layer(
         param_value != nullptr &&
         param_value_size == sizeof(cl_uint) &&
         ((cl_uint*)param_value)[0] == 0) {
-        errorCode = clGetDeviceInfo_override(
+        errorCode = clGetDeviceInfo_fallback(
             device,
             param_name,
             param_value_size,
@@ -127,7 +127,7 @@ clGetKernelSubGroupInfo_layer(
         param_value,
         param_value_size_ret);
     if (errorCode != CL_SUCCESS) {
-        errorCode = clGetKernelSubGroupInfo_override(
+        errorCode = clGetKernelSubGroupInfo_fallback(
             kernel,
             device,
             param_name,
