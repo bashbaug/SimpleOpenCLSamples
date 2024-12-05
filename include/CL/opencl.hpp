@@ -1490,9 +1490,6 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR,      cl::vector<cl_external_semaphore_handle_type_khr>) \
     F(cl_semaphore_info_khr, CL_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR,      cl::vector<cl_external_semaphore_handle_type_khr>) \
 
-#define CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_DX_FENCE_EXT(F) \
-    F(cl_external_semaphore_handle_type_khr, CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR, void*) \
-
 #define CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_OPAQUE_FD_EXT(F) \
     F(cl_external_semaphore_handle_type_khr, CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR, int) \
 
@@ -1790,7 +1787,7 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_command_buffer_info_khr, CL_COMMAND_BUFFER_PROPE
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_COMMAND_COMMAND_QUEUE_KHR, CommandQueue)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_COMMAND_COMMAND_BUFFER_KHR, CommandBufferKhr)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_COMMAND_COMMAND_TYPE_KHR, cl_command_type)
-CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_DISPATCH_PROPERTIES_ARRAY_KHR, cl::vector<cl_ndrange_kernel_command_properties_khr>)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_COMMAND_PROPERTIES_ARRAY_KHR, cl::vector<cl_command_properties_khr>)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_DISPATCH_KERNEL_KHR, cl_kernel)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_DISPATCH_DIMENSIONS_KHR, cl_uint)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_DISPATCH_GLOBAL_WORK_OFFSET_KHR, cl::vector<size_type>)
@@ -1801,6 +1798,12 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_mutable_command_info_khr, CL_MUTABLE_DISPATCH_LO
 #if defined(cl_khr_kernel_clock)
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_KERNEL_CLOCK_CAPABILITIES_KHR, cl_device_kernel_clock_capabilities_khr)
 #endif /* cl_khr_kernel_clock */
+
+#if defined(cl_ext_float_atomics)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_SINGLE_FP_ATOMIC_CAPABILITIES_EXT, cl_device_fp_atomic_capabilities_ext)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_DOUBLE_FP_ATOMIC_CAPABILITIES_EXT, cl_device_fp_atomic_capabilities_ext)
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_HALF_FP_ATOMIC_CAPABILITIES_EXT, cl_device_fp_atomic_capabilities_ext)
+#endif /* cl_ext_float_atomics */
 
 #if defined(cl_intel_command_queue_families)
 CL_HPP_PARAM_NAME_CL_INTEL_COMMAND_QUEUE_FAMILIES_(CL_HPP_DECLARE_PARAM_TRAITS_)
@@ -1823,7 +1826,7 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_kernel_work_group_info, CL_KERNEL_SPILL_MEM_SIZE
 
 #if defined(cl_intel_unified_shared_memory)
 CL_HPP_PARAM_NAME_CL_INTEL_UNIFIED_SHARED_MEMORY_(CL_HPP_DECLARE_PARAM_TRAITS_)
-#endif // cl_intel_command_queue_families
+#endif // cl_intel_unified_shared_memory
 
 // Convenience functions
 
