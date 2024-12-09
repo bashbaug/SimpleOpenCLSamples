@@ -701,18 +701,16 @@ static void flash_attention_minimal_forward(
         flash_attention.setArg(0, q);
         flash_attention.setArg(1, k);
         flash_attention.setArg(2, v);
-        flash_attention.setArg(3, Tc);
-        flash_attention.setArg(4, Tr);
-        flash_attention.setArg(5, Bc);
-        flash_attention.setArg(6, Br);
-        flash_attention.setArg(7, softmax_scale);
-        flash_attention.setArg(8, l);
-        flash_attention.setArg(9, m);
-        flash_attention.setArg(10, out);
-        flash_attention.setArg(11, cl::Local(Q_LMSize));
-        flash_attention.setArg(12, cl::Local(KV_LMSize));
-        flash_attention.setArg(13, cl::Local(KV_LMSize));
-        flash_attention.setArg(14, cl::Local(S_LMSize));
+        flash_attention.setArg(3, Bc);
+        flash_attention.setArg(4, Br);
+        flash_attention.setArg(5, softmax_scale);
+        flash_attention.setArg(6, l);
+        flash_attention.setArg(7, m);
+        flash_attention.setArg(8, out);
+        flash_attention.setArg(9, cl::Local(Q_LMSize));
+        flash_attention.setArg(10, cl::Local(KV_LMSize));
+        flash_attention.setArg(11, cl::Local(KV_LMSize));
+        flash_attention.setArg(12, cl::Local(S_LMSize));
 
         if (!skipinit) {
             queue.enqueueFillBuffer(out, 0, 0, out_ref.size() * sizeof(out_ref[0]));
@@ -756,13 +754,14 @@ static void flash_attention_forward(
 
     printf("%80s: ", label.c_str()); fflush(stdout);
 
-    cl::Kernel flash_attention{program, "flash_attention"};
+    cl::Kernel flash_attention{program, kernelName.c_str()};
     if (flash_attention() == nullptr) {
         printf("unsupported.\n");
     } else {
         const float softmax_scale = 1.0f / (float)std::sqrt(D);
 
-        cl::NDRange flash_attention_gws(B, NH, T);
+        cl::NDRange flash_attention_gws(T, NH, B);
+        cl::NDRange flash_attention_lws(32, 1, 1);
         flash_attention.setArg(0, q);
         flash_attention.setArg(1, k);
         flash_attention.setArg(2, v);
@@ -776,7 +775,7 @@ static void flash_attention_forward(
         float best = 999.0f;
         for (int test = 0; test < testIterations; test++) {
             auto start = test_clock::now();
-            queue.enqueueNDRangeKernel(flash_attention, cl::NullRange, flash_attention_gws);
+            queue.enqueueNDRangeKernel(flash_attention, cl::NullRange, flash_attention_gws, flash_attention_lws);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -974,7 +973,7 @@ int main(int argc, char** argv)
         }
 #endif
 
-#if 1
+#if 0
         {
             std::vector<float> tout_vec   (B * T * C);
 
@@ -991,7 +990,7 @@ int main(int argc, char** argv)
         }
 #endif
 
-#if 1
+#if 0
         {
             std::vector<float> tout_vec   (B * T * C);
 
@@ -1008,7 +1007,7 @@ int main(int argc, char** argv)
         }
 #endif
 
-#if 1
+#if 0
         {
             std::vector<float> tout_vec   (B * T * C);
 
@@ -1037,11 +1036,11 @@ int main(int argc, char** argv)
 
     printf("Running tests...\n");
 
-    if (mask & 0x2) {
+    if (mask & 0x1) {
         naive_3p_attention_forward(context, program, queue, out, preatt, att, q, k, v, wgSize, out_vec, preatt_vec, att_vec);
     }
 
-    if (mask & 0x20) {
+    if (mask & 0x10) {
         flash_attention_minimal_forward(context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
@@ -1049,8 +1048,8 @@ int main(int argc, char** argv)
         flash_attention_forward("flash_attention", context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
-    if (mask & 0x20) {
-        flash_attention_forward("flash_attention_colblock", context, program, queue, out, q, k, v, wgSize, out_vec);
+    if (mask & 0x40) {
+        flash_attention_forward("flash_attention_blocked", context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
     printf("Done.\n");
