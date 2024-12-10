@@ -26,9 +26,17 @@ clGetExtensionFunctionAddressForPlatform
 clInitLayer
 ```
 
+## Optional Controls
+
+The following environment variables can modify the behavior of the command buffer emulation layer:
+
+| Environment Variable | Behavior |  Example Format |
+|----------------------|----------|-----------------|
+| `CMDBUFEMU_EnhancedErrorChecking` | Enables additional error checking when commands are added to a command buffer using a command buffer "test queue".  By default, the additional error checking is disabled. | `export CMDBUFEMU_EnhancedErrorChecking=1`<br/><br/>`set CMDBUFEMU_EnhancedErrorChecking=1` |
+
 ## Known Limitations
 
 This section describes some of the limitations of the emulated `cl_khr_command_buffer` functionality:
 
-* Many error conditions are not properly checked for and returned.
+* Some error conditions are not properly checked for and returned.
 * Many functions are not thread safe.
