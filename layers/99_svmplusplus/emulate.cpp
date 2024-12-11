@@ -230,50 +230,70 @@ private:
 
         // USM Types:
 
+        cl_svm_capabilities_khr combinedCaps = 0;
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getDeviceUSMCaps(device);
             if (caps != 0) {
-                typeCapsPlatform.push_back(CL_SVM_TYPE_MACRO_DEVICE_KHR);
-                break;
+                combinedCaps = (combinedCaps == 0) ? caps : (combinedCaps & caps);
             }
         }
+        if (combinedCaps != 0) {
+            typeCapsPlatform.push_back(combinedCaps);
+        }
+
+        combinedCaps = 0;
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getHostUSMCaps(device);
             if (caps != 0) {
-                typeCapsPlatform.push_back(CL_SVM_TYPE_MACRO_HOST_KHR);
-                break;
+                combinedCaps = (combinedCaps == 0) ? caps : (combinedCaps & caps);
             }
         }
+        if (combinedCaps != 0) {
+            typeCapsPlatform.push_back(combinedCaps);
+        }
+
+        combinedCaps = 0;
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getSingleDeviceSharedUSMCaps(device);
             if (caps != 0) {
-                typeCapsPlatform.push_back(CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR);
-                break;
+                combinedCaps = (combinedCaps == 0) ? caps : (combinedCaps & caps);
             }
+        }
+        if (combinedCaps != 0) {
+            typeCapsPlatform.push_back(combinedCaps);
         }
 
         // SVM Types:
 
+        combinedCaps = 0;
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getCoarseGrainSVMCaps(device);
             if (caps != 0) {
-                typeCapsPlatform.push_back(CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR);
-                break;
+                combinedCaps = (combinedCaps == 0) ? caps : (combinedCaps & caps);
             }
         }
+        if (combinedCaps != 0) {
+            typeCapsPlatform.push_back(combinedCaps);
+        }
+
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getFineGrainSVMCaps(device);
             if (caps != 0) {
-                typeCapsPlatform.push_back(CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR);
-                break;
+                combinedCaps = (combinedCaps == 0) ? caps : (combinedCaps & caps);
             }
         }
+        if (combinedCaps != 0) {
+            typeCapsPlatform.push_back(combinedCaps);
+        }
+
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getSystemSVMCaps(device);
             if (caps != 0) {
-                typeCapsPlatform.push_back(CL_SVM_TYPE_MACRO_SYSTEM_KHR);
-                break;
+                combinedCaps = (combinedCaps == 0) ? caps : (combinedCaps & caps);
             }
+        }
+        if (combinedCaps != 0) {
+            typeCapsPlatform.push_back(combinedCaps);
         }
 
         TypeCapsPlatform[platform] = typeCapsPlatform;
@@ -282,28 +302,26 @@ private:
             std::vector<cl_svm_capabilities_khr> typeCapsDevice;
 
             for (auto caps: typeCapsPlatform) {
-                switch(caps) {
-                case CL_SVM_TYPE_MACRO_DEVICE_KHR:
+                if ((caps & CL_SVM_TYPE_MACRO_DEVICE_KHR) == CL_SVM_TYPE_MACRO_DEVICE_KHR) {
                     typeCapsDevice.push_back(getDeviceUSMCaps(device));
-                    break;
-                case CL_SVM_TYPE_MACRO_HOST_KHR:
+                }
+                else if ((caps & CL_SVM_TYPE_MACRO_HOST_KHR) == CL_SVM_TYPE_MACRO_HOST_KHR) {
                     typeCapsDevice.push_back(getHostUSMCaps(device));
-                    break;
-                case CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR:
+                }
+                else if ((caps & CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) == CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) {
                     typeCapsDevice.push_back(getSingleDeviceSharedUSMCaps(device));
-                    break;
-                case CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR:
+                }
+                else if ((caps & CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) {
                     typeCapsDevice.push_back(getCoarseGrainSVMCaps(device));
-                    break;
-                case CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR:
+                }
+                else if ((caps & CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR) {
                     typeCapsDevice.push_back(getFineGrainSVMCaps(device));
-                    break;
-                case CL_SVM_TYPE_MACRO_SYSTEM_KHR:
+                }
+                else if ((caps & CL_SVM_TYPE_MACRO_SYSTEM_KHR) == CL_SVM_TYPE_MACRO_SYSTEM_KHR) {
                     typeCapsDevice.push_back(getSystemSVMCaps(device));
-                    break;
-                default:
+                }
+                else {
                     assert(0 && "unknown platform SVM type");
-                    break;
                 }
             }
 
