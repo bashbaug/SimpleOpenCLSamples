@@ -197,7 +197,7 @@ int main(int argc, char** argv)
 
         for( size_t i = 0; i < gws + 1; i++ )
         {
-            uint check = (i == gws) ? gws : gws + 1;
+            cl_uint check = (i == gws) ? gws : gws + 1;
             if( pDst[i] != check )
             {
                 if( mismatches < 16 )
