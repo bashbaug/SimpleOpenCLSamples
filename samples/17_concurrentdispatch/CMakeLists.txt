@@ -7,5 +7,4 @@ add_opencl_sample(
     NUMBER 17
     TARGET concurrentdispatch
     VERSION 200 # for clSetKernelExecInfo
-    SOURCES main.cpp
-    LIBS OpenCLExt)
+    SOURCES main.cpp)

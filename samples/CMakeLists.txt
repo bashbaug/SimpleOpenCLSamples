@@ -76,6 +76,7 @@ add_subdirectory( 06_ndrangekernelfromfile )
 
 add_subdirectory( 10_queueexperiments )
 add_subdirectory( 16_floatatomics )
+add_subdirectory( 17_concurrentdispatch )
 
 set(BUILD_EXTENSION_SAMPLES TRUE)
 if(NOT TARGET OpenCLExt)
@@ -90,5 +91,4 @@ if(BUILD_EXTENSION_SAMPLES)
     add_subdirectory( 13_mutablecommandbuffers )
     add_subdirectory( 14_ooqcommandbuffers )
     add_subdirectory( 15_mutablecommandbufferasserts )
-    add_subdirectory( 17_concurrentdispatch )
 endif()
