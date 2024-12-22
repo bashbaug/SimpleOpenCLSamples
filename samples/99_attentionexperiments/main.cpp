@@ -761,7 +761,61 @@ static void flash_attention_forward(
         const float softmax_scale = 1.0f / (float)std::sqrt(D);
 
         cl::NDRange flash_attention_gws(T, NH, B);
-        cl::NDRange flash_attention_lws(32, 1, 1);
+        flash_attention.setArg(0, q);
+        flash_attention.setArg(1, k);
+        flash_attention.setArg(2, v);
+        flash_attention.setArg(3, out);
+        flash_attention.setArg(4, softmax_scale);
+
+        if (!skipinit) {
+            queue.enqueueFillBuffer(out, 0, 0, out_ref.size() * sizeof(out_ref[0]));
+        }
+
+        float best = 999.0f;
+        for (int test = 0; test < testIterations; test++) {
+            auto start = test_clock::now();
+            queue.enqueueNDRangeKernel(flash_attention, cl::NullRange, flash_attention_gws);
+            queue.finish();
+            auto end = test_clock::now();
+            std::chrono::duration<float> sw_time = end - start;
+            auto elapsed = sw_time.count();
+            best = std::min(best, elapsed);
+        }
+        printf("Best in %f seconds\n", best);
+
+        if (validate) {
+            printf("Checking results: out... "); fflush(stdout);
+            std::vector<float> out_check(out_ref.size());
+            queue.enqueueReadBuffer(out, CL_TRUE, 0, out_check.size() * sizeof(out_check[0]), out_check.data());
+            check_results(out_check, out_ref);
+            printf(" done!\n");
+        }
+    }
+}
+
+static void flash_attention_forward_wg(
+    const std::string& kernelName,
+    cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
+    cl::Buffer& out,
+    cl::Buffer& q, cl::Buffer& k, cl::Buffer& v,
+    size_t wgSize,
+    const std::vector<float>& out_ref)
+{
+    std::string label(__FUNCTION__);
+    label += "(";
+    label += kernelName;
+    label += ")";
+
+    printf("%80s: ", label.c_str()); fflush(stdout);
+
+    cl::Kernel flash_attention{program, kernelName.c_str()};
+    if (flash_attention() == nullptr) {
+        printf("unsupported.\n");
+    } else {
+        const float softmax_scale = 1.0f / (float)std::sqrt(D);
+
+        cl::NDRange flash_attention_gws(T * D, NH, B);
+        cl::NDRange flash_attention_lws(D, 1, 1);
         flash_attention.setArg(0, q);
         flash_attention.setArg(1, k);
         flash_attention.setArg(2, v);
@@ -1046,10 +1100,11 @@ int main(int argc, char** argv)
 
     if (mask & 0x20) {
         flash_attention_forward("flash_attention", context, program, queue, out, q, k, v, wgSize, out_vec);
+        flash_attention_forward("flash_attention_blocked", context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
     if (mask & 0x40) {
-        flash_attention_forward("flash_attention_blocked", context, program, queue, out, q, k, v, wgSize, out_vec);
+        flash_attention_forward_wg("flash_attention_wg", context, program, queue, out, q, k, v, wgSize, out_vec);
     }
 
     printf("Done.\n");
