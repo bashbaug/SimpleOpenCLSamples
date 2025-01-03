@@ -310,6 +310,9 @@ private:
                 else if ((caps & CL_SVM_TYPE_MACRO_HOST_KHR) == CL_SVM_TYPE_MACRO_HOST_KHR) {
                     typeCapsDevice.push_back(getHostUSMCaps(device));
                 }
+                else if ((caps & CL_SVM_TYPE_MACRO_SYSTEM_KHR) == CL_SVM_TYPE_MACRO_SYSTEM_KHR) {
+                    typeCapsDevice.push_back(getSystemSVMCaps(device));
+                }
                 else if ((caps & CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) == CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) {
                     typeCapsDevice.push_back(getSingleDeviceSharedUSMCaps(device));
                 }
@@ -318,9 +321,6 @@ private:
                 }
                 else if ((caps & CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) {
                     typeCapsDevice.push_back(getCoarseGrainSVMCaps(device));
-                }
-                else if ((caps & CL_SVM_TYPE_MACRO_SYSTEM_KHR) == CL_SVM_TYPE_MACRO_SYSTEM_KHR) {
-                    typeCapsDevice.push_back(getSystemSVMCaps(device));
                 }
                 else {
                     assert(0 && "unknown platform SVM type");
