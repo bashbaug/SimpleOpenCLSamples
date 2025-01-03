@@ -276,6 +276,7 @@ private:
             typeCapsPlatform.push_back(combinedCaps);
         }
 
+        combinedCaps = 0;
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getFineGrainSVMCaps(device);
             if (caps != 0) {
@@ -286,6 +287,7 @@ private:
             typeCapsPlatform.push_back(combinedCaps);
         }
 
+        combinedCaps = 0;
         for (auto device: devices) {
             cl_svm_capabilities_khr caps = getSystemSVMCaps(device);
             if (caps != 0) {
