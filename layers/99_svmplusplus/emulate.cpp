@@ -422,7 +422,9 @@ static bool isUSMPtr(
         sizeof(type),
         &type,
         nullptr);
-    return type != CL_MEM_TYPE_UNKNOWN_INTEL;
+    // Workaround: some implementations return zero instead of UNKNOWN for
+    // non-USM pointers, especially SVM pointers.
+    return type != 0 && type != CL_MEM_TYPE_UNKNOWN_INTEL;
 }
 
 static void parseSVMAllocProperties(
@@ -515,9 +517,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     }
     else if ((caps & CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR) {
         cl_svm_mem_flags svmFlags = CL_MEM_READ_WRITE | CL_MEM_SVM_FINE_GRAIN_BUFFER;
-
-        const auto& typeCapsDevice = layerContext.TypeCapsDevice[device];
-        if (typeCapsDevice[svm_type_index] & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR) {
+        if (caps & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR) {
             svmFlags |= CL_MEM_SVM_ATOMICS;
         }
         void* ret = g_pNextDispatch->clSVMAlloc(
