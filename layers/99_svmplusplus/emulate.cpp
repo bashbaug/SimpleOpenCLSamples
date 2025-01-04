@@ -486,8 +486,8 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     size_t alignment = 0;
     parseSVMAllocProperties(properties, device, flags, alignment);
 
-    switch(typeCapsPlatform[svm_type_index]) {
-    case CL_SVM_TYPE_MACRO_DEVICE_KHR:
+    const auto caps = typeCapsPlatform[svm_type_index];
+    if ((caps & CL_SVM_TYPE_MACRO_DEVICE_KHR) == CL_SVM_TYPE_MACRO_DEVICE_KHR) {
         return clDeviceMemAllocINTEL(
             context,
             device,
@@ -495,14 +495,16 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
             size,
             alignment,
             errcode_ret);
-    case CL_SVM_TYPE_MACRO_HOST_KHR:
+    }
+    else if ((caps & CL_SVM_TYPE_MACRO_HOST_KHR) == CL_SVM_TYPE_MACRO_HOST_KHR) {
         return clHostMemAllocINTEL(
             context,
             nullptr,
             size,
             alignment,
             errcode_ret);
-    case CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR:
+    }
+    else if ((caps & CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) == CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) {
         return clSharedMemAllocINTEL(
             context,
             device,
@@ -510,37 +512,37 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
             size,
             alignment,
             errcode_ret);
-    case CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR: {
-            void* ret = g_pNextDispatch->clSVMAlloc(
-                context,
-                CL_MEM_READ_WRITE,
-                size,
-                alignment);
-            if (errcode_ret) {
-                errcode_ret[0] = ret ? CL_SUCCESS : CL_INVALID_VALUE;
-            }
-            return ret;
-        }
-    case CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR: {
-            cl_svm_mem_flags svmFlags = CL_MEM_READ_WRITE | CL_MEM_SVM_FINE_GRAIN_BUFFER;
+    }
+    else if ((caps & CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR) {
+        cl_svm_mem_flags svmFlags = CL_MEM_READ_WRITE | CL_MEM_SVM_FINE_GRAIN_BUFFER;
 
-            const auto& typeCapsDevice = layerContext.TypeCapsDevice[device];
-            if (typeCapsDevice[svm_type_index] & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR) {
-                svmFlags |= CL_MEM_SVM_ATOMICS;
-            }
-            void* ret = g_pNextDispatch->clSVMAlloc(
-                context,
-                svmFlags,
-                size,
-                alignment);
-            if (errcode_ret) {
-                errcode_ret[0] = ret ? CL_SUCCESS : CL_INVALID_VALUE;
-            }
-            return ret;
+        const auto& typeCapsDevice = layerContext.TypeCapsDevice[device];
+        if (typeCapsDevice[svm_type_index] & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR) {
+            svmFlags |= CL_MEM_SVM_ATOMICS;
         }
-    default:
+        void* ret = g_pNextDispatch->clSVMAlloc(
+            context,
+            svmFlags,
+            size,
+            alignment);
+        if (errcode_ret) {
+            errcode_ret[0] = ret ? CL_SUCCESS : CL_INVALID_VALUE;
+        }
+        return ret;
+    }
+    else if ((caps & CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) {
+        void* ret = g_pNextDispatch->clSVMAlloc(
+            context,
+            CL_MEM_READ_WRITE,
+            size,
+            alignment);
+        if (errcode_ret) {
+            errcode_ret[0] = ret ? CL_SUCCESS : CL_INVALID_VALUE;
+        }
+        return ret;
+    }
+    else {
         assert(0 && "unknown SVM type");
-        break;
     }
 
     if (errcode_ret) {
