@@ -95,9 +95,9 @@ int main(
         return -1;
     }
 
-    cl_device_command_buffer_capabilities_khr cmdbufcaps =
-        devices[deviceIndex].getInfo<CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR>();
-    if (cmdbufcaps & CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR) {
+    cl_command_queue_properties cmdbufqueueprops =
+        devices[deviceIndex].getInfo<CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR>();
+    if (cmdbufqueueprops & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) {
         printf("Device supports out-of-order command buffers.\n");
     } else {
         printf("Device does not support out-of-order command buffers, exiting.\n");
