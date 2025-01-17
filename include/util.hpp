@@ -8,7 +8,7 @@
 #include <CL/opencl.hpp>
 #include <string>
 
-static cl_uint getDeviceOpenCLVersion(
+static cl_version getDeviceOpenCLVersion(
     const cl::Device& device)
 {
     cl_uint major = 0;
@@ -36,7 +36,7 @@ static cl_uint getDeviceOpenCLVersion(
         }
     }
 
-    return (major << 16) | minor;
+    return CL_MAKE_VERSION(major, minor, 0);
 }
 
 static bool checkDeviceForExtension(

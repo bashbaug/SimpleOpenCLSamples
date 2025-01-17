@@ -2897,7 +2897,7 @@ bool clGetDeviceInfo_override(
                     deviceExtensions.data(),
                     CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
                 getOpenCLVersionFromString(
-                    deviceVersion.data() ) >= 0x00020001)
+                    deviceVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 std::string newExtensions;
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
@@ -2981,7 +2981,7 @@ bool clGetDeviceInfo_override(
 
             if( found == false &&
                 getOpenCLVersionFromString(
-                    deviceVersion.data() ) >= 0x00020001)
+                    deviceVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 {
                     extensions.emplace_back();
@@ -3246,7 +3246,7 @@ bool clGetPlatformInfo_override(
                     platformExtensions.data(),
                     CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
                 getOpenCLVersionFromString(
-                    platformVersion.data() ) >= 0x00020001)
+                    platformVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 std::string newExtensions;
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
@@ -3330,7 +3330,7 @@ bool clGetPlatformInfo_override(
 
             if( found == false &&
                 getOpenCLVersionFromString(
-                    platformVersion.data() ) >= 0x00020001)
+                    platformVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 {
                     extensions.emplace_back();

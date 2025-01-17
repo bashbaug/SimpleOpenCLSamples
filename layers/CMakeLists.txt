@@ -54,3 +54,4 @@ add_subdirectory( 00_example )
 
 add_subdirectory( 10_cmdbufemu )
 add_subdirectory( 11_semaemu )
+add_subdirectory( 12_spirvqueriesemu )
