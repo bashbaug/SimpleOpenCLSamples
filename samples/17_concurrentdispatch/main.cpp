@@ -56,16 +56,22 @@ clGetKernelMaxConcurrentWorkGroupCountINTEL(
 #endif // !defined(cl_intel_concurrent_dispatch)
 
 static const char kernelString[] = R"CLC(
-#pragma OPENCL EXTENSION cl_intel_concurrent_dispatch : enable
+//#pragma OPENCL EXTENSION cl_intel_concurrent_dispatch : enable
+bool __attribute__((overloadable)) intel_is_device_barrier_valid();
+void __attribute__((overloadable)) intel_device_barrier(
+    cl_mem_fence_flags flags);
+void __attribute__((overloadable)) intel_device_barrier(
+    cl_mem_fence_flags flags,
+    memory_scope scope);
 kernel void DeviceBarrierTest( global uint* dst )
 {
     const size_t gws = get_global_size(0);
     atomic_add( &dst[gws], 1 );
 
-    //if (intel_is_device_barrier_valid()) {
-        //intel_device_barrier( CLK_LOCAL_MEM_FENCE );    // TODO: check fence flags
-        //intel_device_barrier( CLK_LOCAL_MEM_FENCE, memory_scope_device );    // TODO: check fence flags
-    //}
+    if (intel_is_device_barrier_valid()) {
+        intel_device_barrier( CLK_GLOBAL_MEM_FENCE );    // TODO: check fence flags
+        intel_device_barrier( CLK_GLOBAL_MEM_FENCE, memory_scope_device );    // TODO: check fence flags
+    }
 
     const uint id = get_global_id(0);
     dst[id] = dst[gws] + 1;
