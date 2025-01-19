@@ -19,6 +19,7 @@
 
 #include "emulate.h"
 
+// TODO: bump to 0.9.7 when tests are ready.
 static constexpr cl_version version_cl_khr_command_buffer =
     CL_MAKE_VERSION(0, 9, 6);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
@@ -1069,9 +1070,9 @@ struct NDRangeKernel : Command
             queue,
             kernel,
             work_dim,
-            global_work_offset.size() ? global_work_offset.data() : NULL,
+            global_work_offset.size() ? global_work_offset.data() : nullptr,
             global_work_size.data(),
-            local_work_size.size() ? local_work_size.data() : NULL,
+            local_work_size.size() ? local_work_size.data() : nullptr,
             static_cast<cl_uint>(wait_list.size()),
             wait_list.data(),
             signal);
@@ -1126,14 +1127,14 @@ typedef struct _cl_command_buffer_khr
         const cl_command_buffer_properties_khr* properties,
         cl_int* errcode_ret)
     {
-        cl_command_buffer_khr cmdbuf = NULL;
+        cl_command_buffer_khr cmdbuf = nullptr;
         cl_int errorCode = CL_SUCCESS;
 
         ptrdiff_t numProperties = 0;
         cl_command_buffer_flags_khr flags = 0;
         cl_mutable_dispatch_asserts_khr mutableDispatchAsserts = 0;
 
-        if( num_queues != 1 || queues == NULL )
+        if( num_queues != 1 || queues == nullptr )
         {
             errorCode = CL_INVALID_VALUE;
         }
@@ -1179,6 +1180,20 @@ typedef struct _cl_command_buffer_khr
             }
             numProperties = check - properties + 1;
         }
+        for( cl_uint q = 0; q < num_queues && queues != nullptr; q++ )
+        {
+            cl_uint refCount = 0;
+            if( g_pNextDispatch->clGetCommandQueueInfo(
+                    queues[q],
+                    CL_QUEUE_REFERENCE_COUNT,
+                    sizeof(refCount),
+                    &refCount,
+                    nullptr) != CL_SUCCESS )
+            {
+                errorCode = CL_INVALID_COMMAND_QUEUE;
+                break;
+            }
+        }
         if( errcode_ret )
         {
             errcode_ret[0] = errorCode;
@@ -1196,12 +1211,24 @@ typedef struct _cl_command_buffer_khr
                 properties,
                 properties + numProperties );
 
+            cmdbuf->IsInOrder.reserve(num_queues);
             cmdbuf->TestQueues.reserve(num_queues);
             cmdbuf->BlockingEvents.reserve(num_queues);
 
             for( auto queue : cmdbuf->Queues )
             {
                 g_pNextDispatch->clRetainCommandQueue(queue);
+
+                cl_command_queue_properties props = 0;
+                g_pNextDispatch->clGetCommandQueueInfo(
+                    queue,
+                    CL_QUEUE_PROPERTIES,
+                    sizeof(props),
+                    &props,
+                    nullptr);
+                cmdbuf->IsInOrder.push_back(
+                    (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0 );
+
                 cmdbuf->setupTestQueue(queue);
             }
         }
@@ -1424,8 +1451,8 @@ typedef struct _cl_command_buffer_khr
         {
             return CL_INVALID_OPERATION;
         }
-        if( ( queues == NULL && num_queues > 0 ) ||
-            ( queues != NULL && num_queues == 0 ) )
+        if( ( queues == nullptr && num_queues > 0 ) ||
+            ( queues != nullptr && num_queues == 0 ) )
         {
             return CL_INVALID_VALUE;
         }
@@ -1433,8 +1460,8 @@ typedef struct _cl_command_buffer_khr
         {
             return CL_INVALID_VALUE;
         }
-        if( ( event_wait_list == NULL && num_events_in_wait_list > 0 ) ||
-            ( event_wait_list != NULL && num_events_in_wait_list == 0 ) )
+        if( ( event_wait_list == nullptr && num_events_in_wait_list > 0 ) ||
+            ( event_wait_list != nullptr && num_events_in_wait_list == 0 ) )
         {
             return CL_INVALID_EVENT_WAIT_LIST;
         }
@@ -1449,7 +1476,7 @@ typedef struct _cl_command_buffer_khr
 
         for( cl_uint q = 0; q < num_queues && queues; q++ )
         {
-            if( queues[q] == NULL )
+            if( queues[q] == nullptr )
             {
                 return CL_INVALID_COMMAND_QUEUE;
             }
@@ -1534,12 +1561,32 @@ typedef struct _cl_command_buffer_khr
     {
         cl_int errorCode = CL_SUCCESS;
 
+        cl_command_queue_properties props = 0;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            queue,
+            CL_QUEUE_PROPERTIES,
+            sizeof(props),
+            &props,
+            nullptr);
+        bool isRecordQueueInOrder = IsInOrder[0];
+        bool isReplayQueueInOrder =
+            (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0;
+
         const uint32_t numSyncPoints = NextSyncPoint.load(std::memory_order_relaxed);
         std::vector<cl_event> deps(numSyncPoints, nullptr);
 
         for( const auto& command : Commands )
         {
             errorCode = command->playback(queue, deps);
+            if( (errorCode == CL_SUCCESS) && 
+                isRecordQueueInOrder && !isReplayQueueInOrder )
+            {
+                errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
+                    queue,
+                    0,
+                    nullptr,
+                    nullptr);
+            }
             if( errorCode != CL_SUCCESS )
             {
                 break;
@@ -1622,6 +1669,7 @@ private:
 
     std::atomic<uint32_t> RefCount;
 
+    std::vector<bool>   IsInOrder;
     std::vector<cl_command_queue>   TestQueues;
     std::vector<cl_event>   BlockingEvents;
 
@@ -1801,7 +1849,7 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
         new NDRangeKernel(cmdbuf, queue));
 
     command->original_kernel = kernel;
-    command->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
+    command->kernel = g_pNextDispatch->clCloneKernel(kernel, nullptr);
     command->work_dim = work_dim;
 
     command->mutableFields = mutableFields;
@@ -1959,7 +2007,7 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
         errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
             0,
-            NULL,
+            nullptr,
             event );
     }
 
