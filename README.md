@@ -39,6 +39,10 @@ Many samples that use extensions additionally require the OpenCL Extension Loade
 
     git clone https://github.com/bashbaug/opencl-extension-loader external/opencl-extension-loader
 
+The loading and unloading sample requires the OpenCL Runtime Loader:
+
+    git clone https://github.com/bashbaug/opencl-runtime-loader external/opencl-runtime-loader
+
 After satisfying the external dependencies create build files using CMake.  For example:
 
     mkdir build && cd build

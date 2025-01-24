@@ -25,10 +25,17 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OpenCL_INCLUDE_DIR})
 
 add_subdirectory(external/OpenCL-Headers)
+
+option(SAMPLES_USE_RUNTIME_LOADER "Build with the OpenCL Runtime Loader" ON)
+if (SAMPLES_USE_RUNTIME_LOADER)
+add_subdirectory(external/opencl-runtime-loader)
+set(OpenCL_LIBRARIES OpenCLRuntimeLoader ${CMAKE_DL_LIBS})
+else()
 add_subdirectory(external/opencl-icd-loader)
 set_target_properties(OpenCL PROPERTIES FOLDER "OpenCL-ICD-Loader")
 set_target_properties(cllayerinfo PROPERTIES FOLDER "OpenCL-ICD-Loader")
 set(OpenCL_LIBRARIES OpenCL)
+endif()
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/opencl-extension-loader)
     add_subdirectory(external/opencl-extension-loader)
