@@ -41,7 +41,7 @@ Many samples that use extensions additionally require the OpenCL Extension Loade
 
 The loading and unloading sample requires the OpenCL Runtime Loader:
 
-    git clone https://github.com/bashbaug/opencl-runtime-loader external/opencl-runtime-loader
+    git clone https://github.com/bashbaug/opencl-runtime-loader external/opencl-runtime-loader -b add-teardown-function
 
 After satisfying the external dependencies create build files using CMake.  For example:
 
