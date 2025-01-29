@@ -292,7 +292,7 @@ private:
                 }
 
                 // Required for devices supporting SPIR-V 1.6.
-                if (deviceILVersion.find("SPIR-V_1.6")) {
+                if (deviceILVersion.find("SPIR-V_1.6") != std::string::npos) {
                     deviceInfo.Capabilities.push_back(spv::CapabilityUniformDecoration);
                 }
 
