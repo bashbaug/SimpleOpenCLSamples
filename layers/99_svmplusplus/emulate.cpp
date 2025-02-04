@@ -677,9 +677,8 @@ cl_int CL_API_CALL clGetSVMPointerInfoKHR_EMU(
 
         cl_uint index = CL_UINT_MAX;
         for (size_t ci = 0; ci < platformSVMCaps.size(); ci++) {
-            if (platformSVMCaps[ci] == search) {
+            if ((platformSVMCaps[ci] & search) == search) {
                 index = static_cast<cl_uint>(ci);
-                break;
             }
         }
 
