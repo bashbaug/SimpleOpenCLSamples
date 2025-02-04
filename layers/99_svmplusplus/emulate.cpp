@@ -182,6 +182,16 @@ static cl_svm_capabilities_khr getSystemSVMCaps(cl_device_id device)
     return ret;
 }
 
+struct SAllocInfo
+{
+    cl_uint     TypeIndex = ~0;
+    size_t      Size = ~0;
+
+    std::vector<cl_svm_alloc_properties_khr> Properties;
+    cl_svm_alloc_access_flags_khr AccessFlags = 0;
+    cl_device_id AssociatedDevice = nullptr;
+};
+
 struct SLayerContext
 {
     SLayerContext() {
@@ -203,8 +213,57 @@ struct SLayerContext
         }
     }
 
-    std::map<cl_platform_id, std::vector<cl_svm_capabilities_khr>>  TypeCapsPlatform;
-    std::map<cl_device_id, std::vector<cl_svm_capabilities_khr>>    TypeCapsDevice;
+    const std::vector<cl_svm_capabilities_khr>& getSVMCaps(cl_platform_id platform)
+    {
+        return TypeCapsPlatform[platform];
+    }
+
+    const std::vector<cl_svm_capabilities_khr>& getSVMCaps(cl_device_id device)
+    {
+        return TypeCapsDevice[device];
+    }
+
+    SAllocInfo& getAllocInfo(cl_context context, const void* ptr)
+    {
+        return AllocMaps[context][ptr];
+    }
+
+    bool findAllocInfo(cl_context context, const void* ptr, const void*& base, SAllocInfo& info)
+    {
+        base = nullptr;
+        info.TypeIndex = CL_UINT_MAX;
+        info.Size = 0;
+        info.AccessFlags = 0;
+        info.AssociatedDevice = nullptr;
+
+        CAllocMap& allocMap = AllocMaps[context];
+        if (allocMap.empty()) {
+            return false;
+        }
+
+        CAllocMap::iterator iter = allocMap.lower_bound(ptr);
+        if (iter == allocMap.end() || iter->first != ptr) {
+            if (iter == allocMap.begin()) {
+                return false;
+            }
+            --iter;
+        }
+
+        const void* start = iter->first;
+        const void* end = (const void*)((uintptr_t)start + iter->second.Size);
+        if (ptr < start || ptr >= end) {
+            return false;
+        }
+
+        base = iter->first;
+        info = iter->second;
+        return true;
+    }
+
+    void removeAllocInfo(cl_context context, const void* ptr)
+    {
+        AllocMaps[context].erase(ptr);
+    }
 
 private:
     void getSVMTypesForPlatform(cl_platform_id platform)
@@ -330,6 +389,12 @@ private:
             TypeCapsDevice[device] = typeCapsDevice;
         }
     }
+
+    std::map<cl_platform_id, std::vector<cl_svm_capabilities_khr>>  TypeCapsPlatform;
+    std::map<cl_device_id, std::vector<cl_svm_capabilities_khr>>    TypeCapsDevice;
+
+    typedef std::map<const void*, SAllocInfo> CAllocMap;
+    std::map<cl_context, CAllocMap> AllocMaps;
 };
 
 SLayerContext& getLayerContext(void)
@@ -441,26 +506,21 @@ static void parseSVMAllocProperties(
         while(props[0] != 0) {
             cl_int property = (cl_int)props[0];
             switch(property) {
-            case CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_KHR: {
-                    device = *(const cl_device_id*)(props + 1);
-                    props += 2;
-                }
+            case CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_KHR:
+                device = *(const cl_device_id*)(props + 1);
                 break;
-            case CL_SVM_ALLOC_ACCESS_FLAGS_KHR: {
-                    flags = *(const cl_svm_alloc_access_flags_khr*)(props + 1);
-                    props += 2;
-                }
+            case CL_SVM_ALLOC_ACCESS_FLAGS_KHR:
+                flags = *(const cl_svm_alloc_access_flags_khr*)(props + 1);
                 break;
-            case CL_SVM_ALLOC_ALIGNMENT_KHR: {
-                    alignment = *(const size_t*)(props + 1);
-                    props += 2;
-                }
+            case CL_SVM_ALLOC_ALIGNMENT_KHR:
+                alignment = *(const size_t*)(props + 1);
                 break;
             default:
                 // Not supporting other properties currently.
                 assert(0 && "unknown SVM mem property");
                 break;
             }
+            props += 2;
         }
     }
 }
@@ -474,14 +534,15 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
 {
     cl_platform_id platform = getPlatform(context);
 
-    SLayerContext& layerContext = getLayerContext();
-    const auto& typeCapsPlatform = layerContext.TypeCapsPlatform[platform];
+    const auto& typeCapsPlatform = getLayerContext().getSVMCaps(platform);
     if (svm_type_index >= typeCapsPlatform.size()) {
         if (errcode_ret) {
             errcode_ret[0] = CL_INVALID_VALUE;
         }
         return nullptr;
     }
+
+    void* ret = nullptr;
 
     cl_device_id device = nullptr;
     cl_svm_alloc_access_flags_khr flags = 0;
@@ -490,7 +551,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
 
     const auto caps = typeCapsPlatform[svm_type_index];
     if ((caps & CL_SVM_TYPE_MACRO_DEVICE_KHR) == CL_SVM_TYPE_MACRO_DEVICE_KHR) {
-        return clDeviceMemAllocINTEL(
+        ret = clDeviceMemAllocINTEL(
             context,
             device,
             nullptr,
@@ -499,7 +560,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
             errcode_ret);
     }
     else if ((caps & CL_SVM_TYPE_MACRO_HOST_KHR) == CL_SVM_TYPE_MACRO_HOST_KHR) {
-        return clHostMemAllocINTEL(
+        ret = clHostMemAllocINTEL(
             context,
             nullptr,
             size,
@@ -507,7 +568,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
             errcode_ret);
     }
     else if ((caps & CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) == CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) {
-        return clSharedMemAllocINTEL(
+        ret = clSharedMemAllocINTEL(
             context,
             device,
             nullptr,
@@ -520,7 +581,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
         if (caps & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR) {
             svmFlags |= CL_MEM_SVM_ATOMICS;
         }
-        void* ret = g_pNextDispatch->clSVMAlloc(
+        ret = g_pNextDispatch->clSVMAlloc(
             context,
             svmFlags,
             size,
@@ -528,10 +589,9 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
         if (errcode_ret) {
             errcode_ret[0] = ret ? CL_SUCCESS : CL_INVALID_VALUE;
         }
-        return ret;
     }
     else if ((caps & CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) {
-        void* ret = g_pNextDispatch->clSVMAlloc(
+        ret = g_pNextDispatch->clSVMAlloc(
             context,
             CL_MEM_READ_WRITE,
             size,
@@ -539,16 +599,42 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
         if (errcode_ret) {
             errcode_ret[0] = ret ? CL_SUCCESS : CL_INVALID_VALUE;
         }
-        return ret;
     }
     else {
         assert(0 && "unknown SVM type");
+        if (errcode_ret) {
+            errcode_ret[0] = CL_INVALID_OPERATION;
+        }
     }
 
-    if (errcode_ret) {
-        errcode_ret[0] = CL_INVALID_OPERATION;
+    if (ret) {
+        SAllocInfo& allocInfo = getLayerContext().getAllocInfo(context, ret);
+        allocInfo.TypeIndex = svm_type_index;
+        allocInfo.Size = size;
+        const cl_svm_alloc_properties_khr* props = properties;
+        if (props) {
+            while (props[0] != 0) {
+                switch(props[0]) {
+                case CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_KHR:
+                case CL_SVM_ALLOC_ACCESS_FLAGS_KHR:
+                case CL_SVM_ALLOC_ALIGNMENT_KHR:
+                    allocInfo.Properties.push_back(props[0]);
+                    allocInfo.Properties.push_back(props[1]);
+                    break;
+                default:
+                    // Not supporting other properties currently.
+                    assert(0 && "unknown SVM mem property");
+                    break;
+                }
+                props += 2;
+            }
+            allocInfo.Properties.push_back(0);
+        }
+        allocInfo.AccessFlags = flags;
+        allocInfo.AssociatedDevice = device;
     }
-    return nullptr;
+
+    return ret;
 }
 
 cl_int CL_API_CALL clSVMFreeWithPropertiesKHR_EMU(
@@ -557,22 +643,28 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesKHR_EMU(
     cl_svm_free_flags_khr flags,
     void* ptr)
 {
+    cl_int errorCode = CL_SUCCESS;
     if (isUSMPtr(context, ptr)) {
         if (flags & CL_SVM_FREE_BLOCKING_KHR) {
-            return clMemBlockingFreeINTEL(
+            errorCode = clMemBlockingFreeINTEL(
                 context,
                 ptr);
         }
-        return clMemFreeINTEL(
+        errorCode = clMemFreeINTEL(
+            context,
+            ptr);
+    } else {
+        assert(!(flags & CL_SVM_FREE_BLOCKING_KHR) && "blocking SVM free is currently unsupported");
+        g_pNextDispatch->clSVMFree(
             context,
             ptr);
     }
 
-    assert(!(flags & CL_SVM_FREE_BLOCKING_KHR) && "blocking SVM free is currently unsupported");
-    g_pNextDispatch->clSVMFree(
-        context,
-        ptr);
-    return CL_SUCCESS;
+    if (errorCode == CL_SUCCESS) {
+        getLayerContext().removeAllocInfo(context, ptr);
+    }
+
+    return errorCode;
 }
 
 cl_int CL_API_CALL clGetSVMSuggestedTypeIndexKHR_EMU(
@@ -621,8 +713,7 @@ cl_int CL_API_CALL clGetSVMSuggestedTypeIndexKHR_EMU(
 
     cl_uint ret = CL_UINT_MAX;
     for (auto device: checkDevices) {
-        SLayerContext& layerContext = getLayerContext();
-        const auto& supported = layerContext.TypeCapsDevice[device];
+        const auto& supported = getLayerContext().getSVMCaps(device);;
         for (size_t ci = 0; ci < supported.size(); ci++) {
             if ((supported[ci] & required_capabilities) == required_capabilities) {
                 ret = static_cast<cl_uint>(ci);
@@ -647,61 +738,70 @@ cl_int CL_API_CALL clGetSVMPointerInfoKHR_EMU(
     void* param_value,
     size_t* param_value_size_ret)
 {
-    if (param_name == CL_SVM_INFO_TYPE_INDEX_KHR) {
-        cl_unified_shared_memory_type_intel type = CL_MEM_TYPE_UNKNOWN_INTEL;
-        clGetMemAllocInfoINTEL(
-            context,
-            ptr,
-            CL_MEM_ALLOC_TYPE_INTEL,
-            sizeof(type),
-            &type,
-            nullptr);
-        cl_svm_capabilities_khr search = 0;
-        switch (type) {
-        case CL_MEM_TYPE_DEVICE_INTEL:
-            search = CL_SVM_TYPE_MACRO_DEVICE_KHR;
-            break;
-        case CL_MEM_TYPE_HOST_INTEL:
-            search = CL_SVM_TYPE_MACRO_HOST_KHR;
-            break;
-        case CL_MEM_TYPE_SHARED_INTEL:
-            search = CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR;
-            break;
-        default:
-            break;
-        }
+    const void* base = nullptr;
+    SAllocInfo allocInfo;
+    getLayerContext().findAllocInfo(context, ptr, base, allocInfo);
 
-        SLayerContext& layerContext = getLayerContext();
-        cl_platform_id platform = getPlatform(context);
-        const auto& platformSVMCaps = layerContext.TypeCapsPlatform[platform];
-
-        cl_uint index = CL_UINT_MAX;
-        for (size_t ci = 0; ci < platformSVMCaps.size(); ci++) {
-            if ((platformSVMCaps[ci] & search) == search) {
-                index = static_cast<cl_uint>(ci);
-            }
-        }
-
-        auto ptr = (cl_uint*)param_value;
+    switch(param_name) {
+    case CL_SVM_INFO_TYPE_INDEX_KHR:
         return writeParamToMemory(
             param_value_size,
-            index,
+            allocInfo.TypeIndex,
             param_value_size_ret,
-            ptr);
-    }
-
-    if (isUSMPtr(context, ptr)) {
-        return clGetMemAllocInfoINTEL(
-            context,
-            ptr,
-            param_name,
+            (cl_uint*)param_value);
+    case CL_SVM_INFO_CAPABILITIES_KHR: {
+            cl_svm_capabilities_khr caps = 0;
+            if (allocInfo.TypeIndex != CL_UINT_MAX) {
+                if (device) {
+                    const auto& deviceSVMCaps = getLayerContext().getSVMCaps(device);
+                    caps = deviceSVMCaps[allocInfo.TypeIndex];
+                } else {
+                    auto platform = getPlatform(context);
+                    const auto& platformSVMCaps = getLayerContext().getSVMCaps(platform);
+                    caps = platformSVMCaps[allocInfo.TypeIndex];
+                }
+            }
+            return writeParamToMemory(
+                param_value_size,
+                caps,
+                param_value_size_ret,
+                (cl_svm_capabilities_khr*)param_value);
+        }
+    case CL_SVM_INFO_PROPERTIES_KHR:
+        return writeVectorToMemory(
             param_value_size,
-            param_value,
-            param_value_size_ret);
+            allocInfo.Properties,
+            param_value_size_ret,
+            (cl_svm_alloc_properties_khr*)param_value);
+    case CL_SVM_INFO_ACCESS_FLAGS_KHR:
+        return writeParamToMemory(
+            param_value_size,
+            allocInfo.AccessFlags,
+            param_value_size_ret,
+            (cl_svm_alloc_access_flags_khr*)param_value);
+    case CL_SVM_INFO_BASE_PTR_KHR:
+        return writeParamToMemory(
+            param_value_size,
+            base,
+            param_value_size_ret,
+            (const void**)param_value);
+    case CL_SVM_INFO_SIZE_KHR:
+        return writeParamToMemory(
+            param_value_size,
+            allocInfo.Size,
+            param_value_size_ret,
+            (size_t*)param_value);
+    case CL_SVM_INFO_ASSOCIATED_DEVICE_HANDLE_KHR:
+        return writeParamToMemory(
+            param_value_size,
+            allocInfo.AssociatedDevice,
+            param_value_size_ret,
+            (cl_device_id*)param_value);
+    default:
+        break;
     }
 
-    // Note: do not currently support querying SVM pointers!
-    return CL_INVALID_OPERATION;
+    return CL_INVALID_VALUE;
 }
 
 cl_int CL_API_CALL clGetDeviceInfo_override(
@@ -813,8 +913,7 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
         break;
     case CL_DEVICE_SVM_TYPE_CAPABILITIES_KHR:
         {
-            SLayerContext& layerContext = getLayerContext();
-            const auto& deviceSVMCaps = layerContext.TypeCapsDevice[device];
+            const auto& deviceSVMCaps = getLayerContext().getSVMCaps(device);
             auto ptr = (cl_svm_capabilities_khr*)param_value;
             return writeVectorToMemory(
                 param_value_size,
@@ -943,8 +1042,7 @@ cl_int CL_API_CALL clGetPlatformInfo_override(
         break;
     case CL_PLATFORM_SVM_TYPE_CAPABILITIES_KHR:
         {
-            SLayerContext& layerContext = getLayerContext();
-            const auto& platformSVMCaps = layerContext.TypeCapsPlatform[platform];
+            const auto& platformSVMCaps = getLayerContext().getSVMCaps(platform);
             auto ptr = (cl_svm_capabilities_khr*)param_value;
             return writeVectorToMemory(
                 param_value_size,
