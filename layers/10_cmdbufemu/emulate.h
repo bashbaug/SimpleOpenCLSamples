@@ -217,8 +217,6 @@ cl_command_buffer_khr CL_API_CALL clRemapCommandBufferKHR_EMU(
 
 #endif // defined(cl_khr_command_buffer_multi_device)
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-
 cl_int CL_API_CALL clUpdateMutableCommandsKHR_EMU(
     cl_command_buffer_khr command_buffer,
     cl_uint num_configs,
@@ -231,8 +229,6 @@ cl_int CL_API_CALL clGetMutableCommandInfoKHR_EMU(
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret);
-
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Override Functions
