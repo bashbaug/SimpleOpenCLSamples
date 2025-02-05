@@ -19,9 +19,8 @@
 
 #include "emulate.h"
 
-// TODO: bump to 0.9.7 when tests are ready.
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 6);
+    CL_MAKE_VERSION(0, 9, 7);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
     CL_MAKE_VERSION(0, 9, 3);
 
