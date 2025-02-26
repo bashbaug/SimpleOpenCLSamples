@@ -148,7 +148,7 @@ static void checkResults()
             0,
             gwx * gwy * sizeof(cl_uchar4) ) );
 
-    stbi_write_bmp(filename, gwx, gwy, 4, buf);
+    stbi_write_bmp(filename, (int)gwx, (int)gwy, 4, buf);
     printf("Wrote image file %s\n", filename);
 
     commandQueue.enqueueUnmapMemObject(

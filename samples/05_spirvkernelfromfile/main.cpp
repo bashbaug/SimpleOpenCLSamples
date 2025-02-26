@@ -164,7 +164,7 @@ int main(
     }
 
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
     printf("Reading SPIR-V from file: %s\n", fileName.c_str());
     std::vector<cl_uchar> spirv = readSPIRVFromFile(fileName);

@@ -173,9 +173,13 @@ int main(
         NULL );
     printf("\tMutable Dispatch Capabilities:\n");
     PrintMutableDispatchCapabilities(mutableCaps);
+    if (!(mutableCaps & CL_MUTABLE_DISPATCH_GLOBAL_SIZE_KHR)) {
+        printf("Device does not support modifying the global work size, exiting.\n");
+        return -1;
+    }
 
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
@@ -347,18 +351,22 @@ int main(
     // mutate the command buffer
     {
         cl_mutable_dispatch_config_khr dispatchConfig = {};
-        dispatchConfig.type = CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR;
         dispatchConfig.command = command;
         dispatchConfig.global_work_size = &gwx;
 
-        cl_mutable_base_config_khr baseConfig = {};
-        baseConfig.type = CL_STRUCTURE_TYPE_MUTABLE_BASE_CONFIG_KHR;
-        baseConfig.num_mutable_dispatch = 1;
-        baseConfig.mutable_dispatch_list = &dispatchConfig;
+        const cl_uint updateCount = 1;
+        const cl_command_buffer_update_type_khr updateTypes[updateCount] = {
+            CL_STRUCTURE_TYPE_MUTABLE_DISPATCH_CONFIG_KHR,
+        };
+        const void* updateConfigs[updateCount] = {
+            &dispatchConfig,
+        };
 
         clUpdateMutableCommandsKHR(
             cmdbuf,
-            &baseConfig );
+            updateCount,
+            updateTypes,
+            updateConfigs );
     }
 
     clEnqueueCommandBufferKHR(

@@ -517,16 +517,13 @@ int main(int argc, char** argv)
     auto minSubGroupSize = findMinSubGroupSize(device);
 
     bool emulate_tN16 = true;
-    if (!emulate && checkDeviceForExtension(device, "cl_intel_subgroup_matrix_multiply_accumulate")) {
-        printf("Found support for cl_intel_subgroup_matrix_multiply_accumulate, min sub-group size is: %zu\n", minSubGroupSize);
+    if (!emulate && checkDeviceForExtension(device, "cl_intel_subgroup_matrix_multiply_accumulate_tf32")) {
+        printf("Found support for cl_intel_subgroup_matrix_multiply_accumulate_tf32, min sub-group size is: %zu\n", minSubGroupSize);
         switch(minSubGroupSize) {
             case 16: emulate_tN16 = false; break;
             default: break;
         }
     }
-
-    printf("NOTE: dpas is unconditionally emulated, currently!\n");
-    emulate_tN16 = true;
 
     buildOptions += " -DEMULATE_tN16=" + std::to_string(emulate_tN16);
 

@@ -47,7 +47,7 @@ void HELPER_NAME(btile_load_rowmajor, MM, NN)(global float* B, int tN, int N, in
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn++) {
-            bData[nn][kk] = load_b_rowmajor_d32_k8_nx(B, k + kk * tK, n + nn * tN, N);
+            bData[nn][kk] = load_b_rowmajor_32b_8rNc(B, k + kk * tK, n + nn * tN, N);
         }
     }
 }
@@ -56,7 +56,7 @@ void HELPER_NAME(atile_prefetch_rowmajor_sg16, MM, NN)(global float* A, int tM, 
 {
     for (int kk = 0; kk < KK; kk+=2) {
         for (int mm = 0; mm < MM; mm+=2) {
-            prefetch_a_rowmajor_d32_m8v2_k8v2_sg16(A, m + mm * tM, prefetch_k + kk * tK, K);
+            prefetch_a_rowmajor_32b_8x2r8x2c_sg16(A, m + mm * tM, prefetch_k + kk * tK, K);
         }
     }
 }
@@ -65,7 +65,7 @@ void HELPER_NAME(btile_prefetch_rowmajor_sg16, MM, NN)(global float* B, int tN, 
 {
     for (int kk = 0; kk < KK; kk+=2) {
         for (int nn = 0; nn < NN; nn+=2) {
-            prefetch_b_rowmajor_d32_k8v2_n8v2_sg16(B, prefetch_k + kk * tK, n + nn * tN, N);
+            prefetch_b_rowmajor_32b_8x2r8x2c_sg16(B, prefetch_k + kk * tK, n + nn * tN, N);
         }
     }
 }
@@ -74,7 +74,7 @@ void HELPER_NAME(atile_load_rowmajor_sg16, MM, NN)(global float* A, int tM, int 
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int mm = 0; mm < MM; mm++) {
-            aData[kk][mm] = load_a_rowmajor_d32_m8_k8_sg16(A, m + mm * tM, k + kk * tK, K);
+            aData[kk][mm] = load_a_rowmajor_32b_8r8c_sg16(A, m + mm * tM, k + kk * tK, K);
         }
     }
 }
@@ -136,7 +136,7 @@ kernel void MM_KERNEL_NAME(tf32_dpas_rowmajor_tiled, 8, 16, MM, NN)(global float
     for (int nn = 0; nn < NN; nn++) {
         for (int mm = 0; mm < MM; mm++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            store_c_rowmajor_fp32_m8_nx(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
+            store_c_rowmajor_fp32_8rNc(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
         }
     }
 }
@@ -169,7 +169,7 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global float* B, int tN, int
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn++) {
-            bData[nn][kk] = as_float8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(float), K, N * sizeof(float), (int2)(n + nn * tN, k + kk * tK)));
+            bData[nn][kk] = as_float8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(float), K, N * sizeof(float), (int2)(n + nn * tN, k + kk * tK)));
         }
     }
 }
@@ -230,7 +230,7 @@ kernel void MM_KERNEL_NAME(tf32_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN)(gl
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
+            intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
         }
     }
 }

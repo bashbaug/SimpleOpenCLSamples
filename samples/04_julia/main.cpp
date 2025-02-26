@@ -114,7 +114,7 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
@@ -177,7 +177,7 @@ int main(
                 0,
                 gwx * gwy * sizeof(cl_uchar4) ) );
 
-        stbi_write_bmp(filename, gwx, gwy, 4, buf);
+        stbi_write_bmp(filename, (int)gwx, (int)gwy, 4, buf);
         printf("Wrote image file %s\n", filename);
 
         commandQueue.enqueueUnmapMemObject(

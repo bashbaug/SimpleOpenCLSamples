@@ -47,16 +47,16 @@ void HELPER_NAME(btile_load_rowmajor, MM, NN)(global ushort* B, int tN, int N, i
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn++) {
-            bData[nn][kk] = load_b_rowmajor_d16_k16_nx(B, k + kk * tK, n + nn * tN, N);
+            bData[nn][kk] = load_b_rowmajor_16b_16rNc(B, k + kk * tK, n + nn * tN, N);
         }
     }
 }
 
-void HELPER_NAME(btile_load_vnni, MM, NN)(global ushort* B, int tN, int N, int k, int n, int8 bData[NN][KK])
+void HELPER_NAME(btile_load_packed, MM, NN)(global ushort* B, int tN, int N, int k, int n, int8 bData[NN][KK])
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn++) {
-            bData[nn][kk] = load_b_vnni_d16_k16_nx(B, k + kk * tK, n + nn * tN, N);
+            bData[nn][kk] = load_b_packed_16b_16rNc(B, k + kk * tK, n + nn * tN, N);
         }
     }
 }
@@ -67,7 +67,7 @@ void HELPER_NAME(atile_prefetch_rowmajor_sg8, MM, NN)(global ushort* A, int tM, 
 {
     for (int kk = 0; kk < KK; kk+=2) {
         for (int mm = 0; mm < MM; mm++) {
-            prefetch_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, prefetch_k + kk * tK, K);
+            prefetch_a_rowmajor_16b_8r16x2c_sg8(A, m + mm * tM, prefetch_k + kk * tK, K);
         }
     }
 }
@@ -76,16 +76,16 @@ void HELPER_NAME(btile_prefetch_rowmajor_sg8, MM, NN)(global ushort* B, int tN, 
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn+=4) {
-            prefetch_b_rowmajor_d16_k16_n8v4_sg8(B, prefetch_k + kk * tK, n + nn * tN, N);
+            prefetch_b_rowmajor_16b_16r8x4c_sg8(B, prefetch_k + kk * tK, n + nn * tN, N);
         }
     }
 }
 
-void HELPER_NAME(btile_prefetch_vnni_sg8, MM, NN)(global ushort* B, int tN, int N, int prefetch_k, int n)
+void HELPER_NAME(btile_prefetch_packed_sg8, MM, NN)(global ushort* B, int tN, int N, int prefetch_k, int n)
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn+=2) {
-            prefetch_b_vnni_d16_k16_n8v2_sg8(B, prefetch_k + kk * tK, n + nn * tN, N);
+            prefetch_b_packed_16b_16r8x2c_sg8(B, prefetch_k + kk * tK, n + nn * tN, N);
         }
     }
 }
@@ -95,7 +95,7 @@ void HELPER_NAME(atile_load_rowmajor_sg8, MM, NN)(global ushort* A, int tM, int 
     if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm++) {
-                int16   aTemp = load_a_rowmajor_d16_m8_k16v2_sg8(A, m + mm * tM, k + kk * tK, K);
+                int16   aTemp = load_a_rowmajor_16b_8r16x2c_sg8(A, m + mm * tM, k + kk * tK, K);
                 aData[kk + 0][mm] = aTemp.lo;
                 aData[kk + 1][mm] = aTemp.hi;
             }
@@ -103,7 +103,7 @@ void HELPER_NAME(atile_load_rowmajor_sg8, MM, NN)(global ushort* A, int tM, int 
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg8(A, m + mm * tM, k + kk * tK, K);
+                aData[kk][mm] = load_a_rowmajor_16b_8r16c_sg8(A, m + mm * tM, k + kk * tK, K);
             }
         }
     }
@@ -166,7 +166,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 8, MM, NN)(global fl
     for (int nn = 0; nn < NN; nn++) {
         for (int mm = 0; mm < MM; mm++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            store_c_rowmajor_fp32_m8_nx(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
+            store_c_rowmajor_fp32_8rNc(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
         }
     }
 }
@@ -185,7 +185,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
     int prefetch_k = 0;
     for (int p = 0; p < PREFETCH_DISTANCE; p++) {
         HELPER_NAME(atile_prefetch_rowmajor_sg8, MM, NN)(A, tM, K, m, prefetch_k);
-        HELPER_NAME(btile_prefetch_vnni_sg8, MM, NN)(B, tN, N, prefetch_k, n);
+        HELPER_NAME(btile_prefetch_packed_sg8, MM, NN)(B, tN, N, prefetch_k, n);
         prefetch_k += tK * KK;
     }
 
@@ -209,7 +209,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
         HELPER_NAME(atile_load_rowmajor_sg8, MM, NN)(A, tM, K, m, k, aData);
 
         int8    bData[NN][KK];
-        HELPER_NAME(btile_load_vnni, MM, NN)(B, tN, N, k, n, bData);
+        HELPER_NAME(btile_load_packed, MM, NN)(B, tN, N, k, n, bData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
@@ -228,7 +228,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            store_c_rowmajor_fp32_m8_nx(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
+            store_c_rowmajor_fp32_8rNc(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
         }
     }
 }
@@ -239,7 +239,7 @@ void HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(global ushort* A, int tM, int 
 {
     for (int kk = 0; kk < KK; kk+=2) {
         for (int mm = 0; mm < MM; mm+=2) {
-            prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(A, m + mm * tM, prefetch_k + kk * tK, K);
+            prefetch_a_rowmajor_16b_8x2r16x2c_sg16(A, m + mm * tM, prefetch_k + kk * tK, K);
         }
     }
 }
@@ -248,16 +248,16 @@ void HELPER_NAME(btile_prefetch_rowmajor, MM, NN)(global ushort* B, int tN, int 
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn+=2) {
-            prefetch_b_rowmajor_d16_k16_n16v2_sg16(B, prefetch_k + kk * tK, n + nn * tN, N);
+            prefetch_b_rowmajor_16b_16r16x2c_sg16(B, prefetch_k + kk * tK, n + nn * tN, N);
         }
     }
 }
 
-void HELPER_NAME(btile_prefetch_vnni, MM, NN)(global ushort* B, int tN, int N, int prefetch_k, int n)
+void HELPER_NAME(btile_prefetch_packed, MM, NN)(global ushort* B, int tN, int N, int prefetch_k, int n)
 {
     for (int kk = 0; kk < KK; kk+=2) {
         for (int nn = 0; nn < NN; nn++) {
-            prefetch_b_vnni_d16_k16v2_n16_sg16(B, prefetch_k + kk * tK, n + nn * tN, N);
+            prefetch_b_packed_16b_16x2r16c_sg16(B, prefetch_k + kk * tK, n + nn * tN, N);
         }
     }
 }
@@ -267,7 +267,7 @@ void HELPER_NAME(atile_load_rowmajor, MM, NN)(global ushort* A, int tM, int K, i
     if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm++) {
-                short16 aTemp = load_a_rowmajor_d16_m8_k16v2_sg16(A, m + mm * tM, k + kk * tK, K);
+                short16 aTemp = load_a_rowmajor_16b_8r16x2c_sg16(A, m + mm * tM, k + kk * tK, K);
                 aData[kk + 0][mm] = aTemp.lo;
                 aData[kk + 1][mm] = aTemp.hi;
             }
@@ -275,7 +275,7 @@ void HELPER_NAME(atile_load_rowmajor, MM, NN)(global ushort* A, int tM, int K, i
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = load_a_rowmajor_d16_m8_k16_sg16(A, m + mm * tM, k + kk * tK, K);
+                aData[kk][mm] = load_a_rowmajor_16b_8r16c_sg16(A, m + mm * tM, k + kk * tK, K);
             }
         }
     }
@@ -338,7 +338,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_rowmajor_tiled, 8, 16, MM, NN)(global f
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            store_c_rowmajor_fp32_m8_nx(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
+            store_c_rowmajor_fp32_8rNc(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
         }
     }
 }
@@ -357,7 +357,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
     int prefetch_k = 0;
     for (int p = 0; p < PREFETCH_DISTANCE; p++) {
         HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(A, tM, K, m, prefetch_k);
-        HELPER_NAME(btile_prefetch_vnni, MM, NN)(B, tN, N, prefetch_k, n);
+        HELPER_NAME(btile_prefetch_packed, MM, NN)(B, tN, N, prefetch_k, n);
         prefetch_k += tK * KK;
     }
 
@@ -374,14 +374,14 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
         // Next prefetch:
         // TODO: skip prefetch on the last iterations.
         HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(A, tM, K, m, prefetch_k);
-        HELPER_NAME(btile_prefetch_vnni, MM, NN)(B, tN, N, prefetch_k, n);
+        HELPER_NAME(btile_prefetch_packed, MM, NN)(B, tN, N, prefetch_k, n);
         prefetch_k += tK * KK;
 
         short8  aData[KK][MM];
         HELPER_NAME(atile_load_rowmajor, MM, NN)(A, tM, K, m, k, aData);
 
         int8    bData[NN][KK];
-        HELPER_NAME(btile_load_vnni, MM, NN)(B, tN, N, k, n, bData);
+        HELPER_NAME(btile_load_packed, MM, NN)(B, tN, N, k, n, bData);
 
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
@@ -400,7 +400,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            store_c_rowmajor_fp32_m8_nx(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
+            store_c_rowmajor_fp32_8rNc(C, sum[nn][mm], m + mm * tM, n + nn * tN, N);
         }
     }
 }
@@ -416,7 +416,7 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
                 //    printf("atile block load    : %d, %d, %2d:           m = %3d, k = %3d, mm = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), m, k, mm, kk, k + kk * tK, m + mm * tM);
                 //}
                 ushort8 tmp[2][4];
-                intel_subgroup_block_read_u16_m32k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                intel_sub_group_block_read_16b_32r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
                 for (int tkk = 0; tkk < 2; tkk++) {
                     for (int tmm = 0; tmm < 4; tmm++) {
                         aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
@@ -428,7 +428,7 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm+=2) {
                 ushort8 tmp[2][2];
-                intel_subgroup_block_read_u16_m16k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                intel_sub_group_block_read_16b_16r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
                 for (int tkk = 0; tkk < 2; tkk++) {
                     for (int tmm = 0; tmm < 2; tmm++) {
                         aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
@@ -439,7 +439,7 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm++) {
-                short16 aTemp = as_short16(intel_subgroup_block_read_u16_m8k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
+                short16 aTemp = as_short16(intel_sub_group_block_read_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
                 aData[kk + 0][mm] = aTemp.lo;
                 aData[kk + 1][mm] = aTemp.hi;
             }
@@ -448,7 +448,7 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm+=4) {
                 ushort8 tmp[4];
-                intel_subgroup_block_read_u16_m32k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                intel_sub_group_block_read_16b_32r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
                 for (int tmm = 0; tmm < 4; tmm++) {
                     aData[kk][mm + tmm] = as_short8(tmp[tmm]);
                 }
@@ -457,7 +457,7 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = as_short8(intel_subgroup_block_read_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
+                aData[kk][mm] = as_short8(intel_sub_group_block_read_16b_8r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
             }
         }
     }
@@ -472,7 +472,7 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global ushort* B, int tN, in
                 //    printf("btile block load: %d, %d, %2d: n = %3d, k = %3d, nn = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), n, k, nn, kk, n + nn * tN, k + kk * tK);
                 //}
                 int8 tmp[2][2];
-                intel_subgroup_block_read_transform_u16_k32n16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), tmp);
+                intel_sub_group_block_read_transform_16b_32r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), tmp);
                 for (int tnn = 0; tnn < 2; tnn++) {
                     for (int tkk = 0; tkk < 2; tkk++) {
                         bData[nn + tnn][kk + tkk] = tmp[tnn][tkk];
@@ -483,7 +483,7 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global ushort* B, int tN, in
     } else if (NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn+=2) {
-                int16 bTemp = intel_subgroup_block_read_transform_u16_k16n16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                int16 bTemp = intel_sub_group_block_read_transform_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
                 bData[nn + 0][kk] = bTemp.lo;
                 bData[nn + 1][kk] = bTemp.hi;
             }
@@ -491,7 +491,7 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global ushort* B, int tN, in
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                int16 bTemp = intel_subgroup_block_read_transform_u16_k32n16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                int16 bTemp = intel_sub_group_block_read_transform_16b_32r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
                 bData[nn][kk + 0] = bTemp.lo;
                 bData[nn][kk + 1] = bTemp.hi;
             }
@@ -499,18 +499,18 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global ushort* B, int tN, in
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                bData[nn][kk] = intel_subgroup_block_read_transform_u16_k16n16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                bData[nn][kk] = intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     }
 }
 
-void HELPER_NAME(btile_block_load_vnni, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
+void HELPER_NAME(btile_block_load_packed, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n, int8 bData[NN][KK])
 {
     if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                int16 bTemp = as_int16(intel_subgroup_block_read_u32_m16k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
+                int16 bTemp = as_int16(intel_sub_group_block_read_32b_16r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
                 bData[nn][kk + 0] = bTemp.lo;
                 bData[nn][kk + 1] = bTemp.hi;
             }
@@ -518,7 +518,7 @@ void HELPER_NAME(btile_block_load_vnni, MM, NN)(global ushort* B, int tN, int K,
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                bData[nn][kk] = as_int8(intel_subgroup_block_read_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
+                bData[nn][kk] = as_int8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
             }
         }
     }
@@ -533,35 +533,39 @@ void HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(global ushort* A, int tM
         //if (get_sub_group_local_id() == 0) {
         //    printf("atile block prefetch: %d, %d, %2d: sg_x = %d, m = %3d, k = %3d, mm = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), sg_index_x, m, k, mm, kk, k + kk * tK, m + mm * tM);
         //}
-        intel_subgroup_block_prefetch_u16_m8k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+#ifdef USE_32C
+        intel_sub_group_block_prefetch_16b_8r32c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+#else
+        intel_sub_group_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+#endif
     } else if (KK % 2 == 0 & MM % 4 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm+=4) {
-                intel_subgroup_block_prefetch_u16_m32k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_block_prefetch_16b_32r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else if (KK % 2 == 0 & MM % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm+=2) {
-                intel_subgroup_block_prefetch_u16_m16k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_block_prefetch_16b_16r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm++) {
-                intel_subgroup_block_prefetch_u16_m8k16v2(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else if (MM % 4 == 0) {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm+=4) {
-                intel_subgroup_block_prefetch_u16_m32k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_block_prefetch_16b_32r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm++) {
-                intel_subgroup_block_prefetch_u16_m8k16(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_block_prefetch_16b_8r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     }
@@ -576,51 +580,55 @@ void HELPER_NAME(btile_block_prefetch_rowmajor, MM, NN)(global ushort* B, int tN
         //if (get_sub_group_local_id() == 0) {
         //    printf("btile block prefetch: %d, %d, %2d: sg_y = %d, n = %3d, k = %3d, nn = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), sg_index_y, n, k, nn, kk, n + nn * tN, k + kk * tK);
         //}
-        intel_subgroup_block_prefetch_u16_m16k16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+#ifdef USE_32C
+        intel_sub_group_block_prefetch_16b_16r32c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+#else
+        intel_sub_group_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+#endif
     } else if (KK % 2 == 0 & NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn += 2) {
-                intel_subgroup_block_prefetch_u16_m32k16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_block_prefetch_16b_32r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     } else if (NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn+=2) {
-                intel_subgroup_block_prefetch_u16_m16k16v2(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_subgroup_block_prefetch_u16_m32k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_block_prefetch_16b_32r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_subgroup_block_prefetch_u16_m16k16(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_block_prefetch_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     }
 }
 
-void HELPER_NAME(btile_block_prefetch_vnni, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n)
+void HELPER_NAME(btile_block_prefetch_packed, MM, NN)(global ushort* B, int tN, int K, int N, int k, int n)
 {
     if (KK == 2 & NN == 4 & SGS_PER_WG_Y >= 4) {
         const int sg_index_y = get_sub_group_id() / SGS_PER_WG_X;   // index in [0, SGS_PER_WG_Y)
         const int nn = sg_index_y % 4;  // nn(sg_index_y) == 0, 1, 2, 3, 0, 1, 2, 3
         const int kk = 0;               // kk(sg_index_y) == 0, 0, 0, 0, 0, 0, 0, 0
-        intel_subgroup_block_prefetch_u32_m16k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
+        intel_sub_group_block_prefetch_32b_16r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_subgroup_block_prefetch_u32_m16k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
+                intel_sub_group_block_prefetch_32b_16r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_subgroup_block_prefetch_u32_m8k16(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
+                intel_sub_group_block_prefetch_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
             }
         }
     }
@@ -681,7 +689,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
+            intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
         }
     }
 }
@@ -699,7 +707,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
 
     int prefetch_k = 0;
     for (int p = 0; p < PREFETCH_DISTANCE; p++) {
-        HELPER_NAME(btile_block_prefetch_vnni, MM, NN)(B, tN, K, N, prefetch_k, n);
+        HELPER_NAME(btile_block_prefetch_packed, MM, NN)(B, tN, K, N, prefetch_k, n);
         HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
         prefetch_k += tK * KK;
     }
@@ -715,13 +723,13 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
 
     for (int k = 0; k < K; k += tK * KK) {
         int8    bData[NN][KK];
-        HELPER_NAME(btile_block_load_vnni, MM, NN)(B, tN, K, N, k, n, bData);
+        HELPER_NAME(btile_block_load_packed, MM, NN)(B, tN, K, N, k, n, bData);
 
         short8  aData[KK][MM];
         HELPER_NAME(atile_block_load_rowmajor, MM, NN)(A, tM, M, K, m, k, aData);
 
         // TODO: skip prefetch on the last iterations.
-        HELPER_NAME(btile_block_prefetch_vnni, MM, NN)(B, tN, K, N, prefetch_k, n);
+        HELPER_NAME(btile_block_prefetch_packed, MM, NN)(B, tN, K, N, prefetch_k, n);
         HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(A, tM, M, K, m, prefetch_k);
         prefetch_k += tK * KK;
 
@@ -742,7 +750,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            intel_subgroup_block_write_u32_m8k16(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
+            intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
         }
     }
 }

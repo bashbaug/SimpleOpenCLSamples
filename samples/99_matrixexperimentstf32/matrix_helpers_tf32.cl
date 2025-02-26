@@ -71,7 +71,6 @@ float emu_sub_group_tf32_tf32_matrix_mad_k8(float  a, float8 b, float  acc)
 {
     float res = acc;
 
-#if 1
     res = fma(sub_group_broadcast(a, 0), b.s0, res);
     res = fma(sub_group_broadcast(a, 1), b.s1, res);
     res = fma(sub_group_broadcast(a, 2), b.s2, res);
@@ -80,12 +79,6 @@ float emu_sub_group_tf32_tf32_matrix_mad_k8(float  a, float8 b, float  acc)
     res = fma(sub_group_broadcast(a, 5), b.s5, res);
     res = fma(sub_group_broadcast(a, 6), b.s6, res);
     res = fma(sub_group_broadcast(a, 7), b.s7, res);
-#else
-float  __attribute__((overloadable)) intel_sub_group_tf32_tf32_matrix_mad_k8_f32(short  a, int8 b, float  acc);
-    uint    a_ui = as_uint(sub_group_shuffle(a, get_sub_group_local_id() / 2));
-    short   aData = get_sub_group_local_id() % 2 ? as_short2(a_ui).hi : as_short2(a_ui).lo;
-    res = intel_sub_group_tf32_tf32_matrix_mad_k8_f32(aData, as_int8(b), res);
-#endif
 
     return res;
 }
@@ -141,7 +134,7 @@ float8 emu_sub_group_tf32_tf32_matrix_mad_k8(float4 a, float8 b, float8 acc)
 }
 
 // M rows x K columns
-float load_a_rowmajor_d32_m1_k8_sg16(global float* A, int rowStart, int colStart, int stride)
+float load_a_rowmajor_32b_1r8c_sg16(global float* A, int rowStart, int colStart, int stride)
 {
     float ret;
 
@@ -155,7 +148,7 @@ float load_a_rowmajor_d32_m1_k8_sg16(global float* A, int rowStart, int colStart
 }
 
 // M rows x K columns
-float load_a_rowmajor_d32_m2_k8_sg16(global float* A, int rowStart, int colStart, int stride)
+float load_a_rowmajor_32b_2r8c_sg16(global float* A, int rowStart, int colStart, int stride)
 {
     float ret;
 
@@ -169,7 +162,7 @@ float load_a_rowmajor_d32_m2_k8_sg16(global float* A, int rowStart, int colStart
 }
 
 // M rows x K columns
-float2 load_a_rowmajor_d32_m4_k8_sg16(global float* A, int rowStart, int colStart, int stride)
+float2 load_a_rowmajor_32b_4r8c_sg16(global float* A, int rowStart, int colStart, int stride)
 {
     float2 ret;
 
@@ -184,7 +177,7 @@ float2 load_a_rowmajor_d32_m4_k8_sg16(global float* A, int rowStart, int colStar
 }
 
 // M rows x K columns
-float4 load_a_rowmajor_d32_m8_k8_sg16(global float* A, int rowStart, int colStart, int stride)
+float4 load_a_rowmajor_32b_8r8c_sg16(global float* A, int rowStart, int colStart, int stride)
 {
     float4 ret;
 
@@ -201,7 +194,7 @@ float4 load_a_rowmajor_d32_m8_k8_sg16(global float* A, int rowStart, int colStar
 }
 
 // M rows x K columns x V tiles (in the M and K dimensions)
-void prefetch_a_rowmajor_d32_m8v2_k8v2_sg16(global float* A, int rowStart, int colStart, int stride)
+void prefetch_a_rowmajor_32b_8x2r8x2c_sg16(global float* A, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
@@ -212,7 +205,7 @@ void prefetch_a_rowmajor_d32_m8v2_k8v2_sg16(global float* A, int rowStart, int c
 // K rows x N columns:
 // Each work-item loads K values.
 // Stride is in units of elements.
-float8 load_b_rowmajor_d32_k8_nx(global float* B, int rowStart, int colStart, int stride)
+float8 load_b_rowmajor_32b_8rNc(global float* B, int rowStart, int colStart, int stride)
 {
     float8 ret;
 
@@ -231,7 +224,7 @@ float8 load_b_rowmajor_d32_k8_nx(global float* B, int rowStart, int colStart, in
 }
 
 // K rows x N columns x V tiles (in the K and N dimensions)
-void prefetch_b_rowmajor_d32_k8v2_n8v2_sg16(global float* B, int rowStart, int colStart, int stride)
+void prefetch_b_rowmajor_32b_8x2r8x2c_sg16(global float* B, int rowStart, int colStart, int stride)
 {
 #if defined(PREFETCH_DEFAULT)
     uint offset = colStart + (rowStart + get_sub_group_local_id()) * stride;
@@ -239,7 +232,7 @@ void prefetch_b_rowmajor_d32_k8v2_n8v2_sg16(global float* B, int rowStart, int c
 #endif // defined(PREFETCH_DEFAULT)
 }
 
-void store_c_rowmajor_fp32_m1_nx(global float* C, float v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_1rNc(global float* C, float v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint v_ui = as_uint(v);
@@ -249,7 +242,7 @@ void store_c_rowmajor_fp32_m1_nx(global float* C, float v, int rowStart, int col
     intel_sub_group_block_write(C_ui + offset, v_ui); offset += stride;
 }
 
-void store_c_rowmajor_fp32_m2_nx(global float* C, float2 v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_2rNc(global float* C, float2 v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint2 v_ui = as_uint2(v);
@@ -260,7 +253,7 @@ void store_c_rowmajor_fp32_m2_nx(global float* C, float2 v, int rowStart, int co
     intel_sub_group_block_write(C_ui + offset, v_ui.s1); offset += stride;
 }
 
-void store_c_rowmajor_fp32_m4_nx(global float* C, float4 v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_4rNc(global float* C, float4 v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint4 v_ui = as_uint4(v);
@@ -273,7 +266,7 @@ void store_c_rowmajor_fp32_m4_nx(global float* C, float4 v, int rowStart, int co
     intel_sub_group_block_write(C_ui + offset, v_ui.s3); offset += stride;
 }
 
-void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int colStart, int stride)
+void store_c_rowmajor_fp32_8rNc(global float* C, float8 v, int rowStart, int colStart, int stride)
 {
     global uint* C_ui = (global uint*)C;
     uint8 v_ui = as_uint8(v);
@@ -302,24 +295,6 @@ void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int co
 //  - pitch is the number of bytes between rows of the entire matrix.  Must be >= 64B.  Must be a multiple of 8 bytes.
 //  - coord is the number of elements (x coord) and row (y coord) to read from.  X coord must be multiple 4 for for 1B data and 2 for 2B data.
 
-// Built-in functions are:
-
-// #ifdef cl_intel_subgroup_extended_block_read
-// ushort2  intel_subgroup_block_read_u8_m1k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort4  intel_subgroup_block_read_u8_m2k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort8  intel_subgroup_block_read_u8_m4k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort16 intel_subgroup_block_read_u8_m8k32v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort2  intel_subgroup_block_read_u16_m1k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort4  intel_subgroup_block_read_u16_m2k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort8  intel_subgroup_block_read_u16_m4k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ushort16 intel_subgroup_block_read_u16_m8k16v2(__global void *base_address, int width, int height, int pitch, int2 coord);
-// uint8    intel_subgroup_block_read_transform_u8_k32(__global void *base_address, int width, int height, int pitch, int2 coord);
-// uint8    intel_subgroup_block_read_transform_u16_k16(__global void *base_address, int width, int height, int pitch, int2 coord);
-// uint8    intel_subgroup_block_read_transpose_u32_k8(__global void *base_address, int width, int height, int pitch, int2 coord);
-// ulong4   intel_subgroup_block_read_transpose_u64_k4(__global void *base_address, int width, int height, int pitch, int2 coord);
-// #endif //defined(cl_intel_subgroup_extended_block_read)
-
-
 // For intrinsics, the pattern is:
 //  - prefix: __builtin_IB_subgroup_block_read_flat or __builtin_IB_subgroup_block_write_flat
 //  - operation (optional): _transpose or _transform
@@ -339,7 +314,18 @@ void store_c_rowmajor_fp32_m8_nx(global float* C, float8 v, int rowStart, int co
 //      - tile width: subgroup size (16)
 //      - number of tiles: 1
 
-// Define additional "non-vector" block read and writes.  These are supported by the hardware but are not in the headers:
+enum LSC_LDCC {
+    LSC_LDCC_DEFAULT      = 0,
+    LSC_LDCC_L1UC_L3UC    = 1,   // Override to L1 uncached and L3 uncached
+    LSC_LDCC_L1UC_L3C     = 2,   // Override to L1 uncached and L3 cached
+    LSC_LDCC_L1C_L3UC     = 3,   // Override to L1 cached and L3 uncached
+    LSC_LDCC_L1C_L3C      = 4,   // Override to L1 cached and L3 cached
+    LSC_LDCC_L1S_L3UC     = 5,   // Override to L1 streaming load and L3 uncached
+    LSC_LDCC_L1S_L3C      = 6,   // Override to L1 streaming load and L3 cached
+    LSC_LDCC_L1IAR_L3C    = 7,   // Override to L1 invalidate-after-read, and L3 cached
+};
+
+// Define block reads, prefetches, and writes.  These are supported by the hardware but are not in the headers:
 
 uint   __builtin_IB_subgroup_block_read_flat_u32_m1k8v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 uint2  __builtin_IB_subgroup_block_read_flat_u32_m2k8v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
@@ -351,65 +337,70 @@ uint2  __builtin_IB_subgroup_block_read_flat_u32_m2k16v1(long baseoffset, int wi
 uint4  __builtin_IB_subgroup_block_read_flat_u32_m4k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 uint8  __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
 
-uint   intel_subgroup_block_read_u32_m1k8(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m1k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
-}
-uint  intel_subgroup_block_read_u32_m2k8(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m2k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord).lo;
-}
-uint2  intel_subgroup_block_read_u32_m4k8(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m4k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord).lo;
-}
-uint4  intel_subgroup_block_read_u32_m8k8(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m8k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord).lo;
-}
-
-uint   intel_subgroup_block_read_u32_m1k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
-}
-uint2  intel_subgroup_block_read_u32_m2k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
-}
-uint4  intel_subgroup_block_read_u32_m4k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
-}
-uint8  intel_subgroup_block_read_u32_m8k16(const __global void *base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
-}
-
 uint8  __builtin_IB_subgroup_block_read_flat_u32_m8k8v2(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
-
-uint8 intel_subgroup_block_read_u32_m8k8v2(const __global void* base_address, int width, int height, int pitch, int2 coord)
-{
-    return __builtin_IB_subgroup_block_read_flat_u32_m8k8v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
-}
 
 void __builtin_IB_subgroup_block_write_flat_u32_m1k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint  data);
 void __builtin_IB_subgroup_block_write_flat_u32_m2k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint2 data);
 void __builtin_IB_subgroup_block_write_flat_u32_m4k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint4 data);
 void __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord, uint8 data);
 
-void intel_subgroup_block_write_u32_m1k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
+uint   intel_sub_group_block_read_32b_1r8c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m1k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+uint  intel_sub_group_block_read_32b_2r8c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m2k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord).lo;
+}
+uint2  intel_sub_group_block_read_32b_4r8c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m4k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord).lo;
+}
+uint4  intel_sub_group_block_read_32b_8r8c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m8k8v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord).lo;
+}
+
+uint   intel_sub_group_block_read_32b_1r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+uint2  intel_sub_group_block_read_32b_2r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+uint4  intel_sub_group_block_read_32b_4r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+uint8  intel_sub_group_block_read_32b_8r16c(const __global void *base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+
+uint8 intel_sub_group_block_read_32b_8r8x2c(const __global void* base_address, int width, int height, int pitch, int2 coord)
+{
+    return __builtin_IB_subgroup_block_read_flat_u32_m8k8v2(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+}
+
+
+#if !defined(BLOCK_PREFETCH_CACHE_TYPE)
+#define BLOCK_PREFETCH_CACHE_TYPE LSC_LDCC_L1C_L3C
+#endif
+
+void intel_sub_group_block_write_32b_1r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m1k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m2k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint2 data)
+void intel_sub_group_block_write_32b_2r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint2 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m2k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m4k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint4 data)
+void intel_sub_group_block_write_32b_4r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint4 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m4k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
-void intel_subgroup_block_write_u32_m8k16(__global void* base_address, int width, int height, int pitch, int2 coord, uint8 data)
+void intel_sub_group_block_write_32b_8r16c(__global void* base_address, int width, int height, int pitch, int2 coord, uint8 data)
 {
     __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
