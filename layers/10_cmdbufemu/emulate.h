@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2024 Ben Ashbaugh
+// Copyright (c) 2022-2025 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -9,6 +9,10 @@
 
 #include <map>
 
+extern bool g_EnhancedErrorChecking;
+
+extern const struct _cl_icd_dispatch* g_pNextDispatch;
+
 struct SLayerContext
 {
     typedef std::map<cl_event, cl_event> CEventMap;
@@ -16,8 +20,6 @@ struct SLayerContext
 };
 
 SLayerContext& getLayerContext(void);
-
-extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Emulated Functions
