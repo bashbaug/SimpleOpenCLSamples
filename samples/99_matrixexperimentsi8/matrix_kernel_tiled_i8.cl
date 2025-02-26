@@ -1,5 +1,5 @@
 #if !defined(tK)
-#error "tK is undefined!  This should be defined as the K dimension of the matrix tiles, which is dependent on the elemement type, likely 16 or 32."
+#error "tK is undefined!  This should be defined as the K dimension of the matrix tiles, which is dependent on the element type, likely 16 or 32."
 #endif
 
 #if !defined(MM)
