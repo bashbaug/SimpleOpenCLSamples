@@ -742,4 +742,20 @@ void intel_subgroup_block_write_u32_m8k16(__global void* base_address, int width
     __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
 
+uint    __builtin_IB_subgroup_block_read_flat_transpose_u32_k1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+uint2   __builtin_IB_subgroup_block_read_flat_transpose_u32_m32k1(long baseoffset, int width_minus_one, int height_minus_one, int pitch_minus_one, int2 coord);
+
+void intel_sub_group_2d_block_read_transpose_32b_16r1x1c(global void* base_address, int width, int height, int pitch, int2 coord, private uint* destination)
+{
+    uint temp = __builtin_IB_subgroup_block_read_flat_transpose_u32_k1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+    destination[0] = temp;
+}
+
+void intel_sub_group_2d_block_read_transpose_32b_32r1x1c(global void* base_address, int width, int height, int pitch, int2 coord, private uint* destination)
+{
+    uint2 temp = __builtin_IB_subgroup_block_read_flat_transpose_u32_m32k1(as_long(base_address), width - 1, height - 1, pitch - 1, coord);
+    destination[0] = temp.s0;
+    destination[1] = temp.s1;
+}
+
 #endif // cl_intel_subgroup_extended_block_read
