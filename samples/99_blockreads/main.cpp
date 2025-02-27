@@ -35,12 +35,23 @@ static std::string readStringFromFile(
 }
 
 template <typename T>
-static void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
+void fill_matrix(std::vector<T>& M, size_t numRows, size_t numCols)
 {
     for (size_t r = 0; r < numRows; r++) {
         for (size_t c = 0; c < numCols; c++) {
-            T value = static_cast<T>(((r % 256) * 256) + (c % 256));
+            T value = static_cast<T>(((r % 256) * 65536) + (c % 256));
             M.push_back(value);
+        }
+    }
+}
+
+template <>
+void fill_matrix(std::vector<uint8_t>& M, size_t numRows, size_t numCols)
+{
+    uint8_t value = 0;
+    for (size_t r = 0; r < numRows; r++) {
+        for (size_t c = 0; c < numCols; c++) {
+            M.push_back(value++);
         }
     }
 }
@@ -124,7 +135,8 @@ int main(
     constexpr size_t numRows = 64;
     constexpr size_t numCols = 64;
 
-    std::vector<uint16_t> matrix;
+    //std::vector<uint32_t> matrix;
+    std::vector<uint8_t> matrix;
     matrix.reserve(numRows * numCols);
     fill_matrix(matrix, numRows, numCols);
 
@@ -136,8 +148,8 @@ int main(
 
     // execution
     kernel.setArg(0, mem);
-    kernel.setArg(1, static_cast<int>(numRows));
-    kernel.setArg(2, static_cast<int>(numCols));
+    kernel.setArg(1, static_cast<int>(numCols * sizeof(matrix[0])));
+    kernel.setArg(2, static_cast<int>(numRows));
     commandQueue.enqueueNDRangeKernel(
         kernel,
         cl::NullRange,
