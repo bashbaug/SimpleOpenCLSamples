@@ -443,6 +443,8 @@ static void i8_dpas_blockread_rowmajor(
     cl::Kernel kernel{program, kernelName.c_str()};
     if (kernel() == nullptr) {
         printf("unsupported.\n");
+    } else if (K < 64 || N < 64) {
+        printf("matrix pitch for block reads must be >= 64 bytes.\n");
     } else {
         kernel.setArg(0, C);
         kernel.setArg(1, A);
@@ -502,6 +504,8 @@ static void i8_dpas_blockread_rowmajor_tiled(
         printf("M is too small.\n");
     } else if (tN * NN > N) {
         printf("N is too small.\n");
+    } else if (K < 64 || N < 64) {
+        printf("matrix pitch for block reads must be >= 64 bytes.\n");
     } else {
         kernel.setArg(0, C);
         kernel.setArg(1, A);
@@ -555,6 +559,8 @@ static void i8_dpas_blockread_vnni(
     cl::Kernel kernel{program, kernelName.c_str()};
     if (kernel() == nullptr) {
         printf("unsupported.\n");
+    } else if (K < 64 || N < 64/4) {
+        printf("matrix pitch for block reads must be >= 64 bytes.\n");
     } else {
         kernel.setArg(0, C);
         kernel.setArg(1, A);
@@ -614,6 +620,8 @@ static void i8_dpas_blockread_vnni_tiled(
         printf("M is too small.\n");
     } else if (tN * NN > N) {
         printf("N is too small.\n");
+    } else if (K < 64 || N < 64/4) {
+        printf("matrix pitch for block reads must be >= 64 bytes.\n");
     } else {
         kernel.setArg(0, C);
         kernel.setArg(1, A);
