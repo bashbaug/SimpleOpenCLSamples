@@ -36,9 +36,6 @@ kernel void i8_naive_TN(global int* C, global char* A, global char* B, int K)
     int sum = 0;
     for (int k = 0; k < K; k++) {
         sum = A[k * K + m] * B[k * N + n] + sum;
-        if (get_global_id(0) == 1 && get_global_id(1) == 0) {
-            printf("after iteration %d: sum is %d\n", k, sum);
-        }
     }
 
     sum = activation(sum);
