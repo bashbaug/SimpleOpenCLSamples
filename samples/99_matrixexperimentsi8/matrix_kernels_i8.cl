@@ -610,16 +610,17 @@ kernel void i8_dpas_blockread_rowmajor_TN_m4_n16(global int* C, global char* A, 
         intel_sub_group_2d_block_read_transpose_32b_32r1x1c(A, M * sizeof(char), K, M * sizeof(char), (int2)(m / 4, k), (uint*)&readData);
 
         // Note: after the transpose block read:
-        //      readData.s0 contains row  0-15
-        //      readData.s1 contains row 16-31
+        //      readData.s0 contains rows  0-15
+        //      readData.s1 contains rows 16-31
         // So, WI0 has rows 0 and 16, WI1 has rows 1 and 17, etc.
         // We want WI0 to have rows 0 and 1, WI1 to have rows 2 and 3, etc.
-        int shuffledData0 = (sglid < 8) ?
-            sub_group_shuffle(readData.s0, (sglid * 2)) :
-            sub_group_shuffle(readData.s1, (sglid * 2) % 16);
-        int shuffledData1 = (sglid < 8) ?
-            sub_group_shuffle(readData.s0, (sglid * 2) + 1) :
-            sub_group_shuffle(readData.s1, (sglid * 2) % 16 + 1);
+        int shuffleIndex = sglid * 2 % 16;
+        int loData0 = sub_group_shuffle(readData.s0, shuffleIndex);
+        int hiData0 = sub_group_shuffle(readData.s1, shuffleIndex);
+        int shuffledData0 = (sglid < 8) ? loData0 : hiData0;
+        int loData1 = sub_group_shuffle(readData.s0, shuffleIndex + 1);
+        int hiData1 = sub_group_shuffle(readData.s1, shuffleIndex + 1);
+        int shuffledData1 = (sglid < 8) ? loData1 : hiData1;
 
         short4  aData;
         aData.s0 = as_short((char2)(as_char4(shuffledData0).s0, as_char4(shuffledData1).s0));
