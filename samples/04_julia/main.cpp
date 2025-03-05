@@ -1,29 +1,15 @@
 /*
-// Copyright (c) 2019-2021 Ben Ashbaugh
+// Copyright (c) 2019-2025 Ben Ashbaugh
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// SPDX-License-Identifier: MIT
 */
 
 #include <popl/popl.hpp>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+
 #include <CL/opencl.hpp>
-#include "bmp.hpp"
 
 #include <chrono>
 
@@ -69,8 +55,8 @@ kernel void Julia( global uchar4* dst, float cr, float ci )
     result = max( result, 0.0f );
     result = min( result, 1.0f );
 
-    // BGRA
-    float4 color = (float4)( 1.0f, sqrt(result), result, 1.0f );
+    // RGBA
+    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
 
     dst[ y * cWidth + x ] = convert_uchar4(color * 255.0f);
 }
@@ -128,7 +114,7 @@ int main(
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
 
     cl::Program program{ context, kernelString };
     program.build();
@@ -164,7 +150,7 @@ int main(
         commandQueue.finish();
 
         auto start = std::chrono::system_clock::now();
-        for( int i = 0; i < iterations; i++ )
+        for( size_t i = 0; i < iterations; i++ )
         {
             commandQueue.enqueueNDRangeKernel(
                 kernel,
@@ -191,12 +177,12 @@ int main(
                 0,
                 gwx * gwy * sizeof(cl_uchar4) ) );
 
-        BMP::save_image(buf, gwx, gwy, filename);
+        stbi_write_bmp(filename, (int)gwx, (int)gwy, 4, buf);
         printf("Wrote image file %s\n", filename);
 
         commandQueue.enqueueUnmapMemObject(
             deviceMemDst,
-            (void*)buf ); // TODO: Why isn't this a const void* in the API?
+            (void*)buf );
     }
 
     return 0;

@@ -19,16 +19,19 @@ After setting these controls and re-running the tutorial application, we won't s
 ```
 $ ls -R ~/CLIntercept_Dump/sinjulia/
 /home/bashbaug/CLIntercept_Dump/sinjulia/:
-CLI_0000_3DC4555B_source.cl  CLI_0000_B823BE28_source.cl  clintercept_report.txt  Inject  memDumpPostEnqueue  memDumpPreEnqueue
+CLI_0000_66C650B0_source.cl  CLI_0000_F05F194C_source.cl  clintercept_report.txt  Inject  memDumpPostEnqueue  memDumpPreEnqueue  Modified
 
 /home/bashbaug/CLIntercept_Dump/sinjulia/Inject:
-CLI_0000_B823BE28_source.cl
+CLI_0000_66C650B0_source.cl
 
 /home/bashbaug/CLIntercept_Dump/sinjulia/memDumpPostEnqueue:
-Enqueue_0001_Kernel_SinJulia_Arg_0_Buffer_0000.bin  Enqueue_0002_Kernel_SinJulia_Arg_0_Buffer_0000.bin
+Enqueue_0000_Kernel_SinJulia_Arg_0_Buffer_0000.bin  Enqueue_0001_Kernel_SinJulia_Arg_0_Buffer_0000.bin  Enqueue_0002_Kernel_SinJulia_Arg_0_Buffer_0000.bin
 
 /home/bashbaug/CLIntercept_Dump/sinjulia/memDumpPreEnqueue:
-Enqueue_0001_Kernel_SinJulia_Arg_0_Buffer_0000.bin  Enqueue_0002_Kernel_SinJulia_Arg_0_Buffer_0000.bin
+Enqueue_0000_Kernel_SinJulia_Arg_0_Buffer_0000.bin  Enqueue_0001_Kernel_SinJulia_Arg_0_Buffer_0000.bin  Enqueue_0002_Kernel_SinJulia_Arg_0_Buffer_0000.bin
+
+/home/bashbaug/CLIntercept_Dump/sinjulia/Modified:
+CLI_0000_66C650B0_source.cl
 ```
 
 Note that the contents of the OpenCL buffers are dumped as binary files, so they will need to be viewed in a hex editor or some other tool capable of decoding binary files.

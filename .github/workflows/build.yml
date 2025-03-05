@@ -1,12 +1,15 @@
 name: build
 
+permissions:
+  contents: read
+
 on:
   push:
     paths-ignore:
       - '**/*.md'
   pull_request:
     branches:
-      - master
+      - main
 
 env:
   BUILD_TYPE: RelWithDebInfo
@@ -15,7 +18,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Check Tabs
       run: |
@@ -31,28 +34,37 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        ext: [YES, NO]
 
     runs-on: ${{matrix.os}}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Get Ubuntu OpenGL Dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
-        sudo apt-get install libglfw3-dev
+        sudo apt-get update
+        sudo apt-get install -y libglfw3-dev
 
     - name: Get OpenCL Headers
-      uses: actions/checkout@master
+      uses: actions/checkout@v4
       with:
         repository: KhronosGroup/OpenCL-Headers
         path: external/OpenCL-Headers
 
     - name: Get OpenCL ICD Loader
-      uses: actions/checkout@master
+      uses: actions/checkout@v4
       with:
         repository: KhronosGroup/OpenCL-ICD-Loader
         path: external/opencl-icd-loader
+
+    - name: Get OpenCL Extension Loader
+      if: matrix.ext == 'YES'
+      uses: actions/checkout@v4
+      with:
+        repository: bashbaug/opencl-extension-loader
+        path: external/opencl-extension-loader
 
     - name: Create Build Directory
       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -65,7 +77,7 @@ jobs:
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config $BUILD_TYPE
+      run: cmake --build . --parallel --config $BUILD_TYPE
 
     #- name: Test
     #  working-directory: ${{runner.workspace}}/build

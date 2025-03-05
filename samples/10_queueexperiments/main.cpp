@@ -1,23 +1,7 @@
 /*
-// Copyright (c) 2019-2021 Ben Ashbaugh
+// Copyright (c) 2019-2025 Ben Ashbaugh
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// SPDX-License-Identifier: MIT
 */
 
 #include <popl/popl.hpp>
@@ -33,7 +17,6 @@ using test_clock = std::chrono::high_resolution_clock;
 constexpr int maxKernels = 64;
 constexpr int testIterations = 32;
 
-int numKernels = 8;
 int numIterations = 1;
 size_t numElements = 1;
 
@@ -272,6 +255,67 @@ static void go_kernel_qf_ioqxN( cl::Context& context, cl::Device& device, const 
     printf("Finished in %f seconds\n", best);
 }
 
+static void go_kernel_qfs_ioqxN( cl::Context& context, cl::Device& device, const int numKernels )
+{
+    init(context, device);
+
+    printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
+
+    if (!checkDeviceForExtension(device, "cl_intel_command_queue_families")) {
+        printf("Skipping (device does not support cl_intel_command_queue_families).\n");
+        return;
+    }
+
+    cl_uint family = 0;
+    cl_uint numQueues = 0;
+    findQueueFamily(device, family, numQueues);
+    if (numQueues == 0) {
+        printf("Skipping (no queues found?).\n");
+        return;
+    } else {
+        printf("Using queue family %u with %u queue(s): ", family, numQueues); fflush(stdout);
+    }
+
+    cl_command_queue_properties props = device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
+    if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) {
+        // Create a dummy out-of-order queue to enable command aggregation.
+        cl::CommandQueue dummy{context, device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
+    }
+
+    std::vector<cl::CommandQueue> queues;
+    for (int i = 0; i < numKernels; i++) {
+        cl_queue_properties props[] = {
+            CL_QUEUE_FAMILY_INTEL, family,
+            CL_QUEUE_INDEX_INTEL, 0,    // always use queue index zero
+            0
+        };
+        queues.push_back(cl::CommandQueue{
+            clCreateCommandQueueWithProperties(context(), device(), props, NULL)});
+    }
+
+    float best = 999.0f;
+    for (int test = 0; test < testIterations; test++) {
+        auto start = test_clock::now();
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].enqueueNDRangeKernel(
+                kernels[i],
+                cl::NullRange,
+                cl::NDRange{numElements});
+        }
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].flush();
+        }
+        for (int i = 0; i < numKernels; i++) {
+            queues[i].finish();
+        }
+
+        auto end = test_clock::now();
+        std::chrono::duration<float> elapsed_seconds = end - start;
+        best = std::min(best, elapsed_seconds.count());
+    }
+    printf("Finished in %f seconds\n", best);
+}
+
 static void go_kernel_ctx_ioqxN( cl::Device& device, const int numKernels )
 {
     printf("%s (n=%d): ", __FUNCTION__, numKernels); fflush(stdout);
@@ -335,12 +379,13 @@ int main(
 {
     int platformIndex = 0;
     int deviceIndex = 0;
+    int numKernels = 0;
 
     {
         popl::OptionParser op("Supported Options");
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
-        op.add<popl::Value<int>>("k", "kernels", "Kernel to Execute", numKernels, &numKernels);
+        op.add<popl::Value<int>>("k", "kernels", "Kernel to Execute (<=0 to sweep)", numKernels, &numKernels);
         op.add<popl::Value<int>>("i", "iterations", "Kernel Iterations", numIterations, &numIterations);
         op.add<popl::Value<size_t>>("e", "elements", "Number of ND-Range Elements", numElements, &numElements);
         bool printUsage = false;
@@ -391,35 +436,40 @@ int main(
         kernels[i].setArg(1, numIterations);
     }
 
-    go_kernelxN(context, device, 1);
-    go_kernelxN(context, device, 2);
-    go_kernelxN(context, device, 4);
-    go_kernelxN(context, device, numKernels);
+    std::vector<int> counts;
+    if (numKernels <= 0) {
+        counts.assign({1, 2, 4, 8, 16, 32, 64});
+    } else {
+        counts.assign({numKernels});
+    }
 
-    go_kernelxN_ooq(context, device, 1);
-    go_kernelxN_ooq(context, device, 2);
-    go_kernelxN_ooq(context, device, 4);
-    go_kernelxN_ooq(context, device, numKernels);
+    for (auto count : counts) {
+        go_kernelxN(context, device, count);
+    }
 
-    go_kernelxN_ooq_events(context, device, 1);
-    go_kernelxN_ooq_events(context, device, 2);
-    go_kernelxN_ooq_events(context, device, 4);
-    go_kernelxN_ooq_events(context, device, numKernels);
+    for (auto count : counts) {
+        go_kernelxN_ooq(context, device, count);
+    }
 
-    go_kernel_ioqxN(context, device, 1);
-    go_kernel_ioqxN(context, device, 2);
-    go_kernel_ioqxN(context, device, 4);
-    go_kernel_ioqxN(context, device, numKernels);
+    for (auto count : counts) {
+        go_kernelxN_ooq_events(context, device, count);
+    }
 
-    go_kernel_qf_ioqxN(context, device, 1);
-    go_kernel_qf_ioqxN(context, device, 2);
-    go_kernel_qf_ioqxN(context, device, 4);
-    go_kernel_qf_ioqxN(context, device, numKernels);
+    for (auto count : counts) {
+        go_kernel_ioqxN(context, device, count);
+    }
 
-    go_kernel_ctx_ioqxN(device, 1);
-    go_kernel_ctx_ioqxN(device, 2);
-    go_kernel_ctx_ioqxN(device, 4);
-    go_kernel_ctx_ioqxN(device, numKernels);
+    for (auto count : counts) {
+        go_kernel_qf_ioqxN(context, device, count);
+    }
+
+    for (auto count : counts) {
+        go_kernel_qfs_ioqxN(context, device, count);
+    }
+
+    for (auto count : counts) {
+        go_kernel_ctx_ioqxN(device, count);
+    }
 
     return 0;
 }

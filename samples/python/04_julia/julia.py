@@ -1,24 +1,8 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019-2021 Ben Ashbaugh
+# Copyright (c) 2019-2025 Ben Ashbaugh
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# SPDX-License-Identifier: MIT
 
 from PIL import Image
 
@@ -76,8 +60,8 @@ kernel void Julia( global uchar4* dst, float cr, float ci )
     result = max( result, 0.0f );
     result = min( result, 1.0f );
 
-    // BGRA
-    float4 color = (float4)( 1.0f, sqrt(result), result, 1.0f );
+    // RGBA
+    float4 color = (float4)( result, sqrt(result), 1.0f, 1.0f );
 
     dst[ y * cWidth + x ] = convert_uchar4(color * 255.0f);
 }
@@ -134,7 +118,7 @@ if __name__ == "__main__":
 
     start = time.perf_counter()
     for i in range(iterations):
-        kernel(commandQueue, [gwx, gwy], None, 
+        kernel(commandQueue, [gwx, gwy], lws,
                deviceMemDst, np.float32(cr), np.float32(ci))
 
     # Ensure all processing is complete before stopping the timer.
@@ -148,7 +132,7 @@ if __name__ == "__main__":
                                               0, gwx * gwy, np.uint32)
     with mapped_dst.base:
         # note: this generates a 24-bit .bmp file instead of a 32-bit .bmp file!
-        (b, g, r, a) = Image.fromarray(mapped_dst.reshape((gwy, gwx)), 'RGBA').split()
+        (r, g, b, a) = Image.fromarray(mapped_dst.reshape((gwy, gwx)), 'RGBA').split()
         image = Image.merge('RGB', (r, g, b))
         image.save(filename)
         print('Wrote image file {}'.format(filename))

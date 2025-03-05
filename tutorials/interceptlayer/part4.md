@@ -54,7 +54,7 @@ Timer Started!
 ... loading complete.
 Running on platform: Intel(R) OpenCL HD Graphics
 Running on device: Intel(R) Graphics [0x5916]
-Build Info for program 0x55af00e8bb10 (0000_3DC4555B_0000_00000000) for 1 device(s):
+Build Info for program 0x55af00e8bb10 (0000_F05F194C_0000_00000000) for 1 device(s):
     Build finished in 283.75 ms.
 Build Status for device 0 = Intel(R) Graphics [0x5916] (OpenCL C 3.0 ): CL_BUILD_SUCCESS
 -------> Start of Build Log:

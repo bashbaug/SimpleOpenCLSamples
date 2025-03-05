@@ -1,23 +1,7 @@
 /*
-// Copyright (c) 2019-2020 Ben Ashbaugh
+// Copyright (c) 2019-2025 Ben Ashbaugh
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// SPDX-License-Identifier: MIT
 */
 
 #include <stdio.h>
@@ -50,12 +34,11 @@ static void PrintDeviceType(
 }
 
 static cl_int PrintDeviceInfoSummary(
-    const std::vector<cl::Device> devices )
+    const std::vector<cl::Device>& devices )
 {
-    size_t  i = 0;
-    for( i = 0; i < devices.size(); i++ )
+    for( size_t i = 0; i < devices.size(); i++ )
     {
-        printf("Device[%d]:\n", (int)i );
+        printf("Device[%zu]:\n", i );
 
         cl_device_type  deviceType = devices[i].getInfo<CL_DEVICE_TYPE>();
         PrintDeviceType("\tType:           ", deviceType);
@@ -95,13 +78,13 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
-    for( auto& platform : platforms )
+    for( size_t i = 0; i < platforms.size(); i++ )
     {
-        printf( "Platform:\n" );
-        PrintPlatformInfoSummary( platform );
+        printf( "Platform[%zu]:\n", i );
+        PrintPlatformInfoSummary( platforms[i] );
 
         std::vector<cl::Device> devices;
-        platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
         PrintDeviceInfoSummary( devices );
         printf( "\n" );

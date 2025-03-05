@@ -16,8 +16,8 @@ This is also the first sample that allocates (and frees) Unified Shared Memory.
 This sample allocates host memory using `clHostMemAllocINTEL`, device memory using `clDeviceMemAllocINTEL`, and shared memory using `clSharedMemAllocINTEL`.
 When all queries are complete and the USM allocation is no longer required, the allocation is freed using `clMemFreeINTEL`.
 
-Since Unified Shared Memory is an OpenCL extension, this sample uses the `libusm` library to query the extension APIs.
-Please see the `libusm` [README](../libusm/README.md) for more detail.
+Since Unified Shared Memory is an OpenCL extension, this sample uses the `OpenCLExt` extension loader library to query the extension APIs.
+Please see the OpenCL Extension Loader [README](https://github.com/bashbaug/opencl-extension-loader) for more detail.
 
 This sample currently uses c APIs because the C++ bindings do not support Unified Shared Memory (yet).
 When support for Unified Shared Memory is added to the C++ bindings the samples will be updated to use the C++ bindings instead, which should simplify the sample slightly.

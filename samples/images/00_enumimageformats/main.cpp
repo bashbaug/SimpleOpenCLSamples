@@ -1,28 +1,14 @@
 /*
-// Copyright (c) 2019 Ben Ashbaugh
+// Copyright (c) 2019-2025 Ben Ashbaugh
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// SPDX-License-Identifier: MIT
 */
 
 #include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
+
+#include <algorithm>
 
 #define CASE_TO_STRING(_e) case _e: return #_e;
 
@@ -96,6 +82,19 @@ const char* channel_order_to_string(cl_channel_order channel_order)
     CASE_TO_STRING(CL_sRGBA);
     CASE_TO_STRING(CL_sBGRA);
     CASE_TO_STRING(CL_ABGR);
+#endif
+#ifdef CL_NV21_IMG  // cl_img_yuv_image
+    CASE_TO_STRING(CL_NV21_IMG);
+    CASE_TO_STRING(CL_YV12_IMG);
+#endif
+#ifdef cl_intel_packed_yuv
+    CASE_TO_STRING(CL_YUYV_INTEL);
+    CASE_TO_STRING(CL_UYVY_INTEL);
+    CASE_TO_STRING(CL_YVYU_INTEL);
+    CASE_TO_STRING(CL_VYUY_INTEL);
+#endif
+#ifdef CL_NV12_INTEL // cl_intel_planar_yuv
+    CASE_TO_STRING(CL_NV12_INTEL);
 #endif
     default: return "Unknown cl_channel_order";
     }
@@ -202,6 +201,13 @@ int main(
         {
             std::vector<cl::ImageFormat> imageFormats;
             context.getSupportedImageFormats( imageAccess, imageType, &imageFormats );
+
+            std::sort(std::begin(imageFormats), std::end(imageFormats),
+                [](cl::ImageFormat a, cl::ImageFormat b) {
+                    return a.image_channel_order < b.image_channel_order ||
+                        (a.image_channel_order == b.image_channel_data_type &&
+                         a.image_channel_data_type < b.image_channel_data_type);
+                });
 
             printf("\nFor image access %s (%04X), image type %s (%04X):\n",
                 mem_flags_to_string(imageAccess),

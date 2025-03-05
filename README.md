@@ -1,6 +1,6 @@
 # Simple OpenCL<sup>TM</sup> Samples
 
-[![build](https://github.com/bashbaug/SimpleOpenCLSamples/workflows/build/badge.svg?branch=master)](https://github.com/bashbaug/SimpleOpenCLSamples/actions?query=workflow%3Abuild+branch%3Amaster)
+[![build](https://github.com/bashbaug/SimpleOpenCLSamples/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/bashbaug/SimpleOpenCLSamples/actions?query=workflow%3Abuild+branch%3Amain)
 
 This repo contains simple OpenCL samples that demonstrate how to build
 OpenCL applications using only the Khronos-provided headers and libs.
@@ -18,7 +18,8 @@ LICENSE                 License information
 CMakeLists.txt          Top-level CMakefile
 external/               External Projects (headers and libs)
 include/                Include Files (OpenCL C++ bindings)
-samples/                Samples
+layers/                 Sample Layers
+samples/                Sample Applications
 tutorials/              Tutorials
 ```
 
@@ -33,6 +34,10 @@ OpenCL Headers:
 OpenCL ICD Loader:
 
     git clone https://github.com/KhronosGroup/opencl-icd-loader external/opencl-icd-loader
+
+Many samples that use extensions additionally require the OpenCL Extension Loader:
+
+    git clone https://github.com/bashbaug/opencl-extension-loader external/opencl-extension-loader
 
 After satisfying the external dependencies create build files using CMake.  For example:
 
@@ -54,10 +59,21 @@ implementations as well.
 
 ## Further Reading
 
-* [Environment Setup for Ubuntu 18.04](docs/env/ubuntu/18.04.md)
+* [Environment Setup for Ubuntu 22.04](docs/env/ubuntu/22.04.md)
 * [OpenCLPapers](https://github.com/bashbaug/OpenCLPapers)
-* [OpenCL Specs](https://www.khronos.org/registry/OpenCL/specs/)
-* [OpenCL Return Codes](https://streamhpc.com/blog/2013-04-28/opencl-error-codes/)
+* [OpenCL Specs](https://registry.khronos.org/OpenCL/)
+* [OpenCL Error Codes](https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_API.html#error_codes)
+
+## A Note About Error Checking
+
+For brevity, most samples do not include error checking. This means that a
+sample may crash or incorrectly report success if an OpenCL error occurs. By
+defining the CMake variable `SAMPLES_ENABLE_EXCEPTIONS` many samples can instead
+throw an exception if an OpenCL error occurs.
+
+Tools like the [OpenCL Intercept Layer](https://github.com/intel/opencl-intercept-layer)
+can also be useful to detect when an OpenCL error occurs and to identify the
+cause of the error.
 
 ## License
 
@@ -70,6 +86,9 @@ and is licensed under the
 [Khronos(tm) License](https://github.com/KhronosGroup/OpenCL-CLHPP/blob/master/LICENSE.txt).
 * The samples use [popl](https://github.com/badaix/popl) for its options
 parsing, which is licensed under the MIT License.
+* The samples use [stb](https://github.com/nothings/stb) for image reading and
+  writing, which is dual-licensed under a public domain license and the MIT
+  license.
 
 ---
 OpenCL and the OpenCL logo are trademarks of Apple Inc. used by permission by Khronos.

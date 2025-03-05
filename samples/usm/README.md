@@ -5,13 +5,10 @@ Unified Shared Memory is intended to bring pointer-based programming to OpenCL, 
 
 ## Unified Shared Memory Extension Status
 
-The `cl_intel_unified_shared_memory` extension that adds USM to OpenCL is currently a _preview_ extension, intended to provide early access to a feature for review and community feedback.
-When the feature matures, it may be released as a formal extension.
-The latest draft of the Unified Shared Memory extension specification can be found [here](https://github.com/intel/llvm/blob/sycl/sycl/doc/extensions/USM/cl_intel_unified_shared_memory.asciidoc).
+The `cl_intel_unified_shared_memory` extension is a widely supported vendor extension.
+The latest Unified Shared Memory extension specification can be found [here](https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_unified_shared_memory.html).
 
-Because the interfaces defined by the `cl_intel_unified_shared_memory` extension are not final and are subject to change they are not intended to be used by shipping software products.
-
-These samples are in sync with the USM extension draft revision H.
+These samples require the OpenCL Extension Loader to get the extension APIs for Unified Shared Memory.
 
 ## Unified Shared Memory Advantages
 

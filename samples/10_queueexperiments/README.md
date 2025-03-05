@@ -21,6 +21,9 @@ Some devices that do not support out-of-order command-queues can still execute c
 5. The fifth pattern executes independent ND-range kernels using multiple in-order command-queues, except in this scenario the command-queues are created using different command-queue indices.
 This pattern requires support for the [cl_intel_command_queue_families](https://www.khronos.org/registry/OpenCL/extensions/intel/cl_intel_command_queue_families.html) extension.
 Command-queues with different command-queue indices may execute differently than ordinary command-queues.
+5. The sixth pattern is similar, except in this scenario the command-queues are explicitly created using the same command-queue indices.
+This pattern also requires support for the [cl_intel_command_queue_families](https://www.khronos.org/registry/OpenCL/extensions/intel/cl_intel_command_queue_families.html) extension.
+Command-queues with different command-queue indices may execute differently than ordinary command-queues.
 6. The sixth pattern executes independent ND-range kernels using in-order command-queues created different OpenCL contexts.
 This pattern simulates the behavior of multiple applications running in parallel, or multiple isolated threads running in parallel.
 
@@ -52,6 +55,6 @@ For GPU OpenCL devices this may require running the application in a console or 
 |:--|:-:|:--|
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
-| `-k <number>` | 8 | Specify the number of kernels to execute for the variable execution.
+| `-k <number>` | 0 | Specify the number of kernels to execute for the variable execution.  Must be less than or equal to 64.  Specifying zero runs a sweep over different values.
 | `-i <number>` | 1 | Specify the number of kernel iterations to execute.
 | `-e <number>` | 1 | Specify the number of ND-range elements to execute (the global work size).

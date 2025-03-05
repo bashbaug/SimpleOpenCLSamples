@@ -1,7 +1,7 @@
 # OpenGL Samples
 
-This directory contains samples that use [OpenGL](https://www.khronos.org/opengl/) to visualization results.
-OpenGL is a widely supported industry standard for graphics and rendering and can interoperate will with many OpenCL devices.
+This directory contains samples that use [OpenGL](https://www.khronos.org/opengl/) to visualize results.
+OpenGL is a widely supported industry standard for graphics and rendering and can interoperate well with many OpenCL devices.
 
 ## Dependencies
 
@@ -61,3 +61,5 @@ After installing, GLFW should be found by the OpenCL samples.
 ## Summary of OpenGL Samples
 
 * [juliagl](./00_juliagl): Demonstrates sharing an OpenGL texture with OpenCL.
+* [nbodygl](./01_nbodygl): Demonstrates rendering an OpenCL vertex buffer with OpenGL.
+* [sobelgl](./01_sobelgl): Displays the output of a Sobel edge detection filter using OpenGL.
