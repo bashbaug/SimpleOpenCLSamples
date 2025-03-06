@@ -198,6 +198,9 @@ int main(
             buildOptions.empty() ? "(none)" : buildOptions.c_str() );
         program.build(buildOptions.c_str());
 
+        printf("Setting spec constant to 3.\n");
+        program.setSpecializationConstant(100, 3);
+
         kernel = cl::Kernel{ program, kernelName.c_str() };
     } else {
         printf("Compiling program with compile options: %s\n",
