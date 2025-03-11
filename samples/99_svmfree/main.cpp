@@ -34,7 +34,7 @@ static void test_malloc(cl::Context& context, cl::CommandQueue& queue, cl::Kerne
         CL_MEM_READ_WRITE,
         count * sizeof(int),
         0);
-    
+
     kernel.setArg(0, ptr);
     kernel.setArg(1, kernelOperationsCount);
 
