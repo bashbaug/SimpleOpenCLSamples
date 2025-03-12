@@ -155,10 +155,8 @@ clGetExtensionFunctionAddressForPlatform_layer(
     CHECK_RETURN_EXTENSION_FUNCTION( clRemapCommandBufferKHR );
 #endif
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     CHECK_RETURN_EXTENSION_FUNCTION( clUpdateMutableCommandsKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetMutableCommandInfoKHR );
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
         platform,
