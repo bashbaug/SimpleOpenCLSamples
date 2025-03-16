@@ -8,6 +8,7 @@
 
 #include <CL/opencl.hpp>
 
+#include <chrono>
 #include <cinttypes>
 
 #include "util.hpp"
