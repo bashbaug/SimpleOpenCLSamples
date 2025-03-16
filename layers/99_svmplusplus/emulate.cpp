@@ -645,16 +645,10 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesKHR_EMU(
 {
     cl_int errorCode = CL_SUCCESS;
     if (isUSMPtr(context, ptr)) {
-        if (flags & CL_SVM_FREE_BLOCKING_KHR) {
-            errorCode = clMemBlockingFreeINTEL(
-                context,
-                ptr);
-        }
-        errorCode = clMemFreeINTEL(
+        errorCode = clMemBlockingFreeINTEL(
             context,
             ptr);
     } else {
-        assert(!(flags & CL_SVM_FREE_BLOCKING_KHR) && "blocking SVM free is currently unsupported");
         g_pNextDispatch->clSVMFree(
             context,
             ptr);

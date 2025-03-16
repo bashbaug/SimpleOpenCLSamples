@@ -152,7 +152,7 @@ int main(
     clSVMFreeWithPropertiesKHR(
         context(),
         nullptr,
-        CL_SVM_FREE_BLOCKING_KHR,
+        0,
         h_dst );
 
     return 0;
