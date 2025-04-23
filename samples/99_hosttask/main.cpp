@@ -36,7 +36,7 @@ clEnqueueHostTaskEXP_t(
 typedef clEnqueueHostTaskEXP_t *
 clEnqueueHostTaskEXP_fn ;
 
-void HostTask(void* user_data)
+void CL_CALLBACK HostTask(void* user_data)
 {
     cl_uint count = 2;
     if (user_data) {
