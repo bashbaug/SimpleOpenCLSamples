@@ -8,4 +8,4 @@ add_opencl_sample(
     TARGET matrixexperimentsi8
     VERSION 200 # for clSetKernelExecInfo
     SOURCES main.cpp
-    KERNELS matrix_helpers_i8.cl matrix_kernels_i8.cl matrix_kernel_tiled_i8.cl)
+    KERNELS matrix_helpers_i8.cl matrix_kernels_i8.cl)
