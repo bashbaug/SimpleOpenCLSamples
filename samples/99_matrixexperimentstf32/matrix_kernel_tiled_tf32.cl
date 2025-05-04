@@ -147,7 +147,7 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global float* A, int tM, int
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int mm = 0; mm < MM; mm++) {
-            aData[kk][mm] = as_float4(intel_sub_group_block_read_32b_8r8c(A, K * sizeof(float), M, K * sizeof(float), (int2)(k + kk * tK, m + mm * tM)));
+            intel_sub_group_2d_block_read_32b_8r8x1c(A, K * sizeof(float), M, K * sizeof(float), (int2)(k + kk * tK, m + mm * tM), (uint*)&aData[kk][mm]);
         }
     }
 }
@@ -156,7 +156,7 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global float* B, int tN, int
 {
     for (int kk = 0; kk < KK; kk++) {
         for (int nn = 0; nn < NN; nn++) {
-            bData[nn][kk] = as_float8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(float), K, N * sizeof(float), (int2)(n + nn * tN, k + kk * tK)));
+            intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(float), K, N * sizeof(float), (int2)(n + nn * tN, k + kk * tK), (uint*)&bData[nn][kk]);
         }
     }
 }
@@ -217,7 +217,7 @@ kernel void MM_KERNEL_NAME(tf32_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN)(gl
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
+            intel_sub_group_2d_block_write_32b_8r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), (uint*)&sum[nn][mm]);
         }
     }
 }
