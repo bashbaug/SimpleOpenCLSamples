@@ -380,7 +380,7 @@ kernel void bfloat16_dpas_vnni_m8_n16(global float* C, global ushort* A, global 
     store_c_rowmajor_fp32_8rNc(C, sum, m, n, N);
 }
 
-#ifdef cl_intel_subgroup_extended_block_read
+#ifdef cl_intel_subgroup_2d_block_io
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void bfloat16_dpas_blockread_rowmajor_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
@@ -395,13 +395,15 @@ kernel void bfloat16_dpas_blockread_rowmajor_m1_n16(global float* C, global usho
 
     float sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short   aData = as_short(intel_sub_group_block_read_16b_1r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short   aData;
+        intel_sub_group_2d_block_read_16b_1r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
+        int8    bData;
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_1r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
+    intel_sub_group_2d_block_write_32b_1r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -417,13 +419,15 @@ kernel void bfloat16_dpas_blockread_rowmajor_m2_n16(global float* C, global usho
 
     float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short2  aData = as_short2(intel_sub_group_block_read_16b_2r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short2  aData;
+        intel_sub_group_2d_block_read_16b_2r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
+        int8    bData;
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_2r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
+    intel_sub_group_2d_block_write_32b_2r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -439,13 +443,15 @@ kernel void bfloat16_dpas_blockread_rowmajor_m4_n16(global float* C, global usho
 
     float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short4  aData = as_short4(intel_sub_group_block_read_16b_4r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short4  aData;
+        intel_sub_group_2d_block_read_16b_4r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
+        int8    bData;
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_4r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
+    intel_sub_group_2d_block_write_32b_4r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -461,13 +467,15 @@ kernel void bfloat16_dpas_blockread_rowmajor_m8_n16(global float* C, global usho
 
     float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short8  aData = as_short8(intel_sub_group_block_read_16b_8r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k)));
+        short8  aData;
+        intel_sub_group_2d_block_read_16b_8r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);;
+        int8    bData;
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
+    intel_sub_group_2d_block_write_32b_8r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -483,13 +491,15 @@ kernel void bfloat16_dpas_blockread_vnni_m1_n16(global float* C, global ushort* 
 
     float sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short   aData = as_short(intel_sub_group_block_read_16b_1r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short   aData;
+        intel_sub_group_2d_block_read_16b_1r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
+        int8    bData;
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_1r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint(sum));
+    intel_sub_group_2d_block_write_32b_1r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -505,13 +515,15 @@ kernel void bfloat16_dpas_blockread_vnni_m2_n16(global float* C, global ushort* 
 
     float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short2  aData = as_short2(intel_sub_group_block_read_16b_2r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short2  aData;
+        intel_sub_group_2d_block_read_16b_2r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
+        int8    bData;
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_2r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint2(sum));
+    intel_sub_group_2d_block_write_32b_2r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -527,13 +539,15 @@ kernel void bfloat16_dpas_blockread_vnni_m4_n16(global float* C, global ushort* 
 
     float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short4  aData = as_short4(intel_sub_group_block_read_16b_4r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short4  aData;
+        intel_sub_group_2d_block_read_16b_4r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
+        int8    bData;
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_4r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint4(sum));
+    intel_sub_group_2d_block_write_32b_4r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
@@ -549,16 +563,18 @@ kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* 
 
     float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short8  aData = as_short8(intel_sub_group_block_read_16b_8r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m)));
-        int8    bData = as_int8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2)));
+        short8  aData;
+        intel_sub_group_2d_block_read_16b_8r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
+        int8    bData;
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
+    intel_sub_group_2d_block_write_32b_8r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), (uint*)&sum);
 }
 
-#endif // cl_intel_subgroup_extended_block_read
+#endif // cl_intel_subgroup_2d_block_io
 
 // Tiled matrix multiplication kernels, generated from a template:
 

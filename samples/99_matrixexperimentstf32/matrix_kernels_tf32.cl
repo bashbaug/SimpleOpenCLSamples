@@ -112,7 +112,7 @@ kernel void tf32_dpas_rowmajor_m8_n16(global float* C, global float* A, global f
     store_c_rowmajor_fp32_8rNc(C, sum, m, n, N);
 }
 
-#ifdef cl_intel_subgroup_extended_block_read
+#ifdef cl_intel_subgroup_2d_block_io
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_blockread_rowmajor_m1_n16(global float* C, global float* A, global float* B, int K)
@@ -202,7 +202,7 @@ kernel void tf32_dpas_blockread_rowmajor_m8_n16(global float* C, global float* A
     intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n, m), as_uint8(sum));
 }
 
-#endif // cl_intel_subgroup_extended_block_read
+#endif // cl_intel_subgroup_2d_block_io
 
 // Tiled matrix multiplication kernels, generated from a template:
 

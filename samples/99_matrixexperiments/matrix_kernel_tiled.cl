@@ -405,7 +405,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 16, MM, NN)(global float
     }
 }
 
-#ifdef cl_intel_subgroup_extended_block_read
+#ifdef cl_intel_subgroup_2d_block_io
 
 void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, int M, int K, int m, int k, short8 aData[KK][MM])
 {
@@ -415,11 +415,11 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
                 //if (get_sub_group_local_id() == 0) {
                 //    printf("atile block load    : %d, %d, %2d:           m = %3d, k = %3d, mm = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), m, k, mm, kk, k + kk * tK, m + mm * tM);
                 //}
-                ushort8 tmp[2][4];
-                intel_sub_group_block_read_16b_32r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                short8 aTemp[2][4];
+                intel_sub_group_2d_block_read_16b_32r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), (ushort*)aTemp);
                 for (int tkk = 0; tkk < 2; tkk++) {
                     for (int tmm = 0; tmm < 4; tmm++) {
-                        aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
+                        aData[kk + tkk][mm + tmm] = aTemp[tkk][tmm];
                     }
                 }
             }
@@ -427,11 +427,11 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
     } else if (KK % 2 == 0 & MM % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm+=2) {
-                ushort8 tmp[2][2];
-                intel_sub_group_block_read_16b_16r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                short8 aTemp[2][2];
+                intel_sub_group_2d_block_read_16b_16r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), (ushort*)aTemp);
                 for (int tkk = 0; tkk < 2; tkk++) {
                     for (int tmm = 0; tmm < 2; tmm++) {
-                        aData[kk + tkk][mm + tmm] = as_short8(tmp[tkk][tmm]);
+                        aData[kk + tkk][mm + tmm] = aTemp[tkk][tmm];
                     }
                 }
             }
@@ -439,25 +439,28 @@ void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global ushort* A, int tM, in
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm++) {
-                short16 aTemp = as_short16(intel_sub_group_block_read_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
-                aData[kk + 0][mm] = aTemp.lo;
-                aData[kk + 1][mm] = aTemp.hi;
+                short8 aTemp[2];
+                intel_sub_group_2d_block_read_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), (ushort*)aTemp);
+                aData[kk + 0][mm] = aTemp[0];
+                aData[kk + 1][mm] = aTemp[1];
             }
         }
     } else if (MM % 4 == 0) {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm+=4) {
-                ushort8 tmp[4];
-                intel_sub_group_block_read_16b_32r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), tmp);
+                short8 aTemp[4];
+                intel_sub_group_2d_block_read_16b_32r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), (ushort*)aTemp);
                 for (int tmm = 0; tmm < 4; tmm++) {
-                    aData[kk][mm + tmm] = as_short8(tmp[tmm]);
+                    aData[kk][mm + tmm] = aTemp[tmm];
                 }
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm++) {
-                aData[kk][mm] = as_short8(intel_sub_group_block_read_16b_8r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM)));
+                short8 aTemp[1];
+                intel_sub_group_2d_block_read_16b_8r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM), (ushort*)aTemp);
+                aData[kk][mm] = aTemp[0];
             }
         }
     }
@@ -471,11 +474,11 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global ushort* B, int tN, in
                 //if (get_sub_group_local_id() == 0) {
                 //    printf("btile block load: %d, %d, %2d: n = %3d, k = %3d, nn = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), n, k, nn, kk, n + nn * tN, k + kk * tK);
                 //}
-                int8 tmp[2][2];
-                intel_sub_group_block_read_transform_16b_32r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), tmp);
+                int8 bTemp[2][2];
+                intel_sub_group_2d_block_read_transform_16b_32r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), (uint*)bTemp);
                 for (int tnn = 0; tnn < 2; tnn++) {
                     for (int tkk = 0; tkk < 2; tkk++) {
-                        bData[nn + tnn][kk + tkk] = tmp[tnn][tkk];
+                        bData[nn + tnn][kk + tkk] = bTemp[tnn][tkk];
                     }
                 }
             }
@@ -483,23 +486,27 @@ void HELPER_NAME(btile_block_load_rowmajor, MM, NN)(global ushort* B, int tN, in
     } else if (NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn+=2) {
-                int16 bTemp = intel_sub_group_block_read_transform_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
-                bData[nn + 0][kk] = bTemp.lo;
-                bData[nn + 1][kk] = bTemp.hi;
+                int8 bTemp[2];
+                intel_sub_group_2d_block_read_transform_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), (uint*)bTemp);
+                bData[nn + 0][kk] = bTemp[0];
+                bData[nn + 1][kk] = bTemp[1];
             }
         }
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                int16 bTemp = intel_sub_group_block_read_transform_16b_32r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
-                bData[nn][kk + 0] = bTemp.lo;
-                bData[nn][kk + 1] = bTemp.hi;
+                int8 bTemp[2];
+                intel_sub_group_2d_block_read_transform_16b_32r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), (uint*)bTemp);
+                bData[nn][kk + 0] = bTemp[0];
+                bData[nn][kk + 1] = bTemp[1];
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                bData[nn][kk] = intel_sub_group_block_read_transform_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                int8 bTemp[1];
+                intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK), (uint*)bTemp);
+                bData[nn][kk] = bTemp[0];
             }
         }
     }
@@ -510,15 +517,18 @@ void HELPER_NAME(btile_block_load_packed, MM, NN)(global ushort* B, int tN, int 
     if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                int16 bTemp = as_int16(intel_sub_group_block_read_32b_16r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
-                bData[nn][kk + 0] = bTemp.lo;
-                bData[nn][kk + 1] = bTemp.hi;
+                int8 bTemp[2];
+                intel_sub_group_2d_block_read_32b_16r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2), (uint*)bTemp);
+                bData[nn][kk + 0] = bTemp[0];
+                bData[nn][kk + 1] = bTemp[1];
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                bData[nn][kk] = as_int8(intel_sub_group_block_read_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2)));
+                int8 bTemp[1];
+                intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2), (uint*)bTemp);
+                bData[nn][kk] = bTemp[0];
             }
         }
     }
@@ -533,39 +543,35 @@ void HELPER_NAME(atile_block_prefetch_rowmajor, MM, NN)(global ushort* A, int tM
         //if (get_sub_group_local_id() == 0) {
         //    printf("atile block prefetch: %d, %d, %2d: sg_x = %d, m = %3d, k = %3d, mm = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), sg_index_x, m, k, mm, kk, k + kk * tK, m + mm * tM);
         //}
-#ifdef USE_32C
-        intel_sub_group_block_prefetch_16b_8r32c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
-#else
-        intel_sub_group_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
-#endif
+        intel_sub_group_2d_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
     } else if (KK % 2 == 0 & MM % 4 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm+=4) {
-                intel_sub_group_block_prefetch_16b_32r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_2d_block_prefetch_16b_32r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else if (KK % 2 == 0 & MM % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm+=2) {
-                intel_sub_group_block_prefetch_16b_16r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_2d_block_prefetch_16b_16r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int mm = 0; mm < MM; mm++) {
-                intel_sub_group_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_2d_block_prefetch_16b_8r16x2c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else if (MM % 4 == 0) {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm+=4) {
-                intel_sub_group_block_prefetch_16b_32r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_2d_block_prefetch_16b_32r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int mm = 0; mm < MM; mm++) {
-                intel_sub_group_block_prefetch_16b_8r16c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
+                intel_sub_group_2d_block_prefetch_16b_8r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k + kk * tK, m + mm * tM));
             }
         }
     }
@@ -580,33 +586,29 @@ void HELPER_NAME(btile_block_prefetch_rowmajor, MM, NN)(global ushort* B, int tN
         //if (get_sub_group_local_id() == 0) {
         //    printf("btile block prefetch: %d, %d, %2d: sg_y = %d, n = %3d, k = %3d, nn = %2d, kk = %2d, coord = %3d, %3d\n", (int)get_group_id(1), (int)get_group_id(0), get_sub_group_id(), sg_index_y, n, k, nn, kk, n + nn * tN, k + kk * tK);
         //}
-#ifdef USE_32C
-        intel_sub_group_block_prefetch_16b_16r32c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
-#else
-        intel_sub_group_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
-#endif
+        intel_sub_group_2d_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
     } else if (KK % 2 == 0 & NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn += 2) {
-                intel_sub_group_block_prefetch_16b_32r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_2d_block_prefetch_16b_32r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     } else if (NN % 2 == 0) {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn+=2) {
-                intel_sub_group_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_2d_block_prefetch_16b_16r16x2c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_sub_group_block_prefetch_16b_32r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_2d_block_prefetch_16b_32r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_sub_group_block_prefetch_16b_16r16c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
+                intel_sub_group_2d_block_prefetch_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n + nn * tN, k + kk * tK));
             }
         }
     }
@@ -618,17 +620,17 @@ void HELPER_NAME(btile_block_prefetch_packed, MM, NN)(global ushort* B, int tN, 
         const int sg_index_y = get_sub_group_id() / SGS_PER_WG_X;   // index in [0, SGS_PER_WG_Y)
         const int nn = sg_index_y % 4;  // nn(sg_index_y) == 0, 1, 2, 3, 0, 1, 2, 3
         const int kk = 0;               // kk(sg_index_y) == 0, 0, 0, 0, 0, 0, 0, 0
-        intel_sub_group_block_prefetch_32b_16r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
+        intel_sub_group_2d_block_prefetch_32b_16r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
     } else if (KK % 2 == 0) {
         for (int kk = 0; kk < KK; kk+=2) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_sub_group_block_prefetch_32b_16r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
+                intel_sub_group_2d_block_prefetch_32b_16r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
             }
         }
     } else {
         for (int kk = 0; kk < KK; kk++) {
             for (int nn = 0; nn < NN; nn++) {
-                intel_sub_group_block_prefetch_32b_8r16c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
+                intel_sub_group_2d_block_prefetch_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n + nn * tN, (k + kk * tK) / 2));
             }
         }
     }
@@ -689,7 +691,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
+            intel_sub_group_2d_block_write_32b_8r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), (uint*)&sum[nn][mm]);
         }
     }
 }
@@ -750,9 +752,9 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_blockread_vnni_tiled, 8, 16, MM, NN)(gl
     for (int mm = 0; mm < MM; mm++) {
         for (int nn = 0; nn < NN; nn++) {
             sum[nn][mm] = activation(sum[nn][mm]);
-            intel_sub_group_block_write_32b_8r16c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), as_uint8(sum[nn][mm]));
+            intel_sub_group_2d_block_write_32b_8r16x1c(C, N * sizeof(float), M, N * sizeof(float), (int2)(n + nn * tN, m + mm * tM), (uint*)&sum[nn][mm]);
         }
     }
 }
 
-#endif // cl_intel_subgroup_extended_block_read
+#endif // cl_intel_subgroup_2d_block_io

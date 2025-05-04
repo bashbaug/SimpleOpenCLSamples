@@ -285,7 +285,7 @@ void store_c_rowmajor_fp32_8rNc(global float* C, float8 v, int rowStart, int col
 
 #endif // defined(cl_intel_subgroups)
 
-#ifdef cl_intel_subgroup_extended_block_read
+#ifdef cl_intel_subgroup_2d_block_io
 
 // Note for 2D block reads:
 //  - the tile width and height is encoded into the function name.
@@ -405,4 +405,4 @@ void intel_sub_group_block_write_32b_8r16c(__global void* base_address, int widt
     __builtin_IB_subgroup_block_write_flat_u32_m8k16v1(as_long(base_address), width - 1, height - 1, pitch - 1, coord, data);
 }
 
-#endif // cl_intel_subgroup_extended_block_read
+#endif // cl_intel_subgroup_2d_block_io

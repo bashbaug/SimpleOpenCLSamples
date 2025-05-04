@@ -141,7 +141,7 @@ kernel void MM_KERNEL_NAME(tf32_dpas_rowmajor_tiled, 8, 16, MM, NN)(global float
     }
 }
 
-#ifdef cl_intel_subgroup_extended_block_read
+#ifdef cl_intel_subgroup_2d_block_io
 
 void HELPER_NAME(atile_block_load_rowmajor, MM, NN)(global float* A, int tM, int M, int K, int m, int k, float4 aData[KK][MM])
 {
@@ -222,4 +222,4 @@ kernel void MM_KERNEL_NAME(tf32_dpas_blockread_rowmajor_tiled, 8, 16, MM, NN)(gl
     }
 }
 
-#endif // cl_intel_subgroup_extended_block_read
+#endif // cl_intel_subgroup_2d_block_io
