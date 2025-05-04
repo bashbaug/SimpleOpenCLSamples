@@ -1,8 +1,8 @@
-# Copyright (c) 2019-2024 Ben Ashbaugh
+# Copyright (c) 2019-2025 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_CXX_STANDARD 14)

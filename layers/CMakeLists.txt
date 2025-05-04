@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2024 Ben Ashbaugh
+# Copyright (c) 2022-2025 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
@@ -25,6 +25,7 @@ function(add_opencl_layer)
     target_include_directories(${OPENCL_LAYER_TARGET} PRIVATE ${OpenCL_INCLUDE_DIR} ${OPENCL_LAYER_INCLUDES})
 
     target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_TARGET_OPENCL_VERSION=${OPENCL_LAYER_VERSION})
+    target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_ENABLE_BETA_EXTENSIONS)
     target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_USE_DEPRECATED_OPENCL_1_0_APIS)
     target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_USE_DEPRECATED_OPENCL_1_1_APIS)
     target_compile_definitions(${OPENCL_LAYER_TARGET} PRIVATE CL_USE_DEPRECATED_OPENCL_1_2_APIS)

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2024 Ben Ashbaugh
+// Copyright (c) 2019-2025 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -107,7 +107,7 @@ int main(
             compileOptions.empty() ? "(none)" : compileOptions.c_str() );
         cl::Program object{ context, kernelString };
         object.compile(compileOptions.c_str());
-        for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
+        for( auto& device : object.getInfo<CL_PROGRAM_DEVICES>() )
         {
             printf("Program compile log for device %s:\n",
                 device.getInfo<CL_DEVICE_NAME>().c_str() );
