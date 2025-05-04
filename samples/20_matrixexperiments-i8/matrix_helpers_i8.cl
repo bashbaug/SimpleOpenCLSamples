@@ -1,3 +1,9 @@
+/*
+// Copyright (c) 2024-2025 Ben Ashbaugh
+//
+// SPDX-License-Identifier: MIT
+*/
+
 __attribute__((overloadable))
 int activation(int i)
 {

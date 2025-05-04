@@ -1,43 +1,49 @@
-#include "matrix_helpers_i8.cl"
+/*
+// Copyright (c) 2024-2025 Ben Ashbaugh
+//
+// SPDX-License-Identifier: MIT
+*/
+
+#include "matrix_helpers_bf16.cl"
 
 #if EMULATE_tN8
-#define mat_mul_sg8  emu_sub_group_i8_i8_matrix_mad_k32
+#define mat_mul_sg8  emu_sub_group_bf16_bf16_matrix_mad_k16
 #else
-#define mat_mul_sg8  intel_sub_group_i8_i8_matrix_mad_k32
+#define mat_mul_sg8  intel_sub_group_bf16_bf16_matrix_mad_k16
 #endif
 
 #if EMULATE_tN16
-#define mat_mul_sg16 emu_sub_group_i8_i8_matrix_mad_k32
+#define mat_mul_sg16 emu_sub_group_bf16_bf16_matrix_mad_k16
 #else
-#define mat_mul_sg16 intel_sub_group_i8_i8_matrix_mad_k32
+#define mat_mul_sg16 intel_sub_group_bf16_bf16_matrix_mad_k16
 #endif
 
-kernel void i8_naive(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_naive(global float* C, global ushort* A, global ushort* B, int K)
 {
     const int N = get_global_size(0);
     const int m = get_global_id(1);
     const int n = get_global_id(0);
 
-    int sum = 0;
+    float sum = 0;
     for (int k = 0; k < K; k++) {
-        sum = A[m * K + k] * B[k * N + n] + sum;
+        sum = fma(bf16_to_fp32(A[m * K + k]), bf16_to_fp32(B[k * N + n]), sum);
     }
 
     sum = activation(sum);
     C[m * N + n] = sum;
 }
 
-// For all i8 kernels tK == 32:
-#define tK 32
+// For all bfloat16 kernels tK == 16:
+#define tK 16
 
-#if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_char) && defined(cl_intel_required_subgroup_size)
+#if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
 
 #if HAS_SIMD8
 
 // rowmajor kernels:
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_rowmajor_m1_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
@@ -46,19 +52,19 @@ kernel void i8_dpas_rowmajor_m1_n8(global int* C, global char* A, global char* B
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int sum = 0;
+    float sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int     aData = load_a_rowmajor_d8_m1_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int     aData = load_a_rowmajor_16b_1r16c_sg8(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m1_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_1rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_rowmajor_m2_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m2_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
@@ -67,19 +73,19 @@ kernel void i8_dpas_rowmajor_m2_n8(global int* C, global char* A, global char* B
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int2 sum = 0;
+    float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int2    aData = load_a_rowmajor_d8_m2_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int2    aData = load_a_rowmajor_16b_2r16c_sg8(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m2_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_2rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_rowmajor_m4_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m4_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
@@ -88,19 +94,19 @@ kernel void i8_dpas_rowmajor_m4_n8(global int* C, global char* A, global char* B
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int4 sum = 0;
+    float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int4    aData = load_a_rowmajor_d8_m4_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int4    aData = load_a_rowmajor_16b_4r16c_sg8(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m4_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_4rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_rowmajor_m8_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m8_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
@@ -109,21 +115,21 @@ kernel void i8_dpas_rowmajor_m8_n8(global int* C, global char* A, global char* B
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int8 sum = 0;
+    float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int8    aData = load_a_rowmajor_d8_m8_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    aData = load_a_rowmajor_16b_8r16c_sg8(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m8_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_8rNc(C, sum, m, n, N);
 }
 
-// vnni kernels:
+// pre-packed kernels:
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_vnni_m1_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m1_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
@@ -132,19 +138,19 @@ kernel void i8_dpas_vnni_m1_n8(global int* C, global char* A, global char* B, in
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int sum = 0;
+    float sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int     aData = load_a_rowmajor_d8_m1_k32_sg8(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        int     aData = load_a_rowmajor_16b_1r16c_sg8(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m1_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_1rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_vnni_m2_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m2_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
@@ -153,19 +159,19 @@ kernel void i8_dpas_vnni_m2_n8(global int* C, global char* A, global char* B, in
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int2 sum = 0;
+    float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int2    aData = load_a_rowmajor_d8_m2_k32_sg8(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        int2    aData = load_a_rowmajor_16b_2r16c_sg8(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m2_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_2rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_vnni_m4_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m4_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
@@ -174,19 +180,19 @@ kernel void i8_dpas_vnni_m4_n8(global int* C, global char* A, global char* B, in
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int4 sum = 0;
+    float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int4    aData = load_a_rowmajor_d8_m4_k32_sg8(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        int4    aData = load_a_rowmajor_16b_4r16c_sg8(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m4_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_4rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(8))) __attribute__((reqd_work_group_size(8, 1, 1)))
-kernel void i8_dpas_vnni_m8_n8(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
@@ -195,15 +201,15 @@ kernel void i8_dpas_vnni_m8_n8(global int* C, global char* A, global char* B, in
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int8 sum = 0;
+    float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        int8    aData = load_a_rowmajor_d8_m8_k32_sg8(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        int8    aData = load_a_rowmajor_16b_8r16c_sg8(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m8_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_8rNc(C, sum, m, n, N);
 }
 
 #endif // HAS_SIMD8
@@ -211,7 +217,7 @@ kernel void i8_dpas_vnni_m8_n8(global int* C, global char* A, global char* B, in
 // rowmajor krenels:
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_rowmajor_m1_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
@@ -220,19 +226,19 @@ kernel void i8_dpas_rowmajor_m1_n16(global int* C, global char* A, global char* 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * get_local_size(0);
 
-    int sum = 0;
+    float sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short   aData = load_a_rowmajor_d8_m1_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        short   aData = load_a_rowmajor_16b_1r16c_sg16(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m1_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_1rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_rowmajor_m2_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
@@ -241,19 +247,19 @@ kernel void i8_dpas_rowmajor_m2_n16(global int* C, global char* A, global char* 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * get_local_size(0);
 
-    int2 sum = 0;
+    float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short2  aData = load_a_rowmajor_d8_m2_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        short2  aData = load_a_rowmajor_16b_2r16c_sg16(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m2_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_2rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_rowmajor_m4_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
@@ -262,19 +268,19 @@ kernel void i8_dpas_rowmajor_m4_n16(global int* C, global char* A, global char* 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * get_local_size(0);
 
-    int4 sum = 0;
+    float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short4  aData = load_a_rowmajor_d8_m4_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        short4  aData = load_a_rowmajor_16b_4r16c_sg16(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m4_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_4rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_rowmajor_m8_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_rowmajor_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
@@ -283,21 +289,21 @@ kernel void i8_dpas_rowmajor_m8_n16(global int* C, global char* A, global char* 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * get_local_size(0);
 
-    int8 sum = 0;
+    float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short8  aData = load_a_rowmajor_d8_m8_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        short8  aData = load_a_rowmajor_16b_8r16c_sg16(A, m, k, K);
+        int8    bData = load_b_rowmajor_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m8_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_8rNc(C, sum, m, n, N);
 }
 
-// vnni kernels:
+// pre-packed kernels:
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_vnni_m1_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
@@ -306,19 +312,19 @@ kernel void i8_dpas_vnni_m1_n16(global int* C, global char* A, global char* B, i
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int sum = 0;
+    float sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short   aData = load_a_rowmajor_d8_m1_k32_sg16(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        short   aData = load_a_rowmajor_16b_1r16c_sg16(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m1_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_1rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_vnni_m2_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
@@ -327,19 +333,19 @@ kernel void i8_dpas_vnni_m2_n16(global int* C, global char* A, global char* B, i
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int2 sum = 0;
+    float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short2  aData = load_a_rowmajor_d8_m2_k32_sg16(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        short2  aData = load_a_rowmajor_16b_2r16c_sg16(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m2_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_2rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_vnni_m4_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
@@ -348,19 +354,19 @@ kernel void i8_dpas_vnni_m4_n16(global int* C, global char* A, global char* B, i
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int4 sum = 0;
+    float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short4  aData = load_a_rowmajor_d8_m4_k32_sg16(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        short4  aData = load_a_rowmajor_16b_4r16c_sg16(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m4_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_4rNc(C, sum, m, n, N);
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_vnni_m8_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_vnni_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
@@ -369,21 +375,21 @@ kernel void i8_dpas_vnni_m8_n16(global int* C, global char* A, global char* B, i
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int8 sum = 0;
+    float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
-        short8  aData = load_a_rowmajor_d8_m8_k32_sg16(A, m, k, K);
-        int8    bData = load_b_vnni_d8_k32_nx(B, k, n, N);
+        short8  aData = load_a_rowmajor_16b_8r16c_sg16(A, m, k, K);
+        int8    bData = load_b_packed_16b_16rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
     sum = activation(sum);
-    store_c_rowmajor_int32_m8_nx(C, sum, m, n, N);
+    store_c_rowmajor_fp32_8rNc(C, sum, m, n, N);
 }
 
 #ifdef cl_intel_subgroup_2d_block_io
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_rowmajor_m1_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_rowmajor_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
@@ -393,12 +399,12 @@ kernel void i8_dpas_blockread_rowmajor_m1_n16(global int* C, global char* A, glo
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int sum = 0;
+    float sum = 0;
     for (int k = 0; k < K; k += tK) {
         short   aData;
-        intel_sub_group_2d_block_read_8b_1r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_1r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
         int8    bData;
-        intel_sub_group_2d_block_read_transform_8b_32r16x1c(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k), (uint*)&bData);
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -407,7 +413,7 @@ kernel void i8_dpas_blockread_rowmajor_m1_n16(global int* C, global char* A, glo
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_rowmajor_m2_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_rowmajor_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
@@ -417,12 +423,12 @@ kernel void i8_dpas_blockread_rowmajor_m2_n16(global int* C, global char* A, glo
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int2 sum = 0;
+    float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short2  aData;
-        intel_sub_group_2d_block_read_8b_2r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_2r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
         int8    bData;
-        intel_sub_group_2d_block_read_transform_8b_32r16x1c(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k), (uint*)&bData);
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -431,7 +437,7 @@ kernel void i8_dpas_blockread_rowmajor_m2_n16(global int* C, global char* A, glo
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_rowmajor_m4_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_rowmajor_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
@@ -441,12 +447,12 @@ kernel void i8_dpas_blockread_rowmajor_m4_n16(global int* C, global char* A, glo
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int4 sum = 0;
+    float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short4  aData;
-        intel_sub_group_2d_block_read_8b_4r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_4r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
         int8    bData;
-        intel_sub_group_2d_block_read_transform_8b_32r16x1c(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k), (uint*)&bData);
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -455,7 +461,7 @@ kernel void i8_dpas_blockread_rowmajor_m4_n16(global int* C, global char* A, glo
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_rowmajor_m8_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_rowmajor_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
@@ -465,12 +471,12 @@ kernel void i8_dpas_blockread_rowmajor_m8_n16(global int* C, global char* A, glo
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int8 sum = 0;
+    float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short8  aData;
-        intel_sub_group_2d_block_read_8b_8r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_8r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);;
         int8    bData;
-        intel_sub_group_2d_block_read_transform_8b_32r16x1c(B, N * sizeof(char), K, N * sizeof(char), (int2)(n, k), (uint*)&bData);
+        intel_sub_group_2d_block_read_transform_16b_16r16x1c(B, N * sizeof(ushort), K, N * sizeof(ushort), (int2)(n, k), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -479,7 +485,7 @@ kernel void i8_dpas_blockread_rowmajor_m8_n16(global int* C, global char* A, glo
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_vnni_m1_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_vnni_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 1;
@@ -489,12 +495,12 @@ kernel void i8_dpas_blockread_vnni_m1_n16(global int* C, global char* A, global 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int sum = 0;
+    float sum = 0;
     for (int k = 0; k < K; k += tK) {
         short   aData;
-        intel_sub_group_2d_block_read_8b_1r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_1r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
         int8    bData;
-        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4), (uint*)&bData);
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -503,7 +509,7 @@ kernel void i8_dpas_blockread_vnni_m1_n16(global int* C, global char* A, global 
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_vnni_m2_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_vnni_m2_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 2;
@@ -513,12 +519,12 @@ kernel void i8_dpas_blockread_vnni_m2_n16(global int* C, global char* A, global 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int2 sum = 0;
+    float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short2  aData;
-        intel_sub_group_2d_block_read_8b_2r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_2r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
         int8    bData;
-        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4), (uint*)&bData);
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -527,7 +533,7 @@ kernel void i8_dpas_blockread_vnni_m2_n16(global int* C, global char* A, global 
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_vnni_m4_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_vnni_m4_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 4;
@@ -537,12 +543,12 @@ kernel void i8_dpas_blockread_vnni_m4_n16(global int* C, global char* A, global 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int4 sum = 0;
+    float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short4  aData;
-        intel_sub_group_2d_block_read_8b_4r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_4r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
         int8    bData;
-        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4), (uint*)&bData);
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -551,7 +557,7 @@ kernel void i8_dpas_blockread_vnni_m4_n16(global int* C, global char* A, global 
 }
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
-kernel void i8_dpas_blockread_vnni_m8_n16(global int* C, global char* A, global char* B, int K)
+kernel void bfloat16_dpas_blockread_vnni_m8_n16(global float* C, global ushort* A, global ushort* B, int K)
 {
     __builtin_assume(K > 0);    // Always at least one K iteration.
     const int tM = 8;
@@ -561,12 +567,12 @@ kernel void i8_dpas_blockread_vnni_m8_n16(global int* C, global char* A, global 
     const int m = get_group_id(1) * tM;
     const int n = get_group_id(0) * tN;
 
-    int8 sum = 0;
+    float8 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short8  aData;
-        intel_sub_group_2d_block_read_8b_8r32x1c(A, K * sizeof(char), M, K * sizeof(char), (int2)(k, m), (ushort*)&aData);
+        intel_sub_group_2d_block_read_16b_8r16x1c(A, K * sizeof(ushort), M, K * sizeof(ushort), (int2)(k, m), (ushort*)&aData);
         int8    bData;
-        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 4), (uint*)&bData);
+        intel_sub_group_2d_block_read_32b_8r16x1c(B, N * sizeof(uint), K, N * sizeof(uint), (int2)(n, k / 2), (uint*)&bData);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -575,6 +581,50 @@ kernel void i8_dpas_blockread_vnni_m8_n16(global int* C, global char* A, global 
 }
 
 #endif // cl_intel_subgroup_2d_block_io
+
+// Tiled matrix multiplication kernels, generated from a template:
+
+#define MM 1
+#define NN 1
+#include "matrix_kernel_tiled_bf16.cl"
+#undef MM
+#undef NN
+
+#define MM 2
+#define NN 1
+#include "matrix_kernel_tiled_bf16.cl"
+#undef MM
+#undef NN
+
+#define MM 1
+#define NN 2
+#include "matrix_kernel_tiled_bf16.cl"
+#undef MM
+#undef NN
+
+#define MM 2
+#define NN 2
+#include "matrix_kernel_tiled_bf16.cl"
+#undef MM
+#undef NN
+
+#define MM 4
+#define NN 2
+#include "matrix_kernel_tiled_bf16.cl"
+#undef MM
+#undef NN
+
+#define MM 2
+#define NN 4
+#include "matrix_kernel_tiled_bf16.cl"
+#undef MM
+#undef NN
+
+#define MM 4
+#define NN 4
+#include "matrix_kernel_tiled_bf16.cl"
+#undef MM
+#undef NN
 
 #endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
 

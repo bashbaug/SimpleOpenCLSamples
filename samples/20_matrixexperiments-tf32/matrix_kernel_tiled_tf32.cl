@@ -1,3 +1,9 @@
+/*
+// Copyright (c) 2024-2025 Ben Ashbaugh
+//
+// SPDX-License-Identifier: MIT
+*/
+
 #if !defined(tK)
 #error "tK is undefined!  This should be defined as the K dimension of the matrix tiles, which is dependent on the elemement type, likely 16 or 32."
 #endif

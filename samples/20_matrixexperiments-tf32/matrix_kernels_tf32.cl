@@ -1,3 +1,9 @@
+/*
+// Copyright (c) 2024-2025 Ben Ashbaugh
+//
+// SPDX-License-Identifier: MIT
+*/
+
 #include "matrix_helpers_tf32.cl"
 
 #if EMULATE_tN16

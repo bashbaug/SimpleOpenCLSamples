@@ -1,3 +1,9 @@
+/*
+// Copyright (c) 2024-2025 Ben Ashbaugh
+//
+// SPDX-License-Identifier: MIT
+*/
+
 float bf16_to_fp32(ushort u)
 {
 #if defined(cl_intel_bfloat16_conversions)
