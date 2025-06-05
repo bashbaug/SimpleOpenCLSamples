@@ -39,6 +39,10 @@ Many samples that use extensions additionally require the OpenCL Extension Loade
 
     git clone https://github.com/bashbaug/opencl-extension-loader external/opencl-extension-loader
 
+Several samples that interact with SPIR-V require the SPIR-V headres:
+
+    git clone https://github.com/KhronosGroup/SPIRV-Headers external/SPIRV-Headers
+
 After satisfying the external dependencies create build files using CMake.  For example:
 
     mkdir build && cd build
