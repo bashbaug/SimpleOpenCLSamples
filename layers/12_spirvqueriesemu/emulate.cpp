@@ -406,6 +406,11 @@ private:
                     deviceInfo.Capabilities.push_back(spv::CapabilityImageMipmap);
                 }
 
+                // Required for devices supporting cl_khr_spirv_extended_debug_info.
+                if (checkStringForExtension(deviceExtensions.c_str(), "cl_khr_spirv_extended_debug_info")) {
+                    deviceInfo.ExtendedInstructionSets.push_back("OpenCL.DebugInfo.100");
+                }
+
                 // Required for devices supporting cl_khr_spirv_linkonce_odr.
                 if (checkStringForExtension(deviceExtensions.c_str(), "cl_khr_spirv_linkonce_odr")) {
                     deviceInfo.Extensions.push_back("SPV_KHR_linkonce_odr");
