@@ -343,13 +343,15 @@ private:
                 }
 
                 // Required for OpenCL 2.2 devices.
-                if (deviceVersion == CL_MAKE_VERSION(2, 2, 0)) {
+                if (deviceILVersion.find("SPIR-V_1.1") != std::string::npos &&
+                    deviceVersion == CL_MAKE_VERSION(2, 2, 0)) {
                     deviceInfo.Capabilities.push_back(spv::CapabilityPipeStorage);
                 }
 
                 // Required for OpenCL 2.2, or OpenCL 3.0 devices supporting sub-groups.
-                if (deviceVersion == CL_MAKE_VERSION(2, 2, 0) ||
-                    (deviceVersion >= CL_MAKE_VERSION(3, 0, 0) && deviceMaxNumSubGroups != 0)) {
+                if (deviceILVersion.find("SPIR-V_1.1") != std::string::npos &&
+                    (deviceVersion == CL_MAKE_VERSION(2, 2, 0) ||
+                     (deviceVersion >= CL_MAKE_VERSION(3, 0, 0) && deviceMaxNumSubGroups != 0))) {
                     deviceInfo.Capabilities.push_back(spv::CapabilitySubgroupDispatch);
                 }
 
@@ -497,7 +499,7 @@ private:
                 // Required for devices supporting cl_ext_float_atomics and fp64 atomic adds.
                 if (checkStringForExtension(deviceExtensions.c_str(), "cl_ext_float_atomics") &&
                     (deviceFp64AtomicCapabilities & (CL_DEVICE_GLOBAL_FP_ATOMIC_ADD_EXT | CL_DEVICE_LOCAL_FP_ATOMIC_ADD_EXT))) {
-                    deviceInfo.Capabilities.push_back(spv::CapabilityAtomicFloat64MinMaxEXT);
+                    deviceInfo.Capabilities.push_back(spv::CapabilityAtomicFloat64AddEXT);
                 }
 
                 // Required for devices supporting cl_ext_float_atomics and fp64 atomic min and max.
