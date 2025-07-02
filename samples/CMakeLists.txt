@@ -93,3 +93,7 @@ if(BUILD_EXTENSION_SAMPLES)
     add_subdirectory( 14_ooqcommandbuffers )
     add_subdirectory( 15_mutablecommandbufferasserts )
 endif()
+
+if(TARGET SPIRV-Headers)
+    add_subdirectory( 00_spirvqueries )
+endif()

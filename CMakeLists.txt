@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_CXX_STANDARD 14)
@@ -34,6 +34,12 @@ if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/opencl-extension-loader)
     add_subdirectory(external/opencl-extension-loader)
 else()
     message(STATUS "OpenCL Extension Loader is not found.")
+endif()
+
+if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/SPIRV-Headers)
+    add_subdirectory(external/SPIRV-Headers)
+else()
+    message(STATUS "SPIR-V Headers are not found.")
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 add_opencl_layer(
-    NUMBER 10
+    NUMBER 11
     TARGET SemaEmu
     VERSION 300
     SOURCES main.cpp emulate.cpp emulate.h)
