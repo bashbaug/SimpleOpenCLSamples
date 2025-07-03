@@ -59,6 +59,7 @@ static void _init_dispatch()
     dispatch.clSetKernelArgSVMPointer = clSetKernelArgSVMPointer_override;
     dispatch.clSetKernelExecInfo = clSetKernelExecInfo_override;
     dispatch.clSVMFree = clSVMFree_override;
+    dispatch.clEnqueueSVMFree = clEnqueueSVMFree_override;
     dispatch.clEnqueueSVMMemcpy = clEnqueueSVMMemcpy_override;
     dispatch.clEnqueueSVMMemFill = clEnqueueSVMMemFill_override;
     dispatch.clEnqueueSVMMigrateMem = clEnqueueSVMMigrateMem_override;

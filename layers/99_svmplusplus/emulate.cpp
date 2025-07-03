@@ -1174,6 +1174,24 @@ cl_int CL_API_CALL clSetKernelExecInfo_override(
             ret = (check == CL_SUCCESS) ? CL_SUCCESS : ret;
             return check;
         }
+    case CL_KERNEL_EXEC_INFO_SVM_PTRS:
+        {
+            const void* const* svmPtrs = (const void* const*)param_value;
+            const size_t numPtrs = param_value_size / sizeof(void*);
+
+            std::vector<const void*> nonNullPtrs;
+            for (size_t i = 0; i < numPtrs; ++i) {
+                if (svmPtrs[i] != nullptr) {
+                    nonNullPtrs.push_back(svmPtrs[i]);
+                }
+            }
+
+            return g_pNextDispatch->clSetKernelExecInfo(
+                kernel,
+                CL_KERNEL_EXEC_INFO_SVM_PTRS,
+                nonNullPtrs.size() * sizeof(void*),
+                nonNullPtrs.empty() ? nullptr : nonNullPtrs.data());
+        }
     default: break;
     }
 
@@ -1193,6 +1211,38 @@ void CL_API_CALL clSVMFree_override(
     } else {
         g_pNextDispatch->clSVMFree(context, ptr);
     }
+}
+
+cl_int CL_API_CALL clEnqueueSVMFree_override(
+    cl_command_queue command_queue,
+    cl_uint num_svm_pointers,
+    void* svm_pointers[],
+    void (CL_CALLBACK* pfn_free_func)(
+        cl_command_queue queue,
+        cl_uint num_svm_pointers,
+        void* svm_pointers[],
+        void* user_data),
+    void* user_data,
+    cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list,
+    cl_event* event)
+{
+    std::vector<void*> nonNullPtrs;
+    for (cl_uint i = 0; i < num_svm_pointers; ++i) {
+        if (svm_pointers[i] != nullptr) {
+            nonNullPtrs.push_back(svm_pointers[i]);
+        }
+    }
+
+    return g_pNextDispatch->clEnqueueSVMFree(
+        command_queue,
+        static_cast<cl_uint>(nonNullPtrs.size()),
+        nonNullPtrs.empty() ? nullptr : nonNullPtrs.data(),
+        pfn_free_func,
+        user_data,
+        num_events_in_wait_list,
+        event_wait_list,
+        event);
 }
 
 cl_int CL_API_CALL clEnqueueSVMMemcpy_override(

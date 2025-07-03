@@ -75,6 +75,20 @@ void CL_API_CALL clSVMFree_override(
     cl_context context,
     void* ptr);
 
+cl_int CL_API_CALL clEnqueueSVMFree_override(
+    cl_command_queue command_queue,
+    cl_uint num_svm_pointers,
+    void* svm_pointers[],
+    void (CL_CALLBACK* pfn_free_func)(
+        cl_command_queue queue,
+        cl_uint num_svm_pointers,
+        void* svm_pointers[],
+        void* user_data),
+    void* user_data,
+    cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list,
+    cl_event* event);
+
 cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
     cl_command_queue command_queue,
     cl_bool blocking_copy,
