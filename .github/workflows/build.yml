@@ -51,6 +51,7 @@ jobs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: KhronosGroup/OpenCL-Headers
+        ref: cl_khr_unified_svm
         path: external/OpenCL-Headers
 
     - name: Get OpenCL ICD Loader
