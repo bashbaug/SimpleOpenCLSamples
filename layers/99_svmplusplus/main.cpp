@@ -53,6 +53,7 @@ static struct _cl_icd_dispatch dispatch;
 static void _init_dispatch()
 {
     dispatch.clGetDeviceInfo = clGetDeviceInfo_override;
+    dispatch.clGetEventInfo = clGetEventInfo_override;
     dispatch.clGetExtensionFunctionAddressForPlatform = clGetExtensionFunctionAddressForPlatform_override;
     dispatch.clGetPlatformInfo = clGetPlatformInfo_override;
     dispatch.clSetKernelArgSVMPointer = clSetKernelArgSVMPointer_override;
@@ -61,6 +62,7 @@ static void _init_dispatch()
     dispatch.clEnqueueSVMMemcpy = clEnqueueSVMMemcpy_override;
     dispatch.clEnqueueSVMMemFill = clEnqueueSVMMemFill_override;
     dispatch.clEnqueueSVMMigrateMem = clEnqueueSVMMigrateMem_override;
+    dispatch.clReleaseEvent = clReleaseEvent_override;
 }
 
 CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(

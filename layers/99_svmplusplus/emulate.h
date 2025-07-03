@@ -46,6 +46,13 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
     void* param_value,
     size_t* param_value_size_ret);
 
+cl_int CL_API_CALL clGetEventInfo_override(
+    cl_event event,
+    cl_event_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret);
+
 cl_int CL_API_CALL clGetPlatformInfo_override(
     cl_platform_id platform,
     cl_platform_info param_name,
@@ -97,3 +104,6 @@ cl_int CL_API_CALL clEnqueueSVMMigrateMem_override(
     cl_uint num_events_in_wait_list,
     const cl_event* event_wait_list,
     cl_event* event);
+
+cl_int CL_API_CALL clReleaseEvent_override(
+    cl_event event);

@@ -192,6 +192,11 @@ struct SAllocInfo
     cl_device_id AssociatedDevice = nullptr;
 };
 
+struct SEventInfo
+{
+    cl_command_type Type = 0;
+};
+
 struct SLayerContext
 {
     SLayerContext() {
@@ -263,6 +268,26 @@ struct SLayerContext
     void removeAllocInfo(cl_context context, const void* ptr)
     {
         AllocMaps[context].erase(ptr);
+    }
+
+    SEventInfo& getEventInfo(cl_event event)
+    {
+        return EventMap[event];
+    }
+
+    bool findEventInfo(cl_event event, SEventInfo& info)
+    {
+        auto it = EventMap.find(event);
+        if (it != EventMap.end()) {
+            info = it->second;
+            return true;
+        }
+        return false;
+    }
+
+    void removeEventInfo(cl_event event)
+    {
+        EventMap.erase(event);
     }
 
 private:
@@ -395,6 +420,9 @@ private:
 
     typedef std::map<const void*, SAllocInfo> CAllocMap;
     std::map<cl_context, CAllocMap> AllocMaps;
+
+    std::map<cl_event, SEventInfo> EventMap;
+
 };
 
 SLayerContext& getLayerContext(void)
@@ -538,6 +566,13 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     if (svm_type_index >= typeCapsPlatform.size()) {
         if (errcode_ret) {
             errcode_ret[0] = CL_INVALID_VALUE;
+        }
+        return nullptr;
+    }
+
+    if (size == 0) {
+        if (errcode_ret) {
+            errcode_ret[0] = CL_SUCCESS;
         }
         return nullptr;
     }
@@ -927,6 +962,38 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
         param_value_size_ret);
 }
 
+cl_int CL_API_CALL clGetEventInfo_override(
+    cl_event event,
+    cl_event_info param_name,
+    size_t param_value_size,
+    void* param_value,
+    size_t* param_value_size_ret)
+{
+    switch(param_name) {
+    case CL_EVENT_COMMAND_TYPE:
+        {
+            SEventInfo eventInfo;
+            if (getLayerContext().findEventInfo(event, eventInfo)) {
+                auto ptr = (cl_command_type*)param_value;
+                return writeParamToMemory(
+                    param_value_size,
+                    eventInfo.Type,
+                    param_value_size_ret,
+                    ptr );
+            }
+        }
+        break;
+    default: break;
+    }
+
+    return g_pNextDispatch->clGetEventInfo(
+        event,
+        param_name,
+        param_value_size,
+        param_value,
+        param_value_size_ret);
+}
+
 cl_int CL_API_CALL clGetPlatformInfo_override(
     cl_platform_id platform,
     cl_platform_info param_name,
@@ -1140,6 +1207,22 @@ cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
 {
     cl_context context = getContext(command_queue);
 
+    if (size == 0) {
+        if (event) {
+            cl_int ret = g_pNextDispatch->clEnqueueMarkerWithWaitList(
+                command_queue,
+                num_events_in_wait_list,
+                event_wait_list,
+                event);
+            if (ret == CL_SUCCESS) {
+                auto& eventInfo = getLayerContext().getEventInfo(*event);
+                eventInfo.Type = CL_COMMAND_SVM_MEMCPY;
+            }
+            return ret;
+        }
+        return CL_SUCCESS;
+    }
+
     if (isUSMPtr(context, dst_ptr) || isUSMPtr(context, src_ptr)) {
         return clEnqueueMemcpyINTEL(
             command_queue,
@@ -1174,6 +1257,22 @@ cl_int CL_API_CALL clEnqueueSVMMemFill_override(
     cl_event* event)
 {
     cl_context context = getContext(command_queue);
+
+    if (size == 0) {
+        if (event) {
+            cl_int ret = g_pNextDispatch->clEnqueueMarkerWithWaitList(
+                command_queue,
+                num_events_in_wait_list,
+                event_wait_list,
+                event);
+            if (ret == CL_SUCCESS) {
+                auto& eventInfo = getLayerContext().getEventInfo(*event);
+                eventInfo.Type = CL_COMMAND_SVM_MEMFILL;
+            }
+            return ret;
+        }
+        return CL_SUCCESS;
+    }
 
     if (isUSMPtr(context, svm_ptr)) {
         return clEnqueueMemFillINTEL(
@@ -1214,4 +1313,21 @@ cl_int CL_API_CALL clEnqueueSVMMigrateMem_override(
         num_events_in_wait_list,
         event_wait_list,
         event);
+}
+
+cl_int CL_API_CALL clReleaseEvent_override(
+    cl_event event)
+{
+    cl_uint refCount = 0;
+    g_pNextDispatch->clGetEventInfo(
+        event,
+        CL_EVENT_REFERENCE_COUNT,
+        sizeof(refCount),
+        &refCount,
+        nullptr);
+    if (refCount == 1) {
+        getLayerContext().removeEventInfo(event);
+    }
+
+    return g_pNextDispatch->clReleaseEvent(event);
 }
