@@ -1291,7 +1291,7 @@ cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
     }
 
     if (isUSMPtr(context, dst_ptr) || isUSMPtr(context, src_ptr)) {
-        return clEnqueueMemcpyINTEL(
+        cl_int ret = clEnqueueMemcpyINTEL(
             command_queue,
             blocking_copy,
             dst_ptr,
@@ -1300,6 +1300,11 @@ cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
             num_events_in_wait_list,
             event_wait_list,
             event);
+        if (ret == CL_SUCCESS && event) {
+            auto& eventInfo = getLayerContext().getEventInfo(*event);
+            eventInfo.Type = CL_COMMAND_SVM_MEMCPY;
+        }
+        return ret;
     }
 
     return g_pNextDispatch->clEnqueueSVMMemcpy(
@@ -1342,7 +1347,7 @@ cl_int CL_API_CALL clEnqueueSVMMemFill_override(
     }
 
     if (isUSMPtr(context, svm_ptr)) {
-        return clEnqueueMemFillINTEL(
+        cl_int ret = clEnqueueMemFillINTEL(
             command_queue,
             svm_ptr,
             pattern,
@@ -1351,6 +1356,11 @@ cl_int CL_API_CALL clEnqueueSVMMemFill_override(
             num_events_in_wait_list,
             event_wait_list,
             event);
+        if (ret == CL_SUCCESS && event) {
+            auto& eventInfo = getLayerContext().getEventInfo(*event);
+            eventInfo.Type = CL_COMMAND_SVM_MEMFILL;
+        }
+        return ret;
     }
 
     return g_pNextDispatch->clEnqueueSVMMemFill(
@@ -1375,11 +1385,16 @@ cl_int CL_API_CALL clEnqueueSVMMigrateMem_override(
     cl_event* event)
 {
     // for now, just emit a marker
-    return g_pNextDispatch->clEnqueueMarkerWithWaitList(
+    cl_int ret = g_pNextDispatch->clEnqueueMarkerWithWaitList(
         command_queue,
         num_events_in_wait_list,
         event_wait_list,
         event);
+    if (ret == CL_SUCCESS && event) {
+        auto& eventInfo = getLayerContext().getEventInfo(*event);
+        eventInfo.Type = CL_COMMAND_SVM_MIGRATE_MEM;
+    }
+    return ret;
 }
 
 cl_int CL_API_CALL clReleaseEvent_override(
