@@ -1172,25 +1172,42 @@ cl_int CL_API_CALL clSetKernelExecInfo_override(
                 param_value_size,
                 param_value);
             ret = (check == CL_SUCCESS) ? CL_SUCCESS : ret;
-            return check;
+            return ret;
         }
     case CL_KERNEL_EXEC_INFO_SVM_PTRS:
         {
             const void* const* svmPtrs = (const void* const*)param_value;
             const size_t numPtrs = param_value_size / sizeof(void*);
 
-            std::vector<const void*> nonNullPtrs;
+            cl_context context = getContext(kernel);
+
+            std::vector<const void*> nonNullUSMPtrs;
+            std::vector<const void*> nonNullSVMPtrs;
             for (size_t i = 0; i < numPtrs; ++i) {
                 if (svmPtrs[i] != nullptr) {
-                    nonNullPtrs.push_back(svmPtrs[i]);
+                    if (isUSMPtr(context, svmPtrs[i])) {
+                        nonNullUSMPtrs.push_back(svmPtrs[i]);
+                    } else {
+                        nonNullSVMPtrs.push_back(svmPtrs[i]);
+                    }
                 }
             }
 
-            return g_pNextDispatch->clSetKernelExecInfo(
+            cl_int ret = CL_INVALID_OPERATION;
+            cl_int check = CL_INVALID_OPERATION;
+            check = g_pNextDispatch->clSetKernelExecInfo(
+                kernel,
+                CL_KERNEL_EXEC_INFO_USM_PTRS_INTEL,
+                nonNullUSMPtrs.size() * sizeof(void*),
+                nonNullUSMPtrs.empty() ? nullptr : nonNullUSMPtrs.data());
+            ret = (check == CL_SUCCESS) ? CL_SUCCESS : ret;
+            check = g_pNextDispatch->clSetKernelExecInfo(
                 kernel,
                 CL_KERNEL_EXEC_INFO_SVM_PTRS,
-                nonNullPtrs.size() * sizeof(void*),
-                nonNullPtrs.empty() ? nullptr : nonNullPtrs.data());
+                nonNullSVMPtrs.size() * sizeof(void*),
+                nonNullSVMPtrs.empty() ? nullptr : nonNullSVMPtrs.data());
+            ret = (check == CL_SUCCESS) ? CL_SUCCESS : ret;
+            return ret;
         }
     default: break;
     }
