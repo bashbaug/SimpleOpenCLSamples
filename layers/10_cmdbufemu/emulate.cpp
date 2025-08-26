@@ -1510,10 +1510,13 @@ typedef struct _cl_command_buffer_khr
             NextSyncPoint.fetch_add(1, std::memory_order_relaxed) :
             0;
 
-        command->addDependencies(
-            num_sync_points,
-            wait_list,
-            syncPoint);
+        // We only need to add dependencies if there is more than one queue (so
+        // we have possible cross-queue dependencies) or the queue is an
+        // out-of-order queue (so we have possible intra-queue dependencies).
+        if( Queues.size() > 1 || !IsInOrder[0] )
+        {
+            command->addDependencies(num_sync_points, wait_list, syncPoint);
+        }
 
         if( sync_point != nullptr )
         {
