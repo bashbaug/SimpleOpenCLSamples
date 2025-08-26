@@ -187,7 +187,6 @@ int main(
         printf("\t\tCL_COMMAND_BUFFER_STATE_KHR: %s\n",
             state == CL_COMMAND_BUFFER_STATE_RECORDING_KHR ? "RECORDING" :
             state == CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR ? "EXECUTABLE" :
-            state == CL_COMMAND_BUFFER_STATE_PENDING_KHR ? "PENDING" :
             "UNKNOWN!");
 
         printf("\t\tCL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR size: %zu\n",
