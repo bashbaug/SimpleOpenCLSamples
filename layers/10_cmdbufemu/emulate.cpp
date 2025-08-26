@@ -215,7 +215,7 @@ struct BarrierWithWaitList : Command
         return g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -271,7 +271,7 @@ struct CopyBuffer : Command
             dst_offset,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -345,7 +345,7 @@ struct CopyBufferRect : Command
             dst_row_pitch,
             dst_slice_pitch,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -411,7 +411,7 @@ struct CopyBufferToImage : Command
             dst_origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -473,7 +473,7 @@ struct CopyImage : Command
             dst_origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -535,7 +535,7 @@ struct CopyImageToBuffer : Command
             region.data(),
             dst_offset,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -601,7 +601,7 @@ struct FillBuffer : Command
             offset,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -678,7 +678,7 @@ struct FillImage : Command
             origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -725,7 +725,7 @@ struct SVMMemcpy : Command
             src_ptr,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -779,7 +779,7 @@ struct SVMMemFill : Command
             pattern.size(),
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -1073,7 +1073,7 @@ struct NDRangeKernel : Command
             global_work_size.data(),
             local_work_size.size() ? local_work_size.data() : nullptr,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -1510,10 +1510,13 @@ typedef struct _cl_command_buffer_khr
             NextSyncPoint.fetch_add(1, std::memory_order_relaxed) :
             0;
 
-        command->addDependencies(
-            num_sync_points,
-            wait_list,
-            syncPoint);
+        // We only need to add dependencies if there is more than one queue (so
+        // we have possible cross-queue dependencies) or the queue is an
+        // out-of-order queue (so we have possible intra-queue dependencies).
+        if( Queues.size() > 1 || !IsInOrder[0] )
+        {
+            command->addDependencies(num_sync_points, wait_list, syncPoint);
+        }
 
         if( sync_point != nullptr )
         {
