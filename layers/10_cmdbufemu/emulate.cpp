@@ -39,6 +39,26 @@ const cl_mutable_dispatch_fields_khr g_MutableDispatchCaps =
     CL_MUTABLE_DISPATCH_ARGUMENTS_KHR |
     CL_MUTABLE_DISPATCH_EXEC_INFO_KHR;
 
+static cl_int enqueueProfilingKernel(
+    cl_command_queue queue,
+    cl_kernel kernel,
+    cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list,
+    cl_event* event )
+{
+    const size_t one = 1;
+    return g_pNextDispatch->clEnqueueNDRangeKernel(
+        queue,
+        kernel,
+        1,
+        nullptr,
+        &one,
+        nullptr,
+        num_events_in_wait_list,
+        event_wait_list,
+        event );
+}
+
 typedef struct _cl_mutable_command_khr
 {
     static bool isValid( cl_mutable_command_khr command )
@@ -1229,6 +1249,7 @@ typedef struct _cl_command_buffer_khr
                     (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0 );
 
                 cmdbuf->setupTestQueue(queue);
+                cmdbuf->setupProfilingKernel(queue);
             }
         }
 
@@ -1253,6 +1274,11 @@ typedef struct _cl_command_buffer_khr
         for( auto queue : TestQueues )
         {
             g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
+
+        for( auto kernel : ProfilingKernels )
+        {
+            g_pNextDispatch->clReleaseKernel(kernel);
         }
     }
 
@@ -1297,20 +1323,17 @@ typedef struct _cl_command_buffer_khr
 
     cl_command_queue    getQueue() const
     {
-        if( Queues.size() > 0 )
-        {
-            return Queues[0];
-        }
-        return nullptr;
+        return Queues.empty() ? nullptr : Queues[0];
     }
 
     cl_command_queue    getTestQueue() const
     {
-        if( TestQueues.size() > 0 )
-        {
-            return TestQueues[0];
-        }
-        return nullptr;
+        return TestQueues.empty() ? nullptr : TestQueues[0];
+    }
+
+    cl_kernel   getProfilingKernel() const
+    {
+        return ProfilingKernels.empty() ? nullptr : ProfilingKernels[0];
     }
 
     cl_mutable_dispatch_asserts_khr getMutableDispatchAsserts() const
@@ -1671,6 +1694,7 @@ private:
     std::vector<bool>   IsInOrder;
     std::vector<cl_command_queue>   TestQueues;
     std::vector<cl_event>   BlockingEvents;
+    std::vector<cl_kernel>  ProfilingKernels;
 
     std::vector<std::unique_ptr<Command>> Commands;
     std::atomic<uint32_t> NextSyncPoint;
@@ -1744,6 +1768,52 @@ private:
 
             TestQueues.push_back(testQueue);
             BlockingEvents.push_back(blockingEvent);
+        }
+    }
+
+    void setupProfilingKernel(cl_command_queue queue)
+    {
+        if( g_KernelForProfiling )
+        {
+            cl_context context = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queue,
+                CL_QUEUE_CONTEXT,
+                sizeof(context),
+                &context,
+                nullptr );
+
+            cl_device_id device = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queue,
+                CL_QUEUE_DEVICE,
+                sizeof(device),
+                &device,
+                nullptr );
+
+            const char* kernelString = "kernel void Empty() {}";
+            cl_program program = g_pNextDispatch->clCreateProgramWithSource(
+                context,
+                1,
+                &kernelString,
+                nullptr,
+                nullptr );
+            g_pNextDispatch->clBuildProgram(
+                program,
+                1,
+                &device,
+                nullptr,
+                nullptr,
+                nullptr );
+
+            cl_kernel kernel = g_pNextDispatch->clCreateKernel(
+                program,
+                "Empty",
+                nullptr );
+            g_pNextDispatch->clReleaseProgram(
+                program );
+
+            ProfilingKernels.push_back(kernel);
         }
     }
 
@@ -1993,7 +2063,16 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
             queue,
             num_events_in_wait_list,
             event_wait_list,
-            event ? &startEvent : nullptr);
+            event == nullptr || g_KernelForProfiling ? nullptr : &startEvent );
+        if( errorCode == CL_SUCCESS && event && g_KernelForProfiling )
+        {
+            errorCode = enqueueProfilingKernel(
+                queue,
+                cmdbuf->getProfilingKernel(),
+                0,
+                nullptr,
+                &startEvent );
+        }
     }
 
     if( errorCode == CL_SUCCESS )
@@ -2007,7 +2086,16 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
             queue,
             0,
             nullptr,
-            event );
+            g_KernelForProfiling ? nullptr : event );
+        if( errorCode == CL_SUCCESS && g_KernelForProfiling )
+        {
+            errorCode = enqueueProfilingKernel(
+                queue,
+                cmdbuf->getProfilingKernel(),
+                0,
+                nullptr,
+                event );
+        }
     }
 
     if( event )
