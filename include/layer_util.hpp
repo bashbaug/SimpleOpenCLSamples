@@ -134,3 +134,21 @@ static inline bool checkStringForExtension(
 
     return supported;
 }
+
+#ifdef CL_VERSION_3_0
+
+static inline bool checkForSupport(
+    const std::vector<cl_name_version>& supported,
+    const char* name,
+    const cl_version version = CL_MAKE_VERSION(1, 0, 0))
+{
+    for (auto& check : supported) {
+        if (strcmp(name, check.name) == 0 &&
+            version <= check.version) {
+            return true;
+        }
+    }
+    return false;
+}
+
+#endif // CL_VERSION_3_0
