@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2024 Ben Ashbaugh
+// Copyright (c) 2019-2025 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -55,7 +55,7 @@ static cl::Program createProgramWithIL(
     for (auto device : devices) {
 #ifdef CL_VERSION_2_1
         // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
-        if (getDeviceOpenCLVersion(device) >= 0x00020001 &&
+        if (getDeviceOpenCLVersion(device) >= CL_MAKE_VERSION(2, 1, 0) &&
             !device.getInfo<CL_DEVICE_IL_VERSION>().empty()) {
             useCore = true;
         }
@@ -151,7 +151,7 @@ int main(
     // extension API.  If neither is supported then we cannot run this sample.
 #ifdef CL_VERSION_2_1
     // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
-    if (getDeviceOpenCLVersion(devices[deviceIndex]) >= 0x00020001 &&
+    if (getDeviceOpenCLVersion(devices[deviceIndex]) >= CL_MAKE_VERSION(2, 1, 0) &&
         !devices[deviceIndex].getInfo<CL_DEVICE_IL_VERSION>().empty()) {
         printf("Device supports OpenCL 2.1 or newer, using clCreateProgramWithIL.\n");
     } else

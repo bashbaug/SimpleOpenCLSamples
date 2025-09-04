@@ -1,6 +1,6 @@
 # Simple OpenCL<sup>TM</sup> Samples
 
-[![build](https://github.com/bashbaug/SimpleOpenCLSamples/workflows/build/badge.svg?branch=main)](https://github.com/bashbaug/SimpleOpenCLSamples/actions?query=workflow%3Abuild+branch%3Amain)
+[![build](https://github.com/bashbaug/SimpleOpenCLSamples/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/bashbaug/SimpleOpenCLSamples/actions?query=workflow%3Abuild+branch%3Amain)
 
 This repo contains simple OpenCL samples that demonstrate how to build
 OpenCL applications using only the Khronos-provided headers and libs.
@@ -38,6 +38,10 @@ OpenCL ICD Loader:
 Many samples that use extensions additionally require the OpenCL Extension Loader:
 
     git clone https://github.com/bashbaug/opencl-extension-loader external/opencl-extension-loader
+
+Several samples that interact with SPIR-V require the SPIR-V headres:
+
+    git clone https://github.com/KhronosGroup/SPIRV-Headers external/SPIRV-Headers
 
 After satisfying the external dependencies create build files using CMake.  For example:
 

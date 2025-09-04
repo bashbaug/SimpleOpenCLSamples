@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2024 Ben Ashbaugh
+// Copyright (c) 2022-2025 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -33,6 +33,11 @@
 // use of user events that may not work properly with some implementations.
 
 bool g_EnhancedErrorChecking = false;
+
+// Using kernels for profiling can fix issues with some implementations
+// that do not properly support event profiling on barrkers.
+
+bool g_KernelForProfiling = false;
 
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
@@ -155,10 +160,8 @@ clGetExtensionFunctionAddressForPlatform_layer(
     CHECK_RETURN_EXTENSION_FUNCTION( clRemapCommandBufferKHR );
 #endif
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     CHECK_RETURN_EXTENSION_FUNCTION( clUpdateMutableCommandsKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetMutableCommandInfoKHR );
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
         platform,
@@ -285,6 +288,7 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     _init_dispatch();
 
     getControl("CMDBUFEMU_EnhancedErrorChecking", g_EnhancedErrorChecking);
+    getControl("CMDBUFEMU_KernelForProfiling", g_KernelForProfiling);
 
     g_pNextDispatch = target_dispatch;
 

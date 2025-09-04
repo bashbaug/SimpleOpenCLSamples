@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2024 Ben Ashbaugh
+// Copyright (c) 2022-2025 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -57,7 +57,7 @@ __kernel void nbody_step(
     const float G = 1.0f / numBodies;
     const float dampen = 0.90f;
     const float deltaTime = 0.005f;
-    const float epsilon = 1e-3;
+    const float epsilon = 1e-3f;
 
     float3 myPos = pos[get_global_id(0)].xyz;
     float myMass = pos[get_global_id(0)].w;
