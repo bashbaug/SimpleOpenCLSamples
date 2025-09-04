@@ -58,3 +58,5 @@ add_subdirectory( 11_semaemu )
 if(TARGET SPIRV-Headers)
     add_subdirectory( 12_spirvqueriesemu )
 endif()
+
+add_subdirectory( 21_sgrotateemu )
