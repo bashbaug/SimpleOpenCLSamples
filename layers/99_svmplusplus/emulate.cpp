@@ -15,6 +15,7 @@
 
 #include <cassert>
 
+#include "alloc_util.hpp"
 #include "layer_util.hpp"
 
 #include "emulate.h"
@@ -186,6 +187,9 @@ struct SAllocInfo
 {
     cl_uint     TypeIndex = ~0;
     size_t      Size = ~0;
+    bool        IsSystemPointer = false;
+    bool        IsUSMPointer = false;
+    bool        IsSVMPointer = false;
 
     std::vector<cl_svm_alloc_properties_khr> Properties;
     cl_svm_alloc_access_flags_khr AccessFlags = 0;
@@ -228,9 +232,25 @@ struct SLayerContext
         return TypeCapsDevice[device];
     }
 
+    bool isKnownAlloc(cl_context context, const void* ptr) const
+    {
+        if (AllocMaps.find(context) != AllocMaps.end()) {
+            const auto& allocMap = AllocMaps.at(context);
+            if (allocMap.find(ptr) != allocMap.end()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     SAllocInfo& getAllocInfo(cl_context context, const void* ptr)
     {
         return AllocMaps[context][ptr];
+    }
+
+    const SAllocInfo& getAllocInfo(cl_context context, const void* ptr) const
+    {
+        return AllocMaps.at(context).at(ptr);
     }
 
     bool findAllocInfo(cl_context context, const void* ptr, const void*& base, SAllocInfo& info)
@@ -503,21 +523,37 @@ static cl_context getContext(
     return context;
 }
 
-static bool isUSMPtr(
+static inline bool isSystemPtr(
     cl_context context,
     const void* ptr)
 {
-    cl_unified_shared_memory_type_intel type = CL_MEM_TYPE_UNKNOWN_INTEL;
-    clGetMemAllocInfoINTEL(
-        context,
-        ptr,
-        CL_MEM_ALLOC_TYPE_INTEL,
-        sizeof(type),
-        &type,
-        nullptr);
-    // Workaround: some implementations return zero instead of UNKNOWN for
-    // non-USM pointers, especially SVM pointers.
-    return type != 0 && type != CL_MEM_TYPE_UNKNOWN_INTEL;
+    const auto& layerContext = getLayerContext();
+    if (layerContext.isKnownAlloc(context, ptr)) {
+        return layerContext.getAllocInfo(context, ptr).IsSystemPointer;
+    }
+    return false;
+}
+
+static inline bool isUSMPtr(
+    cl_context context,
+    const void* ptr)
+{
+    const auto& layerContext = getLayerContext();
+    if (layerContext.isKnownAlloc(context, ptr)) {
+        return layerContext.getAllocInfo(context, ptr).IsUSMPointer;
+    }
+    return false;
+}
+
+static inline bool isSVMPtr(
+    cl_context context,
+    const void* ptr)
+{
+    const auto& layerContext = getLayerContext();
+    if (layerContext.isKnownAlloc(context, ptr)) {
+        return layerContext.getAllocInfo(context, ptr).IsSVMPointer;
+    }
+    return false;
 }
 
 static void parseSVMAllocProperties(
@@ -577,6 +613,9 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
         return nullptr;
     }
 
+    bool isUSMPointer = false;
+    bool isSVMPointer = false;
+    bool isSystemPointer = false;
     void* ret = nullptr;
 
     cl_device_id device = nullptr;
@@ -586,6 +625,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
 
     const auto caps = typeCapsPlatform[svm_type_index];
     if ((caps & CL_SVM_TYPE_MACRO_DEVICE_KHR) == CL_SVM_TYPE_MACRO_DEVICE_KHR) {
+        isUSMPointer = true;
         ret = clDeviceMemAllocINTEL(
             context,
             device,
@@ -595,6 +635,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
             errcode_ret);
     }
     else if ((caps & CL_SVM_TYPE_MACRO_HOST_KHR) == CL_SVM_TYPE_MACRO_HOST_KHR) {
+        isUSMPointer = true;
         ret = clHostMemAllocINTEL(
             context,
             nullptr,
@@ -602,7 +643,16 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
             alignment,
             errcode_ret);
     }
+    else if ((caps & CL_SVM_TYPE_MACRO_SYSTEM_KHR) == CL_SVM_TYPE_MACRO_SYSTEM_KHR) {
+        isSystemPointer = true;
+        alignment = (alignment == 0) ? 128 : alignment;
+        ret = align_malloc(size, alignment);
+        if (errcode_ret) {
+            errcode_ret[0] = ret ? CL_SUCCESS : CL_INVALID_VALUE;
+        }
+    }
     else if ((caps & CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) == CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) {
+        isUSMPointer = true;
         ret = clSharedMemAllocINTEL(
             context,
             device,
@@ -616,6 +666,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
         if (caps & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR) {
             svmFlags |= CL_MEM_SVM_ATOMICS;
         }
+        isSVMPointer = true;
         ret = g_pNextDispatch->clSVMAlloc(
             context,
             svmFlags,
@@ -626,6 +677,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
         }
     }
     else if ((caps & CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) == CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR) {
+        isSVMPointer = true;
         ret = g_pNextDispatch->clSVMAlloc(
             context,
             CL_MEM_READ_WRITE,
@@ -646,6 +698,9 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
         SAllocInfo& allocInfo = getLayerContext().getAllocInfo(context, ret);
         allocInfo.TypeIndex = svm_type_index;
         allocInfo.Size = size;
+        allocInfo.IsSystemPointer = isSystemPointer;
+        allocInfo.IsUSMPointer = isUSMPointer;
+        allocInfo.IsSVMPointer = isSVMPointer;
         const cl_svm_alloc_properties_khr* props = properties;
         if (props) {
             while (props[0] != 0) {
@@ -678,21 +733,26 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesKHR_EMU(
     cl_svm_free_flags_khr flags,
     void* ptr)
 {
+    if (ptr == nullptr) {
+        return CL_SUCCESS;
+    }
+
     cl_int errorCode = CL_SUCCESS;
     if (isUSMPtr(context, ptr)) {
         errorCode = clMemBlockingFreeINTEL(
             context,
             ptr);
-    } else {
+    } else if (isSVMPtr(context, ptr)) {
         g_pNextDispatch->clSVMFree(
             context,
             ptr);
+    } else if (isSystemPtr(context, ptr)) {
+        align_free(ptr);
+    } else {
+        errorCode = CL_INVALID_VALUE;
     }
 
-    if (errorCode == CL_SUCCESS) {
-        getLayerContext().removeAllocInfo(context, ptr);
-    }
-
+    getLayerContext().removeAllocInfo(context, ptr);
     return errorCode;
 }
 
@@ -742,7 +802,7 @@ cl_int CL_API_CALL clGetSVMSuggestedTypeIndexKHR_EMU(
 
     cl_uint ret = CL_UINT_MAX;
     for (auto device: checkDevices) {
-        const auto& supported = getLayerContext().getSVMCaps(device);;
+        const auto& supported = getLayerContext().getSVMCaps(device);
         for (size_t ci = 0; ci < supported.size(); ci++) {
             if ((supported[ci] & required_capabilities) == required_capabilities) {
                 ret = static_cast<cl_uint>(ci);
