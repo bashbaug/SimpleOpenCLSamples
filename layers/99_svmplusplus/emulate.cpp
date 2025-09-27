@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2023 Ben Ashbaugh
+// Copyright (c) 2023-2025 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -183,6 +183,20 @@ static cl_svm_capabilities_khr getSystemSVMCaps(cl_device_id device)
     return ret;
 }
 
+struct SUSMFuncs
+{
+    clHostMemAllocINTEL_fn      clHostMemAllocINTEL;
+    clDeviceMemAllocINTEL_fn    clDeviceMemAllocINTEL;
+    clSharedMemAllocINTEL_fn    clSharedMemAllocINTEL;
+    clMemFreeINTEL_fn           clMemFreeINTEL;
+    clMemBlockingFreeINTEL_fn   clMemBlockingFreeINTEL;
+    clGetMemAllocInfoINTEL_fn   clGetMemAllocInfoINTEL;
+    clSetKernelArgMemPointerINTEL_fn clSetKernelArgMemPointerINTEL;
+    clEnqueueMemFillINTEL_fn    clEnqueueMemFillINTEL;
+    clEnqueueMemcpyINTEL_fn     clEnqueueMemcpyINTEL;
+    clEnqueueMemAdviseINTEL_fn  clEnqueueMemAdviseINTEL;
+};
+
 struct SAllocInfo
 {
     cl_uint     TypeIndex = ~0;
@@ -219,6 +233,7 @@ struct SLayerContext
 
         for (auto platform: platforms) {
             getSVMTypesForPlatform(platform);
+            getUSMFuncsForPlatform(platform);
         }
     }
 
@@ -230,6 +245,11 @@ struct SLayerContext
     const std::vector<cl_svm_capabilities_khr>& getSVMCaps(cl_device_id device)
     {
         return TypeCapsDevice[device];
+    }
+
+    const SUSMFuncs& getUSMFuncs(cl_platform_id platform)
+    {
+        return USMFuncs[platform];
     }
 
     bool isKnownAlloc(cl_context context, const void* ptr) const
@@ -435,8 +455,46 @@ private:
         }
     }
 
+    void getUSMFuncsForPlatform(cl_platform_id platform)
+    {
+        SUSMFuncs& funcs = USMFuncs[platform];
+
+        funcs.clHostMemAllocINTEL = (clHostMemAllocINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clHostMemAllocINTEL");
+        funcs.clDeviceMemAllocINTEL = (clDeviceMemAllocINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clDeviceMemAllocINTEL");
+        funcs.clSharedMemAllocINTEL = (clSharedMemAllocINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clSharedMemAllocINTEL");
+        funcs.clMemFreeINTEL = (clMemFreeINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clMemFreeINTEL");
+        funcs.clMemBlockingFreeINTEL = (clMemBlockingFreeINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clMemBlockingFreeINTEL");
+        funcs.clGetMemAllocInfoINTEL = (clGetMemAllocInfoINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clGetMemAllocInfoINTEL");
+        funcs.clSetKernelArgMemPointerINTEL = (clSetKernelArgMemPointerINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clSetKernelArgMemPointerINTEL");
+        funcs.clEnqueueMemFillINTEL = (clEnqueueMemFillINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clEnqueueMemFillINTEL");
+        funcs.clEnqueueMemcpyINTEL = (clEnqueueMemcpyINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clEnqueueMemcpyINTEL");
+        funcs.clEnqueueMemAdviseINTEL = (clEnqueueMemAdviseINTEL_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform, "clEnqueueMemAdviseINTEL");
+    }
+
     std::map<cl_platform_id, std::vector<cl_svm_capabilities_khr>>  TypeCapsPlatform;
     std::map<cl_device_id, std::vector<cl_svm_capabilities_khr>>    TypeCapsDevice;
+
+    std::map<cl_platform_id, SUSMFuncs> USMFuncs;
 
     typedef std::map<const void*, SAllocInfo> CAllocMap;
     std::map<cl_context, CAllocMap> AllocMaps;
@@ -597,6 +655,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     cl_int* errcode_ret)
 {
     cl_platform_id platform = getPlatform(context);
+    const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
 
     const auto& typeCapsPlatform = getLayerContext().getSVMCaps(platform);
     if (svm_type_index >= typeCapsPlatform.size()) {
@@ -626,7 +685,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     const auto caps = typeCapsPlatform[svm_type_index];
     if ((caps & CL_SVM_TYPE_MACRO_DEVICE_KHR) == CL_SVM_TYPE_MACRO_DEVICE_KHR) {
         isUSMPointer = true;
-        ret = clDeviceMemAllocINTEL(
+        ret = USMFuncs.clDeviceMemAllocINTEL(
             context,
             device,
             nullptr,
@@ -636,7 +695,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     }
     else if ((caps & CL_SVM_TYPE_MACRO_HOST_KHR) == CL_SVM_TYPE_MACRO_HOST_KHR) {
         isUSMPointer = true;
-        ret = clHostMemAllocINTEL(
+        ret = USMFuncs.clHostMemAllocINTEL(
             context,
             nullptr,
             size,
@@ -653,7 +712,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     }
     else if ((caps & CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) == CL_SVM_TYPE_MACRO_SINGLE_DEVICE_SHARED_KHR) {
         isUSMPointer = true;
-        ret = clSharedMemAllocINTEL(
+        ret = USMFuncs.clSharedMemAllocINTEL(
             context,
             device,
             nullptr,
@@ -739,7 +798,9 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesKHR_EMU(
 
     cl_int errorCode = CL_SUCCESS;
     if (isUSMPtr(context, ptr)) {
-        errorCode = clMemBlockingFreeINTEL(
+        cl_platform_id platform = getPlatform(context);
+        const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
+        errorCode = USMFuncs.clMemBlockingFreeINTEL(
             context,
             ptr);
     } else if (isSVMPtr(context, ptr)) {
@@ -1191,7 +1252,9 @@ cl_int CL_API_CALL clSetKernelArgSVMPointer_override(
     cl_context context = getContext(kernel);
 
     if (isUSMPtr(context, arg_value)) {
-        return clSetKernelArgMemPointerINTEL(
+        cl_platform_id platform = getPlatform(context);
+        const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
+        return USMFuncs.clSetKernelArgMemPointerINTEL(
             kernel,
             arg_index,
             arg_value);
@@ -1284,7 +1347,9 @@ void CL_API_CALL clSVMFree_override(
     void* ptr)
 {
     if (isUSMPtr(context, ptr)) {
-        clMemFreeINTEL(context, ptr);
+        cl_platform_id platform = getPlatform(context);
+        const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
+        USMFuncs.clMemFreeINTEL(context, ptr);
     } else {
         g_pNextDispatch->clSVMFree(context, ptr);
     }
@@ -1351,7 +1416,9 @@ cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
     }
 
     if (isUSMPtr(context, dst_ptr) || isUSMPtr(context, src_ptr)) {
-        cl_int ret = clEnqueueMemcpyINTEL(
+        cl_platform_id platform = getPlatform(context);
+        const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
+        cl_int ret = USMFuncs.clEnqueueMemcpyINTEL(
             command_queue,
             blocking_copy,
             dst_ptr,
@@ -1407,7 +1474,9 @@ cl_int CL_API_CALL clEnqueueSVMMemFill_override(
     }
 
     if (isUSMPtr(context, svm_ptr)) {
-        cl_int ret = clEnqueueMemFillINTEL(
+        cl_platform_id platform = getPlatform(context);
+        const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
+        cl_int ret = USMFuncs.clEnqueueMemFillINTEL(
             command_queue,
             svm_ptr,
             pattern,
