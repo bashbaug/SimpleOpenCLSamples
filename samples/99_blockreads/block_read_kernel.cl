@@ -11,6 +11,32 @@ void intel_sub_group_2d_block_read_transpose_32b_32r1x1c(global void* base_addre
     destination[1] = temp.s1;
 }
 
+void __spirv_Subgroup2DBlockLoadINTEL(
+    int element_size, int block_width, int block_height, int block_count,
+    const __global void* src_base_pointer, int memory_width, int memory_height, int memory_pitch,
+    int2 coordinate,
+    private void* dst_pointer);
+void __spirv_Subgroup2DBlockLoadTransposeINTEL(
+    int element_size, int block_width, int block_height, int block_count,
+    const __global void* src_base_pointer, int memory_width, int memory_height, int memory_pitch,
+    int2 coordinate,
+    private void* dst_pointer);
+void __spirv_Subgroup2DBlockLoadTransformINTEL(
+    int element_size, int block_width, int block_height, int block_count,
+    const __global void* src_base_pointer, int memory_width, int memory_height, int memory_pitch,
+    int2 coordinate,
+    private void* dst_pointer);
+void __spirv_Subgroup2DBlockPrefetchINTEL(
+    int element_size, int block_width, int block_height, int block_count,
+    const __global void* src_base_pointer, int memory_width, int memory_height, int memory_pitch,
+    int2 coordinate);
+void __spirv_Subgroup2DBlockStoreINTEL(
+    int element_size, int block_width, int block_height, int block_count,
+    const private void* src_pointer,
+    __global void* dst_base_pointer,
+    int memory_width,  int memory_height, int memory_pitch,
+    int2 coordinate);
+
 __attribute__((intel_reqd_sub_group_size(16)))
 kernel void BlockReadTest(global void* matrix, int bytewidth, int height)
 {
@@ -38,7 +64,7 @@ kernel void BlockReadTest(global void* matrix, int bytewidth, int height)
     intel_sub_group_2d_block_read_16b_4r16x1c(matrix, bytewidth, height, bytepitch, coord, data);
     printf("GID %3d: data = %04X %04X %04X %04X\n", (int)get_global_id(0),
         data[0], data[1], data[2], data[3]);
-#elif 1
+#elif 0
     // This is another multi-row 2D block read.
     // Each work-item gets 32 8-bit values, from four different 8 row x 16 column blocks.
     // The first 8 8-bit values are the 32 rows from a column of the first block.
@@ -51,7 +77,7 @@ kernel void BlockReadTest(global void* matrix, int bytewidth, int height)
         data[ 8], data[ 9], data[10], data[11], data[12], data[13], data[14], data[15],
         data[16], data[17], data[18], data[19], data[20], data[21], data[22], data[23],
         data[24], data[25], data[26], data[27], data[28], data[29], data[30], data[31]);
-#elif 1
+#elif 0
     // This is another multi-row 2D block read.
     // Each work-item gets 128 8-bit values, from four different 32 row x 16 column blocks.
     // The first 32 8-bit values are the 32 rows from a column of the first block.
@@ -64,7 +90,7 @@ kernel void BlockReadTest(global void* matrix, int bytewidth, int height)
         data[16], data[17], data[18], data[19], data[20], data[21], data[22], data[23],
         data[24], data[25], data[26], data[27], data[28], data[29], data[30], data[31],
         data[32], data[33], data[34], data[35], data[36], data[37], data[38], data[39]);
-#elif 1
+#elif 0
     // This is another multi-row 2D block read.
     // Each work-item gets 128 8-bit values, from four different 32 row x 16 column blocks.
     // The first 32 8-bit values are the 32 rows from a column of the first block.
@@ -85,7 +111,7 @@ kernel void BlockReadTest(global void* matrix, int bytewidth, int height)
     intel_sub_group_2d_block_read_transpose_32b_16r8x1c(matrix, bytewidth, height, bytepitch, coord, data);
     printf("GID %3d: data = %08X %08X %08X %08X %08X %08X %08X %08X ...\n", (int)get_global_id(0),
         data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
-#elif 1
+#elif 0
     // This is a more complicated transposed 2D block read, since there are 32 rows (pre-transpose) and only 16 work-items.
     // Each work-item gets 16 32-bit values, where each 32-bit value contains two columns of data (pre-transpose).
     // Each work-item therefore gets 16 columns of data from one matrix row, and 16 columns of data from another matrix row.
@@ -93,7 +119,7 @@ kernel void BlockReadTest(global void* matrix, int bytewidth, int height)
     uint data[2];
     intel_sub_group_2d_block_read_transpose_32b_32r1x1c(matrix, bytewidth, height, bytepitch, coord, data);
     printf("GID %3d: data = %08X %08X\n", (int)get_global_id(0), data[0], data[1]);
-#elif 1
+#elif 0
     // This is a more complicated transposed 2D block read, since there are 32 rows (pre-transpose) and only 16 work-items.
     // Each work-item gets 16 32-bit values, where each 32-bit value contains two columns of data (pre-transpose).
     // Each work-item therefore gets 16 columns of data from one matrix row, and 16 columns of data from another matrix row.
@@ -102,5 +128,14 @@ kernel void BlockReadTest(global void* matrix, int bytewidth, int height)
     intel_sub_group_2d_block_read_transpose_32b_32r8x1c(matrix, bytewidth, height, bytepitch, coord, data);
     printf("GID %3d: data = %08X %08X %08X %08X %08X %08X %08X %08X ...\n", (int)get_global_id(0),
         data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+#elif 1
+    // This is a multi-row, multi-block 2D block read.
+    // Each work-item gets four 8-bit values, from two different 2 row x 16 column blocks.
+    // The first two 8-bit values are the two rows from a column of the first block.
+    // The second two 8-bit values are the two rows from a column of the second block.
+    uchar data[4];
+    __spirv_Subgroup2DBlockLoadINTEL(1, 16, 2, 2, matrix, bytewidth, height, bytepitch, coord, data);
+    printf("GID %3d: data = %02X %02X %02X %02X\n", (int)get_global_id(0),
+        data[ 0], data[ 1], data[ 2], data[ 3]);
 #endif
 }
