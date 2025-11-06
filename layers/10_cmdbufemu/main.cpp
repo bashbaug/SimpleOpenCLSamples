@@ -34,6 +34,11 @@
 
 bool g_EnhancedErrorChecking = false;
 
+// Using kernels for profiling can fix issues with some implementations
+// that do not properly support event profiling on barrkers.
+
+bool g_KernelForProfiling = false;
+
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
 static cl_int CL_API_CALL
@@ -283,6 +288,7 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     _init_dispatch();
 
     getControl("CMDBUFEMU_EnhancedErrorChecking", g_EnhancedErrorChecking);
+    getControl("CMDBUFEMU_KernelForProfiling", g_KernelForProfiling);
 
     g_pNextDispatch = target_dispatch;
 

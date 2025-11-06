@@ -33,6 +33,7 @@ The following environment variables can modify the behavior of the command buffe
 | Environment Variable | Behavior |  Example Format |
 |----------------------|----------|-----------------|
 | `CMDBUFEMU_EnhancedErrorChecking` | Enables additional error checking when commands are added to a command buffer using a command buffer "test queue".  By default, the additional error checking is disabled. | `export CMDBUFEMU_EnhancedErrorChecking=1`<br/><br/>`set CMDBUFEMU_EnhancedErrorChecking=1` |
+| `CMDBUFEMU_KernelForProfiling` | Enables use of an empty kernel for event profiling instead of event profiling on a command-queue barrier.  By default, to minimize overhead, the empty kernel is not used. | `export CMDBUFEMU_KernelForProfiling=1`<br/><br/>`set CMDBUFEMU_KernelForProfiling=1` |
 
 ## Known Limitations
 

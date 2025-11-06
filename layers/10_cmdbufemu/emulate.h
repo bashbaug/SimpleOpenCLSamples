@@ -10,6 +10,7 @@
 #include <map>
 
 extern bool g_EnhancedErrorChecking;
+extern bool g_KernelForProfiling;
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
