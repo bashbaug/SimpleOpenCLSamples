@@ -7,7 +7,7 @@ It works by intercepting calls to `clGetExtensionFunctionAddressForPlatform` to 
 If a query succeeds by default then the layer does nothing and simply returns the queried function pointer as-is.
 If the query is unsuccessful however, then the layer returns its own function pointer, which will record the contents of the command buffer for later playback.
 
-This command buffer emulation layer currently implements v0.9.4 of the `cl_khr_command_buffer` extension and v0.9.0 of the `cl_khr_command_buffer_mutable_dispatch` extension.
+This command buffer emulation layer currently implements v0.9.8 of the `cl_khr_command_buffer` extension and v0.9.5 of the `cl_khr_command_buffer_mutable_dispatch` extension.
 The functionality in this emulation layer is sufficient to run the command buffer samples in this repository.
 
 Please note that the emulated command buffers are intended to be functional, but unlike a native implementation, they may not provide any performance benefit over similar code without using command buffers.
@@ -40,4 +40,5 @@ The following environment variables can modify the behavior of the command buffe
 This section describes some of the limitations of the emulated `cl_khr_command_buffer` functionality:
 
 * Some error conditions are not properly checked for and returned.
+* Deferred kernel arguments are supported, but `CL_COMMAND_BUFFER_STATE_FINALIZED_KHR` is not properly handled.
 * Many functions are not thread safe.
