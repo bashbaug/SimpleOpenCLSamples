@@ -19,6 +19,7 @@
 
 #include "emulate.h"
 
+// Reminder: When updating these versions, update the README also!
 static constexpr cl_version version_cl_khr_command_buffer =
     CL_MAKE_VERSION(0, 9, 8);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
