@@ -11,6 +11,8 @@
 #include <fstream>
 #include <string>
 
+#include "util.hpp"
+
 static std::string readStringFromFile(
     const std::string& filename )
 {
@@ -70,6 +72,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

@@ -13,6 +13,8 @@
 
 #include <chrono>
 
+#include "util.hpp"
+
 const char* filename = "sobel.bmp";
 
 const float cr = -0.123f;
@@ -150,6 +152,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

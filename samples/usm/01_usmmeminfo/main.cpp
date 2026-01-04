@@ -8,6 +8,8 @@
 
 #include <CL/opencl.hpp>
 
+#include "util.hpp"
+
 // Each of these functions should eventually move into opencl.hpp:
 
 static cl_unified_shared_memory_type_intel
@@ -109,6 +111,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

@@ -10,6 +10,7 @@ import numpy as np
 import pyopencl as cl
 import argparse
 import PIL
+import sys
 
 filename = 'mandelbrot.bmp'
 
@@ -63,6 +64,8 @@ if __name__ == "__main__":
     deviceIndex = args.device
 
     platforms = cl.get_platforms()
+    if platformIndex >= len(platforms):
+        sys.exit('Invalid platform index: {}'.format(platformIndex))
     print('Running on platform: ' + platforms[platformIndex].get_info(cl.platform_info.NAME))
 
     devices = platforms[platformIndex].get_devices()
