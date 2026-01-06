@@ -10,6 +10,8 @@
 
 #include <algorithm>
 
+#include "util.hpp"
+
 #define CASE_TO_STRING(_e) case _e: return #_e;
 
 const char* mem_object_type_to_string(cl_mem_object_type mem_object_type)
@@ -158,6 +160,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Querying platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

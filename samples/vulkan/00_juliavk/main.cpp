@@ -303,6 +303,10 @@ private:
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
 
+        if (!checkPlatformIndex(platforms, platformIndex)) {
+            throw std::runtime_error("couldn't get OpenCL platform");
+        }
+
         printf("Running on platform: %s\n",
             platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 

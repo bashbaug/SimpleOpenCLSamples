@@ -11,6 +11,8 @@
 
 #include <CL/opencl.hpp>
 
+#include "util.hpp"
+
 const char* filename = "mandelbrot.bmp";
 
 const cl_uint width = 768;
@@ -82,6 +84,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
