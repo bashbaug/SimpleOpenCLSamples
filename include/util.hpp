@@ -69,7 +69,7 @@ static bool checkDeviceForExtension(
 }
 
 static bool checkPlatformIndex(
-    const std::vector<cl::Platform> platforms,
+    const std::vector<cl::Platform>& platforms,
     int platformIndex)
 {
     if (platforms.size() == 0) {
