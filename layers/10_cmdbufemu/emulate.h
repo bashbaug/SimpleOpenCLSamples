@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -10,6 +10,7 @@
 #include <map>
 
 extern bool g_EnhancedErrorChecking;
+extern bool g_KernelForProfiling;
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 
