@@ -696,7 +696,7 @@ int main(int argc, char** argv)
 
         if (printUsage || !op.unknown_options().empty() || !op.non_option_args().empty()) {
             fprintf(stderr,
-                "Usage: matrixexperiments [options]\n"
+                "Usage: matrixexperiments-bf16 [options]\n"
                 "%s", op.help().c_str());
             return -1;
         }
@@ -704,9 +704,8 @@ int main(int argc, char** argv)
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
-    if (platformIndex >= platforms.size()) {
-        printf("Requested platform index is %d, but only %zu platforms were found.\n",
-            platformIndex, platforms.size());
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
         return -1;
     }
 

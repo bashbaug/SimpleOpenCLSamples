@@ -90,3 +90,20 @@ static std::string readStringFromFile(
 
     return source;
 }
+
+static bool checkPlatformIndex(
+    const std::vector<cl::Platform>& platforms,
+    int platformIndex)
+{
+    if (platforms.size() == 0) {
+        fprintf(stderr, "Error: No OpenCL platforms found.\n");
+        return false;
+    }
+    if (platformIndex >= (int)platforms.size()) {
+        fprintf(stderr, "Error: Invalid platform index %d specified (max %d)\n",
+            platformIndex,
+            (int)(platforms.size() - 1) );
+        return false;
+    }
+    return true;
+}

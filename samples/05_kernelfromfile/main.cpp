@@ -11,26 +11,7 @@
 #include <fstream>
 #include <string>
 
-static std::string readStringFromFile(
-    const std::string& filename )
-{
-    std::ifstream is(filename, std::ios::binary);
-    if (!is.good()) {
-        printf("Couldn't open file '%s'!\n", filename.c_str());
-        return "";
-    }
-
-    size_t filesize = 0;
-    is.seekg(0, std::ios::end);
-    filesize = (size_t)is.tellg();
-    is.seekg(0, std::ios::beg);
-
-    std::string source{
-        std::istreambuf_iterator<char>(is),
-        std::istreambuf_iterator<char>() };
-
-    return source;
-}
+#include "util.hpp"
 
 int main(
     int argc,
@@ -70,6 +51,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
