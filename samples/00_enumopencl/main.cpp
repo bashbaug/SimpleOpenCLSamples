@@ -90,9 +90,9 @@ static cl_int PrintPlatformInfoSummary(
         CL_PLATFORM_VERSION,
         platformVersion );
 
-    printf("\tName:           %s\n", platformName );
-    printf("\tVendor:         %s\n", platformVendor );
-    printf("\tDriver Version: %s\n", platformVersion );
+    printf("\tName:             %s\n", platformName );
+    printf("\tVendor:           %s\n", platformVendor );
+    printf("\tPlatform Version: %s\n", platformVersion );
 
     delete [] platformName;
     delete [] platformVendor;
