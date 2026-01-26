@@ -1120,7 +1120,7 @@ private:
         const size_t* global_work_size,
         const size_t* local_work_size )
     {
-        if( work_dim == 0 || 
+        if( work_dim == 0 ||
             global_work_size == nullptr ||
             local_work_size == nullptr )
         {
@@ -1604,7 +1604,7 @@ typedef struct _cl_command_buffer_khr
         for( const auto& command : Commands )
         {
             errorCode = command->playback(queue, deps);
-            if( (errorCode == CL_SUCCESS) && 
+            if( (errorCode == CL_SUCCESS) &&
                 isRecordQueueInOrder && !isReplayQueueInOrder )
             {
                 errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(

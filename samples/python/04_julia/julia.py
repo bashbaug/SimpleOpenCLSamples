@@ -102,7 +102,7 @@ if __name__ == "__main__":
     program.build()
     kernel = program.Julia
 
-    deviceMemDst = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR, 
+    deviceMemDst = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR,
                              gwx * gwy * 4 * np.uint8().itemsize)
 
     lws = None
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     print('Finished in {} seconds'.format(end - start))
 
     mapped_dst, event = cl.enqueue_map_buffer(commandQueue, deviceMemDst,
-                                              cl.map_flags.READ, 
+                                              cl.map_flags.READ,
                                               0, gwx * gwy, np.uint32)
     with mapped_dst.base:
         # note: this generates a 24-bit .bmp file instead of a 32-bit .bmp file!

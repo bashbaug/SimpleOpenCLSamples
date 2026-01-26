@@ -137,7 +137,7 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     const size_t dispatchTableSize =
         sizeof(dispatch) / sizeof(dispatch.clGetPlatformIDs);
 
-    if (target_dispatch == nullptr || 
+    if (target_dispatch == nullptr ||
         num_entries_out == nullptr ||
         layer_dispatch_ret == nullptr) {
         return CL_INVALID_VALUE;
