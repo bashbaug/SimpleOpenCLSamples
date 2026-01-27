@@ -56,9 +56,9 @@ int main(
         const cl::Platform& platform = platforms[p];
 
         printf("Platform[%zu]:\n", p);
-        printf("\tName:           %s\n", platform.getInfo<CL_PLATFORM_NAME>().c_str() );
-        printf("\tVendor:         %s\n", platform.getInfo<CL_PLATFORM_VENDOR>().c_str() );
-        printf("\tDriver Version: %s\n", platform.getInfo<CL_PLATFORM_VERSION>().c_str() );
+        printf("\tName:             %s\n", platform.getInfo<CL_PLATFORM_NAME>().c_str() );
+        printf("\tVendor:           %s\n", platform.getInfo<CL_PLATFORM_VENDOR>().c_str() );
+        printf("\tPlatform Version: %s\n", platform.getInfo<CL_PLATFORM_VERSION>().c_str() );
 
         std::vector<cl::Device> devices;
         platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
