@@ -12,7 +12,7 @@ It will crash initially - that's fine!
 As part of the tutorial we will fix bugs that are preventing the tutorial application from running and running well.
 
 ```
-$ ./sinjulia 
+$ ./sinjulia
 *** Important Note! ***
 This is the Intercept Layer Tutorial application.
 It will crash initially!  Please see the tutorial README for details.
@@ -31,7 +31,7 @@ This tutorial is written to use the [cliloader](https://github.com/intel/opencl-
 After building and installing the Intercept Layer and `cliloader`, you should be able to use it to execute the tutorial application.
 
 ```
-$ cliloader ./sinjulia 
+$ cliloader ./sinjulia
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
 CLIntercept file location: /home/bashbaug/bin/../lib/libOpenCL.so
