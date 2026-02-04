@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -106,7 +106,7 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     const size_t dispatchTableSize =
         sizeof(dispatch) / sizeof(dispatch.clGetPlatformIDs);
 
-    if (target_dispatch == nullptr || 
+    if (target_dispatch == nullptr ||
         num_entries_out == nullptr ||
         layer_dispatch_ret == nullptr) {
         return CL_INVALID_VALUE;

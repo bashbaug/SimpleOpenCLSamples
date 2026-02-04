@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -19,10 +19,11 @@
 
 #include "emulate.h"
 
+// Reminder: When updating these versions, update the README also!
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 7);
+    CL_MAKE_VERSION(0, 9, 8);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
-    CL_MAKE_VERSION(0, 9, 3);
+    CL_MAKE_VERSION(0, 9, 5);
 
 SLayerContext& getLayerContext(void)
 {
@@ -1119,7 +1120,7 @@ private:
         const size_t* global_work_size,
         const size_t* local_work_size )
     {
-        if( work_dim == 0 || 
+        if( work_dim == 0 ||
             global_work_size == nullptr ||
             local_work_size == nullptr )
         {
@@ -1603,7 +1604,7 @@ typedef struct _cl_command_buffer_khr
         for( const auto& command : Commands )
         {
             errorCode = command->playback(queue, deps);
-            if( (errorCode == CL_SUCCESS) && 
+            if( (errorCode == CL_SUCCESS) &&
                 isRecordQueueInOrder && !isReplayQueueInOrder )
             {
                 errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
@@ -2113,6 +2114,13 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
         }
     }
 
+    // If the error code is CL_INVALID_KERNEL_ARGS, then there are probably
+    // deferred kernel arguments and the command buffer is not yet in the
+    // executable state, therefore we should return CL_INVALID_OPERATION.
+    if( errorCode == CL_INVALID_KERNEL_ARGS )
+    {
+        errorCode = CL_INVALID_OPERATION;
+    }
     return errorCode;
 }
 
@@ -2821,7 +2829,12 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
                 nullptr,
                 nullptr ) )
         {
-            return errorCode;
+            // Ignore CL_INVALID_KERNEL_ARGS errors if this is a mutable
+            // command in order to handle deferred kernel arguments.
+            if( !( errorCode == CL_INVALID_KERNEL_ARGS && mutable_handle ) )
+            {
+                return errorCode;
+            }
         }
     }
 

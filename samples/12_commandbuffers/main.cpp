@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -96,6 +96,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

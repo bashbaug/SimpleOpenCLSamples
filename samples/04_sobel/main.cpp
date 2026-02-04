@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2023-2025 Ben Ashbaugh
+// Copyright (c) 2023-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -12,6 +12,8 @@
 #include <CL/opencl.hpp>
 
 #include <chrono>
+
+#include "util.hpp"
 
 const char* filename = "sobel.bmp";
 
@@ -150,6 +152,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

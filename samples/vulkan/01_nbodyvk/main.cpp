@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2021-2025 Ben Ashbaugh
+// Copyright (c) 2021-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -289,6 +289,10 @@ private:
     void initOpenCL() {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
+
+        if (!checkPlatformIndex(platforms, platformIndex)) {
+            throw std::runtime_error("couldn't get OpenCL platform");
+        }
 
         printf("Running on platform: %s\n",
             platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
