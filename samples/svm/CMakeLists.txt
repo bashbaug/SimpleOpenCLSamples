@@ -6,6 +6,8 @@ add_subdirectory( 00_svmqueries )
 
 add_subdirectory( 100_cgsvmhelloworld )
 add_subdirectory( 101_cgsvmlinkedlist )
+add_subdirectory( 102_cgsvmoffset )
+add_subdirectory( 102_cgsvmoffset2 )
 
 add_subdirectory( 200_fgsvmhelloworld )
 add_subdirectory( 201_fgsvmlinkedlist )
