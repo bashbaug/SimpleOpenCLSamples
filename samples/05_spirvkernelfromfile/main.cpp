@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2024 Ben Ashbaugh
+// Copyright (c) 2019-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -55,7 +55,7 @@ static cl::Program createProgramWithIL(
     for (auto device : devices) {
 #ifdef CL_VERSION_2_1
         // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
-        if (getDeviceOpenCLVersion(device) >= 0x00020001 &&
+        if (getDeviceOpenCLVersion(device) >= CL_MAKE_VERSION(2, 1, 0) &&
             !device.getInfo<CL_DEVICE_IL_VERSION>().empty()) {
             useCore = true;
         }
@@ -134,6 +134,10 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
+
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 
@@ -151,7 +155,7 @@ int main(
     // extension API.  If neither is supported then we cannot run this sample.
 #ifdef CL_VERSION_2_1
     // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
-    if (getDeviceOpenCLVersion(devices[deviceIndex]) >= 0x00020001 &&
+    if (getDeviceOpenCLVersion(devices[deviceIndex]) >= CL_MAKE_VERSION(2, 1, 0) &&
         !devices[deviceIndex].getInfo<CL_DEVICE_IL_VERSION>().empty()) {
         printf("Device supports OpenCL 2.1 or newer, using clCreateProgramWithIL.\n");
     } else
@@ -204,7 +208,13 @@ int main(
             0,
             gwx * sizeof( cl_uint ) );
 
-        printf("First few values: [0] = %u, [1] = %u, [2] = %u\n", ptr[0], ptr[1], ptr[2]);
+        printf("First few values:\n"
+            " [0] = 0x%08X (as hex) = %u (as int) = %.2f (as float)\n"
+            " [1] = 0x%08X (as hex) = %u (as int) = %.2f (as float)\n"
+            " [2] = 0x%08X (as hex) = %u (as int) = %.2f (as float)\n",
+            ptr[0], ptr[0], *((float*)&ptr[0]),
+            ptr[1], ptr[1], *((float*)&ptr[1]),
+            ptr[2], ptr[2], *((float*)&ptr[2]));
 
         commandQueue.enqueueUnmapMemObject(
             deviceMemDst,

@@ -9,7 +9,7 @@ The Intercept Layer for OpenCL Applications can pinpoint errors in OpenCL kernel
 After fixing the bug in part 1, and with `ErrorLogging` and `CallLogging` still set, the next OpenCL error is this one:
 
 ```
-$ cliloader ./sinjulia 
+$ cliloader ./sinjulia
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
 <snip>

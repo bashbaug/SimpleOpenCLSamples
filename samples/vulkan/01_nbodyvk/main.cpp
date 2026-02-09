@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2021-2024 Ben Ashbaugh
+// Copyright (c) 2021-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -48,7 +48,7 @@ __kernel void nbody_step(
     const float G = 1.0f / numBodies;
     const float dampen = 0.90f;
     const float deltaTime = 0.005f;
-    const float epsilon = 1e-3;
+    const float epsilon = 1e-3f;
 
     float3 myPos = pos[get_global_id(0)].xyz;
     float myMass = pos[get_global_id(0)].w;
@@ -289,6 +289,10 @@ private:
     void initOpenCL() {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
+
+        if (!checkPlatformIndex(platforms, platformIndex)) {
+            throw std::runtime_error("couldn't get OpenCL platform");
+        }
 
         printf("Running on platform: %s\n",
             platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

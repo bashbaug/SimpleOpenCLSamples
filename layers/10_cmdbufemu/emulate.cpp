@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2024 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -19,18 +19,17 @@
 
 #include "emulate.h"
 
+// Reminder: When updating these versions, update the README also!
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 5);
+    CL_MAKE_VERSION(0, 9, 8);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
-    CL_MAKE_VERSION(0, 9, 3);
+    CL_MAKE_VERSION(0, 9, 5);
 
 SLayerContext& getLayerContext(void)
 {
     static SLayerContext c;
     return c;
 }
-
-#if defined(cl_khr_command_buffer_mutable_dispatch)
 
 // Supported mutable dispatch capabilities.
 // Right now, all capabilities are supported.
@@ -41,14 +40,25 @@ const cl_mutable_dispatch_fields_khr g_MutableDispatchCaps =
     CL_MUTABLE_DISPATCH_ARGUMENTS_KHR |
     CL_MUTABLE_DISPATCH_EXEC_INFO_KHR;
 
-#if !defined(CL_MUTABLE_DISPATCH_ASSERTS_KHR)
-typedef cl_bitfield         cl_mutable_dispatch_asserts_khr;
-#define CL_COMMAND_BUFFER_MUTABLE_DISPATCH_ASSERTS_KHR  0x12B7
-#define CL_MUTABLE_DISPATCH_ASSERTS_KHR                 0x12B8
-#define CL_MUTABLE_DISPATCH_ASSERT_NO_ADDITIONAL_WORK_GROUPS_KHR (1 << 0)
-#endif // !defined(CL_MUTABLE_DISPATCH_ASSERTS_KHR)
-
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+static cl_int enqueueProfilingKernel(
+    cl_command_queue queue,
+    cl_kernel kernel,
+    cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list,
+    cl_event* event )
+{
+    const size_t one = 1;
+    return g_pNextDispatch->clEnqueueNDRangeKernel(
+        queue,
+        kernel,
+        1,
+        nullptr,
+        &one,
+        nullptr,
+        num_events_in_wait_list,
+        event_wait_list,
+        event );
+}
 
 typedef struct _cl_mutable_command_khr
 {
@@ -67,7 +77,6 @@ typedef struct _cl_mutable_command_khr
         return Type;
     }
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     virtual cl_int  getInfo(
         cl_mutable_command_info_khr param_name,
         size_t param_value_size,
@@ -154,7 +163,6 @@ typedef struct _cl_mutable_command_khr
 
         return CL_INVALID_VALUE;
     }
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     void addDependencies(
         cl_uint num_sync_points,
@@ -228,7 +236,7 @@ struct BarrierWithWaitList : Command
         return g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -284,7 +292,7 @@ struct CopyBuffer : Command
             dst_offset,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -358,7 +366,7 @@ struct CopyBufferRect : Command
             dst_row_pitch,
             dst_slice_pitch,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -424,7 +432,7 @@ struct CopyBufferToImage : Command
             dst_origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -486,7 +494,7 @@ struct CopyImage : Command
             dst_origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -548,7 +556,7 @@ struct CopyImageToBuffer : Command
             region.data(),
             dst_offset,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -614,7 +622,7 @@ struct FillBuffer : Command
             offset,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -691,7 +699,7 @@ struct FillImage : Command
             origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -738,7 +746,7 @@ struct SVMMemcpy : Command
             src_ptr,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -792,7 +800,7 @@ struct SVMMemFill : Command
             pattern.size(),
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -825,7 +833,6 @@ struct NDRangeKernel : Command
         g_pNextDispatch->clReleaseKernel(original_kernel);
     }
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     cl_int  getInfo(
         cl_mutable_command_info_khr param_name,
         size_t param_value_size,
@@ -1072,7 +1079,6 @@ struct NDRangeKernel : Command
 
         return CL_SUCCESS;
     }
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     int playback(
         cl_command_queue queue,
@@ -1084,22 +1090,20 @@ struct NDRangeKernel : Command
             queue,
             kernel,
             work_dim,
-            global_work_offset.size() ? global_work_offset.data() : NULL,
+            global_work_offset.size() ? global_work_offset.data() : nullptr,
             global_work_size.data(),
-            local_work_size.size() ? local_work_size.data() : NULL,
+            local_work_size.size() ? local_work_size.data() : nullptr,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
     cl_kernel original_kernel = nullptr;
     cl_kernel kernel = nullptr;
     cl_uint work_dim = 0;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     cl_mutable_dispatch_fields_khr mutableFields = 0;
     cl_mutable_dispatch_asserts_khr mutableAsserts = 0;
     size_t  numWorkGroups = 0;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
     std::vector<cl_command_properties_khr> properties;
     std::vector<size_t> global_work_offset;
     std::vector<size_t> global_work_size;
@@ -1116,7 +1120,7 @@ private:
         const size_t* global_work_size,
         const size_t* local_work_size )
     {
-        if( work_dim == 0 || 
+        if( work_dim == 0 ||
             global_work_size == nullptr ||
             local_work_size == nullptr )
         {
@@ -1143,16 +1147,14 @@ typedef struct _cl_command_buffer_khr
         const cl_command_buffer_properties_khr* properties,
         cl_int* errcode_ret)
     {
-        cl_command_buffer_khr cmdbuf = NULL;
+        cl_command_buffer_khr cmdbuf = nullptr;
         cl_int errorCode = CL_SUCCESS;
 
         ptrdiff_t numProperties = 0;
         cl_command_buffer_flags_khr flags = 0;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
         cl_mutable_dispatch_asserts_khr mutableDispatchAsserts = 0;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
-        if( num_queues != 1 || queues == NULL )
+        if( num_queues != 1 || queues == nullptr )
         {
             errorCode = CL_INVALID_VALUE;
         }
@@ -1179,7 +1181,6 @@ typedef struct _cl_command_buffer_khr
                         check += 2;
                     }
                     break;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
                 case CL_COMMAND_BUFFER_MUTABLE_DISPATCH_ASSERTS_KHR:
                     if( found_CL_COMMAND_BUFFER_MUTABLE_DISPATCH_ASSERTS_KHR )
                     {
@@ -1192,7 +1193,6 @@ typedef struct _cl_command_buffer_khr
                         check += 2;
                     }
                     break;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
                 default:
                     errorCode = CL_INVALID_VALUE;
                     break;
@@ -1200,16 +1200,26 @@ typedef struct _cl_command_buffer_khr
             }
             numProperties = check - properties + 1;
         }
+        for( cl_uint q = 0; q < num_queues && queues != nullptr; q++ )
+        {
+            cl_uint refCount = 0;
+            if( g_pNextDispatch->clGetCommandQueueInfo(
+                    queues[q],
+                    CL_QUEUE_REFERENCE_COUNT,
+                    sizeof(refCount),
+                    &refCount,
+                    nullptr) != CL_SUCCESS )
+            {
+                errorCode = CL_INVALID_COMMAND_QUEUE;
+                break;
+            }
+        }
         if( errcode_ret )
         {
             errcode_ret[0] = errorCode;
         }
         if( errorCode == CL_SUCCESS) {
-            cmdbuf = new _cl_command_buffer_khr(flags
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-                , mutableDispatchAsserts
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
-            );
+            cmdbuf = new _cl_command_buffer_khr(flags, mutableDispatchAsserts);
             cmdbuf->Queues.reserve(num_queues);
             cmdbuf->Queues.insert(
                 cmdbuf->Queues.begin(),
@@ -1221,9 +1231,26 @@ typedef struct _cl_command_buffer_khr
                 properties,
                 properties + numProperties );
 
+            cmdbuf->IsInOrder.reserve(num_queues);
+            cmdbuf->TestQueues.reserve(num_queues);
+            cmdbuf->BlockingEvents.reserve(num_queues);
+
             for( auto queue : cmdbuf->Queues )
             {
                 g_pNextDispatch->clRetainCommandQueue(queue);
+
+                cl_command_queue_properties props = 0;
+                g_pNextDispatch->clGetCommandQueueInfo(
+                    queue,
+                    CL_QUEUE_PROPERTIES,
+                    sizeof(props),
+                    &props,
+                    nullptr);
+                cmdbuf->IsInOrder.push_back(
+                    (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0 );
+
+                cmdbuf->setupTestQueue(queue);
+                cmdbuf->setupProfilingKernel(queue);
             }
         }
 
@@ -1235,6 +1262,24 @@ typedef struct _cl_command_buffer_khr
         for( auto queue : Queues )
         {
             g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
+
+        for( auto event : BlockingEvents )
+        {
+            g_pNextDispatch->clSetUserEventStatus(
+                event,
+                -1 );
+            g_pNextDispatch->clReleaseEvent(event);
+        }
+
+        for( auto queue : TestQueues )
+        {
+            g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
+
+        for( auto kernel : ProfilingKernels )
+        {
+            g_pNextDispatch->clReleaseKernel(kernel);
         }
     }
 
@@ -1248,9 +1293,7 @@ typedef struct _cl_command_buffer_khr
     {
         const cl_command_buffer_flags_khr allFlags =
             CL_COMMAND_BUFFER_SIMULTANEOUS_USE_KHR |
-#if defined(cl_khr_command_buffer_mutable_dispatch)
             CL_COMMAND_BUFFER_MUTABLE_KHR |
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 #if defined(cl_khr_command_buffer_multi_device) && 0
             CL_COMMAND_BUFFER_DEVICE_SIDE_SYNC_KHR |
 #endif // defined(cl_khr_command_buffer_multi_device)
@@ -1281,15 +1324,23 @@ typedef struct _cl_command_buffer_khr
 
     cl_command_queue    getQueue() const
     {
-        return Queues[0];
+        return Queues.empty() ? nullptr : Queues[0];
     }
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
+    cl_command_queue    getTestQueue() const
+    {
+        return TestQueues.empty() ? nullptr : TestQueues[0];
+    }
+
+    cl_kernel   getProfilingKernel() const
+    {
+        return ProfilingKernels.empty() ? nullptr : ProfilingKernels[0];
+    }
+
     cl_mutable_dispatch_asserts_khr getMutableDispatchAsserts() const
     {
         return MutableDispatchAsserts;
     }
-#endif
 
     cl_int  getInfo(
                 cl_command_buffer_info_khr param_name,
@@ -1423,8 +1474,8 @@ typedef struct _cl_command_buffer_khr
         {
             return CL_INVALID_OPERATION;
         }
-        if( ( queues == NULL && num_queues > 0 ) ||
-            ( queues != NULL && num_queues == 0 ) )
+        if( ( queues == nullptr && num_queues > 0 ) ||
+            ( queues != nullptr && num_queues == 0 ) )
         {
             return CL_INVALID_VALUE;
         }
@@ -1432,10 +1483,41 @@ typedef struct _cl_command_buffer_khr
         {
             return CL_INVALID_VALUE;
         }
+        if( ( event_wait_list == nullptr && num_events_in_wait_list > 0 ) ||
+            ( event_wait_list != nullptr && num_events_in_wait_list == 0 ) )
+        {
+            return CL_INVALID_EVENT_WAIT_LIST;
+        }
+
+        cl_context cmdbuf_context = nullptr;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            getQueue(),
+            CL_QUEUE_CONTEXT,
+            sizeof(cmdbuf_context),
+            &cmdbuf_context,
+            nullptr);
+
+        for( cl_uint q = 0; q < num_queues && queues; q++ )
+        {
+            if( queues[q] == nullptr )
+            {
+                return CL_INVALID_COMMAND_QUEUE;
+            }
+
+            cl_context queue_context = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queues[q],
+                CL_QUEUE_CONTEXT,
+                sizeof(queue_context),
+                &queue_context,
+                nullptr);
+            if( queue_context != cmdbuf_context )
+            {
+                return CL_INVALID_CONTEXT;
+            }
+        }
 
         // CL_INCOMPATIBLE_COMMAND_QUEUE_KHR if any element of queues is not compatible with the command-queue set on command_buffer creation at the same list index.
-        // CL_INVALID_CONTEXT if any element of queues does not have the same context as the command-queue set on command_buffer creation at the same list indes.
-        // CL_INVALID_CONTEXT if the context associated with the command buffer and events in event_wait_list are not the same.
 
         return CL_SUCCESS;
     }
@@ -1452,10 +1534,13 @@ typedef struct _cl_command_buffer_khr
             NextSyncPoint.fetch_add(1, std::memory_order_relaxed) :
             0;
 
-        command->addDependencies(
-            num_sync_points,
-            wait_list,
-            syncPoint);
+        // We only need to add dependencies if there is more than one queue (so
+        // we have possible cross-queue dependencies) or the queue is an
+        // out-of-order queue (so we have possible intra-queue dependencies).
+        if( Queues.size() > 1 || !IsInOrder[0] )
+        {
+            command->addDependencies(num_sync_points, wait_list, syncPoint);
+        }
 
         if( sync_point != nullptr )
         {
@@ -1476,6 +1561,23 @@ typedef struct _cl_command_buffer_khr
             return CL_INVALID_OPERATION;
         }
 
+        for( auto event : BlockingEvents )
+        {
+            g_pNextDispatch->clSetUserEventStatus(
+                event,
+                -1 );
+            g_pNextDispatch->clReleaseEvent(event);
+        }
+
+        BlockingEvents.clear();
+
+        for( auto queue : TestQueues )
+        {
+            g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
+
+        TestQueues.clear();
+
         State = CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR;
         return CL_SUCCESS;
     }
@@ -1485,12 +1587,32 @@ typedef struct _cl_command_buffer_khr
     {
         cl_int errorCode = CL_SUCCESS;
 
+        cl_command_queue_properties props = 0;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            queue,
+            CL_QUEUE_PROPERTIES,
+            sizeof(props),
+            &props,
+            nullptr);
+        bool isRecordQueueInOrder = IsInOrder[0];
+        bool isReplayQueueInOrder =
+            (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0;
+
         const uint32_t numSyncPoints = NextSyncPoint.load(std::memory_order_relaxed);
         std::vector<cl_event> deps(numSyncPoints, nullptr);
 
         for( const auto& command : Commands )
         {
             errorCode = command->playback(queue, deps);
+            if( (errorCode == CL_SUCCESS) &&
+                isRecordQueueInOrder && !isReplayQueueInOrder )
+            {
+                errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
+                    queue,
+                    0,
+                    nullptr,
+                    nullptr);
+            }
             if( errorCode != CL_SUCCESS )
             {
                 break;
@@ -1508,7 +1630,6 @@ typedef struct _cl_command_buffer_khr
         return errorCode;
     }
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     cl_int  mutate(
                 cl_uint numUpdates,
                 const cl_command_buffer_update_type_khr* updateTypes,
@@ -1561,7 +1682,6 @@ typedef struct _cl_command_buffer_khr
 
         return CL_SUCCESS;
     }
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
 private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
@@ -1571,26 +1691,143 @@ private:
     std::vector<cl_command_buffer_properties_khr>   Properties;
     cl_command_buffer_state_khr State;
     cl_command_buffer_flags_khr Flags;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     cl_mutable_dispatch_asserts_khr MutableDispatchAsserts;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
+
     std::atomic<uint32_t> RefCount;
+
+    std::vector<bool>   IsInOrder;
+    std::vector<cl_command_queue>   TestQueues;
+    std::vector<cl_event>   BlockingEvents;
+    std::vector<cl_kernel>  ProfilingKernels;
 
     std::vector<std::unique_ptr<Command>> Commands;
     std::atomic<uint32_t> NextSyncPoint;
 
+    void setupTestQueue(cl_command_queue src)
+    {
+        if( g_EnhancedErrorChecking )
+        {
+            cl_command_queue testQueue = nullptr;
+
+            cl_context context = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                src,
+                CL_QUEUE_CONTEXT,
+                sizeof(context),
+                &context,
+                nullptr );
+
+            cl_device_id device = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                src,
+                CL_QUEUE_DEVICE,
+                sizeof(device),
+                &device,
+                nullptr );
+
+            size_t propsSize = 0;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                src,
+                CL_QUEUE_PROPERTIES_ARRAY,
+                0,
+                nullptr,
+                &propsSize );
+            if (propsSize != 0) {
+                size_t numProps = propsSize / sizeof(cl_queue_properties);
+                std::vector<cl_queue_properties> props(numProps);
+                g_pNextDispatch->clGetCommandQueueInfo(
+                    src,
+                    CL_QUEUE_PROPERTIES_ARRAY,
+                    propsSize,
+                    props.data(),
+                    nullptr );
+                testQueue =  g_pNextDispatch->clCreateCommandQueueWithProperties(
+                    context,
+                    device,
+                    props.data(),
+                    nullptr );
+            } else {
+                cl_command_queue_properties props = 0;
+                g_pNextDispatch->clGetCommandQueueInfo(
+                    src,
+                    CL_QUEUE_PROPERTIES,
+                    sizeof(props),
+                    &props,
+                    nullptr );
+                testQueue = g_pNextDispatch->clCreateCommandQueue(
+                    context,
+                    device,
+                    props,
+                    nullptr );
+            }
+
+            cl_event blockingEvent = g_pNextDispatch->clCreateUserEvent(
+                context,
+                nullptr );
+            g_pNextDispatch->clEnqueueBarrierWithWaitList(
+                testQueue,
+                1,
+                &blockingEvent,
+                nullptr );
+
+            TestQueues.push_back(testQueue);
+            BlockingEvents.push_back(blockingEvent);
+        }
+    }
+
+    void setupProfilingKernel(cl_command_queue queue)
+    {
+        if( g_KernelForProfiling )
+        {
+            cl_context context = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queue,
+                CL_QUEUE_CONTEXT,
+                sizeof(context),
+                &context,
+                nullptr );
+
+            cl_device_id device = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queue,
+                CL_QUEUE_DEVICE,
+                sizeof(device),
+                &device,
+                nullptr );
+
+            const char* kernelString = "kernel void Empty() {}";
+            cl_program program = g_pNextDispatch->clCreateProgramWithSource(
+                context,
+                1,
+                &kernelString,
+                nullptr,
+                nullptr );
+            g_pNextDispatch->clBuildProgram(
+                program,
+                1,
+                &device,
+                nullptr,
+                nullptr,
+                nullptr );
+
+            cl_kernel kernel = g_pNextDispatch->clCreateKernel(
+                program,
+                "Empty",
+                nullptr );
+            g_pNextDispatch->clReleaseProgram(
+                program );
+
+            ProfilingKernels.push_back(kernel);
+        }
+    }
+
     _cl_command_buffer_khr(
-            cl_command_buffer_flags_khr flags
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-            , cl_mutable_dispatch_asserts_khr mutableDispatchAsserts
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
-            ) :
+            cl_command_buffer_flags_khr flags,
+            cl_mutable_dispatch_asserts_khr mutableDispatchAsserts) :
         Magic(cMagic),
         State(CL_COMMAND_BUFFER_STATE_RECORDING_KHR),
         Flags(flags),
-#if defined(cl_khr_command_buffer_mutable_dispatch)
         MutableDispatchAsserts(mutableDispatchAsserts),
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
         RefCount(1),
         NextSyncPoint(1) {}
 } CommandBuffer;
@@ -1623,10 +1860,8 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
     errorCode = CL_SUCCESS;
 
     ptrdiff_t numProperties = 0;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     cl_mutable_dispatch_fields_khr mutableFields = g_MutableDispatchCaps;
     cl_mutable_dispatch_asserts_khr mutableAsserts = 0;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     if( properties )
     {
@@ -1638,7 +1873,6 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
             cl_int  property = (cl_int)check[0];
             switch( property )
             {
-#if defined(cl_khr_command_buffer_mutable_dispatch)
             case CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR:
                 if( found_CL_MUTABLE_DISPATCH_UPDATABLE_FIELDS_KHR )
                 {
@@ -1665,7 +1899,6 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
                     check += 2;
                 }
                 break;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
             default:
                 errorCode = CL_INVALID_VALUE;
                 return nullptr;
@@ -1674,7 +1907,6 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
         numProperties = check - properties + 1;
     }
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     if( local_work_size == nullptr )
     {
         const auto mutableAssertsCmdBuf = cmdbuf->getMutableDispatchAsserts();
@@ -1685,23 +1917,20 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
             return nullptr;
         }
     }
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     auto command = std::unique_ptr<NDRangeKernel>(
         new NDRangeKernel(cmdbuf, queue));
 
     command->original_kernel = kernel;
-    command->kernel = g_pNextDispatch->clCloneKernel(kernel, NULL);
+    command->kernel = g_pNextDispatch->clCloneKernel(kernel, nullptr);
     command->work_dim = work_dim;
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     command->mutableFields = mutableFields;
     command->mutableAsserts = mutableAsserts;
     command->numWorkGroups = getNumWorkGroups(
         work_dim,
         global_work_size,
         local_work_size );
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     command->properties.reserve(numProperties);
     command->properties.insert(
@@ -1838,7 +2067,16 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
             queue,
             num_events_in_wait_list,
             event_wait_list,
-            event ? &startEvent : nullptr);
+            event == nullptr || g_KernelForProfiling ? nullptr : &startEvent );
+        if( errorCode == CL_SUCCESS && event && g_KernelForProfiling )
+        {
+            errorCode = enqueueProfilingKernel(
+                queue,
+                cmdbuf->getProfilingKernel(),
+                0,
+                nullptr,
+                &startEvent );
+        }
     }
 
     if( errorCode == CL_SUCCESS )
@@ -1851,8 +2089,17 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
         errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
             0,
-            NULL,
-            event );
+            nullptr,
+            g_KernelForProfiling ? nullptr : event );
+        if( errorCode == CL_SUCCESS && g_KernelForProfiling )
+        {
+            errorCode = enqueueProfilingKernel(
+                queue,
+                cmdbuf->getProfilingKernel(),
+                0,
+                nullptr,
+                event );
+        }
     }
 
     if( event )
@@ -1867,6 +2114,13 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
         }
     }
 
+    // If the error code is CL_INVALID_KERNEL_ARGS, then there are probably
+    // deferred kernel arguments and the command buffer is not yet in the
+    // executable state, therefore we should return CL_INVALID_OPERATION.
+    if( errorCode == CL_INVALID_KERNEL_ARGS )
+    {
+        errorCode = CL_INVALID_OPERATION;
+    }
     return errorCode;
 }
 
@@ -1947,6 +2201,23 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     {
         return CL_INVALID_VALUE;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyBuffer(
+                testQueue,
+                src_buffer,
+                dst_buffer,
+                src_offset,
+                dst_offset,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
+
 
     cmdbuf->addCommand(
         CopyBuffer::create(
@@ -2003,6 +2274,26 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
     if( mutable_handle != nullptr )
     {
         return CL_INVALID_VALUE;
+    }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyBufferRect(
+                testQueue,
+                src_buffer,
+                dst_buffer,
+                src_origin,
+                dst_origin,
+                region,
+                src_row_pitch,
+                src_slice_pitch,
+                dst_row_pitch,
+                dst_slice_pitch,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
     }
 
     cmdbuf->addCommand(
@@ -2061,6 +2352,22 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     {
         return CL_INVALID_VALUE;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyBufferToImage(
+                testQueue,
+                src_buffer,
+                dst_image,
+                src_offset,
+                dst_origin,
+                region,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         CopyBufferToImage::create(
@@ -2113,6 +2420,22 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
     if( mutable_handle != nullptr )
     {
         return CL_INVALID_VALUE;
+    }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyImage(
+                testQueue,
+                src_image,
+                dst_image,
+                src_origin,
+                dst_origin,
+                region,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
     }
 
     cmdbuf->addCommand(
@@ -2167,6 +2490,22 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     {
         return CL_INVALID_VALUE;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueCopyImageToBuffer(
+                testQueue,
+                src_image,
+                dst_buffer,
+                src_origin,
+                region,
+                dst_offset,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         CopyImageToBuffer::create(
@@ -2220,6 +2559,22 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     {
         return CL_INVALID_VALUE;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueFillBuffer(
+                testQueue,
+                buffer,
+                pattern,
+                pattern_size,
+                offset,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         FillBuffer::create(
@@ -2272,6 +2627,21 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     {
         return CL_INVALID_VALUE;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueFillImage(
+                testQueue,
+                image,
+                fill_color,
+                origin,
+                region,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         FillImage::create(
@@ -2321,6 +2691,21 @@ cl_int CL_API_CALL clCommandSVMMemcpyKHR_EMU(
     if( mutable_handle != nullptr )
     {
         return CL_INVALID_VALUE;
+    }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueSVMMemcpy(
+                testQueue,
+                CL_FALSE,
+                dst_ptr,
+                src_ptr,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
     }
 
     cmdbuf->addCommand(
@@ -2372,6 +2757,21 @@ cl_int CL_API_CALL clCommandSVMMemFillKHR_EMU(
     {
         return CL_INVALID_VALUE;
     }
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
+    {
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueSVMMemFill(
+                testQueue,
+                dst_ptr,
+                pattern,
+                pattern_size,
+                size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            return errorCode;
+        }
+    }
 
     cmdbuf->addCommand(
         SVMMemFill::create(
@@ -2416,12 +2816,27 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
     {
         return errorCode;
     }
-#if !defined(cl_khr_command_buffer_mutable_dispatch)
-    if( mutable_handle != nullptr )
+    if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
     {
-        return CL_INVALID_VALUE;
+        if( cl_int errorCode = g_pNextDispatch->clEnqueueNDRangeKernel(
+                testQueue,
+                kernel,
+                work_dim,
+                global_work_offset,
+                global_work_size,
+                local_work_size,
+                0,
+                nullptr,
+                nullptr ) )
+        {
+            // Ignore CL_INVALID_KERNEL_ARGS errors if this is a mutable
+            // command in order to handle deferred kernel arguments.
+            if( !( errorCode == CL_INVALID_KERNEL_ARGS && mutable_handle ) )
+            {
+                return errorCode;
+            }
+        }
     }
-#endif // !defined(cl_khr_command_buffer_mutable_dispatch)
 
     cl_int errorCode = CL_SUCCESS;
     auto command = NDRangeKernel::create(
@@ -2493,8 +2908,6 @@ cl_command_buffer_khr CL_API_CALL clRemapCommandBufferKHR_EMU(
 
 #endif // defined(cl_khr_command_buffer_multi_device)
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // cl_khr_command_buffer_mutable_dispatch
@@ -2540,8 +2953,6 @@ cl_int CL_API_CALL clGetMutableCommandInfoKHR_EMU(
         param_value,
         param_value_size_ret);
 }
-
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
 bool clGetDeviceInfo_override(
     cl_device_id device,
@@ -2590,14 +3001,12 @@ bool clGetDeviceInfo_override(
                     deviceExtensions.data(),
                     CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
                 getOpenCLVersionFromString(
-                    deviceVersion.data() ) >= 0x00020001)
+                    deviceVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 std::string newExtensions;
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
                 newExtensions += ' ';
                 newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
                 std::string oldExtensions(deviceExtensions.data());
 
@@ -2676,7 +3085,7 @@ bool clGetDeviceInfo_override(
 
             if( found == false &&
                 getOpenCLVersionFromString(
-                    deviceVersion.data() ) >= 0x00020001)
+                    deviceVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 {
                     extensions.emplace_back();
@@ -2687,7 +3096,6 @@ bool clGetDeviceInfo_override(
 
                     extension.version = version_cl_khr_command_buffer;
                 }
-#if defined(cl_khr_command_buffer_mutable_dispatch)
                 {
                     extensions.emplace_back();
                     cl_name_version& extension = extensions.back();
@@ -2697,7 +3105,6 @@ bool clGetDeviceInfo_override(
 
                     extension.version = version_cl_khr_command_buffer_mutable_dispatch;
                 }
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
@@ -2732,6 +3139,22 @@ bool clGetDeviceInfo_override(
                 caps |= CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR;
             }
 
+            auto ptr = (cl_device_command_buffer_capabilities_khr*)param_value;
+            cl_int errorCode = writeParamToMemory(
+                param_value_size,
+                caps,
+                param_value_size_ret,
+                ptr );
+
+            if( errcode_ret )
+            {
+                errcode_ret[0] = errorCode;
+            }
+            return true;
+        }
+        break;
+    case CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR:
+        {
             cl_command_queue_properties cqProps = 0;
             g_pNextDispatch->clGetDeviceInfo(
                 device,
@@ -2739,15 +3162,22 @@ bool clGetDeviceInfo_override(
                 sizeof(cqProps),
                 &cqProps,
                 nullptr );
-            if( cqProps & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE )
+
+            cl_command_queue_properties cbProps = 0;
+            if(cqProps & CL_QUEUE_PROFILING_ENABLE)
             {
-                caps |= CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR;
+                cbProps |= CL_QUEUE_PROFILING_ENABLE;
             }
 
-            auto ptr = (cl_device_command_buffer_capabilities_khr*)param_value;
+            if(cqProps & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
+            {
+                cbProps |= CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+            }
+
+            auto ptr = (cl_command_queue_properties*)param_value;
             cl_int errorCode = writeParamToMemory(
                 param_value_size,
-                caps,
+                cbProps,
                 param_value_size_ret,
                 ptr );
 
@@ -2777,7 +3207,6 @@ bool clGetDeviceInfo_override(
             return true;
         }
         break;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     case CL_DEVICE_MUTABLE_DISPATCH_CAPABILITIES_KHR:
         {
             cl_mutable_dispatch_fields_khr caps =
@@ -2797,7 +3226,6 @@ bool clGetDeviceInfo_override(
             return true;
         }
         break;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
     default: break;
     }
 
@@ -2922,14 +3350,12 @@ bool clGetPlatformInfo_override(
                     platformExtensions.data(),
                     CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
                 getOpenCLVersionFromString(
-                    platformVersion.data() ) >= 0x00020001)
+                    platformVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 std::string newExtensions;
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
-#if defined(cl_khr_command_buffer_mutable_dispatch)
                 newExtensions += ' ';
                 newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
                 std::string oldExtensions(platformExtensions.data());
 
@@ -3008,7 +3434,7 @@ bool clGetPlatformInfo_override(
 
             if( found == false &&
                 getOpenCLVersionFromString(
-                    platformVersion.data() ) >= 0x00020001)
+                    platformVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
             {
                 {
                     extensions.emplace_back();
@@ -3019,7 +3445,6 @@ bool clGetPlatformInfo_override(
 
                     extension.version = version_cl_khr_command_buffer;
                 }
-#if defined(cl_khr_command_buffer_mutable_dispatch)
                 {
                     extensions.emplace_back();
                     cl_name_version& extension = extensions.back();
@@ -3029,7 +3454,6 @@ bool clGetPlatformInfo_override(
 
                     extension.version = version_cl_khr_command_buffer_mutable_dispatch;
                 }
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
                 auto ptr = (cl_name_version*)param_value;
                 cl_int errorCode = writeVectorToMemory(
