@@ -39,7 +39,7 @@ Many samples that use extensions additionally require the OpenCL Extension Loade
 
     git clone https://github.com/bashbaug/opencl-extension-loader external/opencl-extension-loader
 
-Several samples that interact with SPIR-V require the SPIR-V headres:
+Several samples that interact with SPIR-V require the SPIR-V headers:
 
     git clone https://github.com/KhronosGroup/SPIRV-Headers external/SPIRV-Headers
 
