@@ -21,9 +21,6 @@
 #endif
 
 #if !defined(cl_intel_split_work_group_barrier) || defined(NO_SPLIT_BARRIERS)
-#if !defined(cl_intel_split_work_group_barrier)
-#warning "Unexpected: cl_intel_split_work_group_barrier is not supported?"
-#endif
 #define split_barrier_arrive()
 #define split_barrier_wait()
 #else
