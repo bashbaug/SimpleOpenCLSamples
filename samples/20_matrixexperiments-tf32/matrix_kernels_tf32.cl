@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2024-2025 Ben Ashbaugh
+// Copyright (c) 2024-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */

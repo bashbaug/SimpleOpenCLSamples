@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2024-2025 Ben Ashbaugh
+// Copyright (c) 2024-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -634,4 +634,4 @@ void store_c_rowmajor_int32_m8_nx(global int* C, int8 v, int rowStart, int colSt
     intel_sub_group_block_write(C_ui + offset, v_ui.s7); offset += stride;
 }
 
-#endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short)
+#endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_char)
