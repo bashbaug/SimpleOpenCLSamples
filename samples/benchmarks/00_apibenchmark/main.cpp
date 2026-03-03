@@ -55,6 +55,12 @@ struct OpenCLBenchmarkEnvironment
         ooq = cl::CommandQueue{context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
     }
 
+    void TearDown(void)
+    {
+        ioq = NULL;
+        ooq = NULL;
+    }
+
     cl::Platform platform;
     cl::Device device;
     cl::Context context;
@@ -208,6 +214,8 @@ struct Kernel : public benchmark::Fixture
     cl::Program program;
     cl::Kernel kernel;
 
+    clGetKernelSuggestedLocalWorkSizeKHR_fn clGetKernelSuggestedLocalWorkSizeKHR = nullptr;
+
     virtual void SetUp(benchmark::State& state) override {
         queue = env.ioq;
 
@@ -225,6 +233,9 @@ struct Kernel : public benchmark::Fixture
         kernel = cl::Kernel{program, "Silly"};
 
         kernel.setArg(0, nullptr);
+
+        clGetKernelSuggestedLocalWorkSizeKHR = (clGetKernelSuggestedLocalWorkSizeKHR_fn)
+            clGetExtensionFunctionAddressForPlatform(env.platform(), "clGetKernelSuggestedLocalWorkSizeKHR");
     }
     virtual void TearDown(benchmark::State& state) override {
         program = NULL;
@@ -384,6 +395,48 @@ BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_overhead)(benchmark::State& st
     }
 }
 BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_overhead)->ArgsProduct({{0, 1}, {1, 32*1024*1024}});
+
+BENCHMARK_DEFINE_F(Kernel, clEnqueueNDRangeKernel_LocalWorkSize)(benchmark::State& state)
+{
+    const bool useLocalWorkSize = state.range(0) == 1;
+
+    const size_t work_dim = 1;
+    const size_t global_work_size[work_dim] = { 256 };
+
+    size_t suggested_local_work_size[work_dim];
+    if (clGetKernelSuggestedLocalWorkSizeKHR) {
+        clGetKernelSuggestedLocalWorkSizeKHR(
+            queue(),
+            kernel(),
+            work_dim,
+            NULL,
+            global_work_size,
+            suggested_local_work_size);
+    } else {
+        suggested_local_work_size[0] = 64;
+    }
+
+    const size_t* local_work_size = useLocalWorkSize ?
+        suggested_local_work_size :
+        NULL;
+    for(auto _ : state) {
+        clEnqueueNDRangeKernel(
+            queue(),
+            kernel(),
+            work_dim,
+            NULL,
+            global_work_size,
+            local_work_size,
+            0,
+            NULL,
+            NULL );
+        clFinish(queue());
+    }
+
+    clFinish(queue());
+}
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_LocalWorkSize)->Arg(0)->ArgName("NULL");
+BENCHMARK_REGISTER_F(Kernel, clEnqueueNDRangeKernel_LocalWorkSize)->Arg(1)->ArgName("Suggested");
 
 BENCHMARK_DEFINE_F(Kernel, clSetKernelArgSVMPointer_null)(benchmark::State& state)
 {
@@ -589,10 +642,13 @@ int main(int argc, char** argv)
     env.ParseArgs(argc, argv);
 
     ::benchmark::Initialize(&argc, argv);
+    ::benchmark::ReportUnrecognizedArguments(argc, argv);
     //if (::benchmark::ReportUnrecognizedArguments(argc, argv)) {
     //    return 1;
     //}
     ::benchmark::RunSpecifiedBenchmarks();
     ::benchmark::Shutdown();
+
+    env.TearDown();
     return 0;
 }
