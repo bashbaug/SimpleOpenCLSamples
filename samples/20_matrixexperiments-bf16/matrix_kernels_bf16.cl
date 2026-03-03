@@ -38,7 +38,7 @@ kernel void bfloat16_naive(global float* C, global ushort* A, global ushort* B, 
 
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
 
-#if HAS_SIMD8
+#if HAS_SG8
 
 // rowmajor kernels:
 
@@ -212,9 +212,9 @@ kernel void bfloat16_dpas_vnni_m8_n8(global float* C, global ushort* A, global u
     store_c_rowmajor_fp32_8rNc(C, sum, m, n, N);
 }
 
-#endif // HAS_SIMD8
+#endif // HAS_SG8
 
-// rowmajor krenels:
+// rowmajor kernels:
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void bfloat16_dpas_rowmajor_m1_n16(global float* C, global ushort* A, global ushort* B, int K)
@@ -224,7 +224,7 @@ kernel void bfloat16_dpas_rowmajor_m1_n16(global float* C, global ushort* A, glo
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float sum = 0;
     for (int k = 0; k < K; k += tK) {
@@ -245,7 +245,7 @@ kernel void bfloat16_dpas_rowmajor_m2_n16(global float* C, global ushort* A, glo
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float2 sum = 0;
     for (int k = 0; k < K; k += tK) {
@@ -266,7 +266,7 @@ kernel void bfloat16_dpas_rowmajor_m4_n16(global float* C, global ushort* A, glo
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float4 sum = 0;
     for (int k = 0; k < K; k += tK) {
@@ -287,7 +287,7 @@ kernel void bfloat16_dpas_rowmajor_m8_n16(global float* C, global ushort* A, glo
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     float8 sum = 0;
     for (int k = 0; k < K; k += tK) {

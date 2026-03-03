@@ -55,7 +55,7 @@ int8 activation(int8 i)
 #define __builtin_expect(x)
 #endif
 
-#if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_char)
+#if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_subgroups_char)
 
 typedef global char* global_aligned_char_ptr __attribute__((align_value(4)));
 
@@ -171,45 +171,45 @@ int  emu_sub_group_i8_i8_matrix_mad_k32(short  a, int8 b, int  acc)
 {
     float res = acc;
 
-    res = as_char2(sub_group_broadcast(a,  0)).x * as_char4(b.s0).x + res;
-    res = as_char2(sub_group_broadcast(a,  0)).y * as_char4(b.s0).y + res;
-    res = as_char2(sub_group_broadcast(a,  1)).x * as_char4(b.s0).z + res;
-    res = as_char2(sub_group_broadcast(a,  1)).y * as_char4(b.s0).w + res;
+    res = as_char2(intel_sub_group_broadcast(a,  0)).x * as_char4(b.s0).x + res;
+    res = as_char2(intel_sub_group_broadcast(a,  0)).y * as_char4(b.s0).y + res;
+    res = as_char2(intel_sub_group_broadcast(a,  1)).x * as_char4(b.s0).z + res;
+    res = as_char2(intel_sub_group_broadcast(a,  1)).y * as_char4(b.s0).w + res;
 
-    res = as_char2(sub_group_broadcast(a,  2)).x * as_char4(b.s1).x + res;
-    res = as_char2(sub_group_broadcast(a,  2)).y * as_char4(b.s1).y + res;
-    res = as_char2(sub_group_broadcast(a,  3)).x * as_char4(b.s1).z + res;
-    res = as_char2(sub_group_broadcast(a,  3)).y * as_char4(b.s1).w + res;
+    res = as_char2(intel_sub_group_broadcast(a,  2)).x * as_char4(b.s1).x + res;
+    res = as_char2(intel_sub_group_broadcast(a,  2)).y * as_char4(b.s1).y + res;
+    res = as_char2(intel_sub_group_broadcast(a,  3)).x * as_char4(b.s1).z + res;
+    res = as_char2(intel_sub_group_broadcast(a,  3)).y * as_char4(b.s1).w + res;
 
-    res = as_char2(sub_group_broadcast(a,  4)).x * as_char4(b.s2).x + res;
-    res = as_char2(sub_group_broadcast(a,  4)).y * as_char4(b.s2).y + res;
-    res = as_char2(sub_group_broadcast(a,  5)).x * as_char4(b.s2).z + res;
-    res = as_char2(sub_group_broadcast(a,  5)).y * as_char4(b.s2).w + res;
+    res = as_char2(intel_sub_group_broadcast(a,  4)).x * as_char4(b.s2).x + res;
+    res = as_char2(intel_sub_group_broadcast(a,  4)).y * as_char4(b.s2).y + res;
+    res = as_char2(intel_sub_group_broadcast(a,  5)).x * as_char4(b.s2).z + res;
+    res = as_char2(intel_sub_group_broadcast(a,  5)).y * as_char4(b.s2).w + res;
 
-    res = as_char2(sub_group_broadcast(a,  6)).x * as_char4(b.s3).x + res;
-    res = as_char2(sub_group_broadcast(a,  6)).y * as_char4(b.s3).y + res;
-    res = as_char2(sub_group_broadcast(a,  7)).x * as_char4(b.s3).z + res;
-    res = as_char2(sub_group_broadcast(a,  7)).y * as_char4(b.s3).w + res;
+    res = as_char2(intel_sub_group_broadcast(a,  6)).x * as_char4(b.s3).x + res;
+    res = as_char2(intel_sub_group_broadcast(a,  6)).y * as_char4(b.s3).y + res;
+    res = as_char2(intel_sub_group_broadcast(a,  7)).x * as_char4(b.s3).z + res;
+    res = as_char2(intel_sub_group_broadcast(a,  7)).y * as_char4(b.s3).w + res;
 
-    res = as_char2(sub_group_broadcast(a,  8)).x * as_char4(b.s4).x + res;
-    res = as_char2(sub_group_broadcast(a,  8)).y * as_char4(b.s4).y + res;
-    res = as_char2(sub_group_broadcast(a,  9)).x * as_char4(b.s4).z + res;
-    res = as_char2(sub_group_broadcast(a,  9)).y * as_char4(b.s4).w + res;
+    res = as_char2(intel_sub_group_broadcast(a,  8)).x * as_char4(b.s4).x + res;
+    res = as_char2(intel_sub_group_broadcast(a,  8)).y * as_char4(b.s4).y + res;
+    res = as_char2(intel_sub_group_broadcast(a,  9)).x * as_char4(b.s4).z + res;
+    res = as_char2(intel_sub_group_broadcast(a,  9)).y * as_char4(b.s4).w + res;
 
-    res = as_char2(sub_group_broadcast(a, 10)).x * as_char4(b.s5).x + res;
-    res = as_char2(sub_group_broadcast(a, 10)).y * as_char4(b.s5).y + res;
-    res = as_char2(sub_group_broadcast(a, 11)).x * as_char4(b.s5).z + res;
-    res = as_char2(sub_group_broadcast(a, 11)).y * as_char4(b.s5).w + res;
+    res = as_char2(intel_sub_group_broadcast(a, 10)).x * as_char4(b.s5).x + res;
+    res = as_char2(intel_sub_group_broadcast(a, 10)).y * as_char4(b.s5).y + res;
+    res = as_char2(intel_sub_group_broadcast(a, 11)).x * as_char4(b.s5).z + res;
+    res = as_char2(intel_sub_group_broadcast(a, 11)).y * as_char4(b.s5).w + res;
 
-    res = as_char2(sub_group_broadcast(a, 12)).x * as_char4(b.s6).x + res;
-    res = as_char2(sub_group_broadcast(a, 12)).y * as_char4(b.s6).y + res;
-    res = as_char2(sub_group_broadcast(a, 13)).x * as_char4(b.s6).z + res;
-    res = as_char2(sub_group_broadcast(a, 13)).y * as_char4(b.s6).w + res;
+    res = as_char2(intel_sub_group_broadcast(a, 12)).x * as_char4(b.s6).x + res;
+    res = as_char2(intel_sub_group_broadcast(a, 12)).y * as_char4(b.s6).y + res;
+    res = as_char2(intel_sub_group_broadcast(a, 13)).x * as_char4(b.s6).z + res;
+    res = as_char2(intel_sub_group_broadcast(a, 13)).y * as_char4(b.s6).w + res;
 
-    res = as_char2(sub_group_broadcast(a, 14)).x * as_char4(b.s7).x + res;
-    res = as_char2(sub_group_broadcast(a, 14)).y * as_char4(b.s7).y + res;
-    res = as_char2(sub_group_broadcast(a, 15)).x * as_char4(b.s7).z + res;
-    res = as_char2(sub_group_broadcast(a, 15)).y * as_char4(b.s7).w + res;
+    res = as_char2(intel_sub_group_broadcast(a, 14)).x * as_char4(b.s7).x + res;
+    res = as_char2(intel_sub_group_broadcast(a, 14)).y * as_char4(b.s7).y + res;
+    res = as_char2(intel_sub_group_broadcast(a, 15)).x * as_char4(b.s7).z + res;
+    res = as_char2(intel_sub_group_broadcast(a, 15)).y * as_char4(b.s7).w + res;
 
     return res;
 }
@@ -459,9 +459,9 @@ void prefetch_a_rowmajor_d16_m8v2_k16v2_sg16(global ushort* A, int rowStart, int
 #endif
 
 // K rows x N columns:
-// Each work-item loads K values and converts to VNNI.
+// Each work-item loads K values and packs into 32-bits.
 // Stride is in units of elements.
-int8 load_b_rowmajor_d8_k32_nx(global char* B, int rowStart, int colStart, int stride)
+int8 load_b_rowmajor_8b_32rNc(global char* B, int rowStart, int colStart, int stride)
 {
     int8 ret;
 

@@ -76,6 +76,12 @@ static size_t findMinSubGroupSize(cl::Device& device)
     return 0;
 }
 
+static bool supportsSubgroupSize(cl::Device& device, size_t subgroupSize)
+{
+    auto s = device.getInfo<CL_DEVICE_SUB_GROUP_SIZES_INTEL>();
+    return std::find(std::begin(s), std::end(s), subgroupSize) != std::end(s);
+}
+
 static void setRoundRobin(cl::Kernel& kernel)
 {
     constexpr cl_kernel_exec_info CL_KERNEL_EXEC_INFO_THREAD_ARBITRATION_POLICY_INTEL = 0x10025;
@@ -175,6 +181,23 @@ static float hw_time(cl::Event& event)
     return ns / 1e9f;
 }
 
+static cl::NDRange getRequiredLocalWorkSize(cl::Kernel& kernel, cl::CommandQueue queue)
+{
+    // Note: This shouldn't be necessary, and the OpenCL implementation should
+    // automatically choose the required local work-group size when the local
+    // work-group size is `nullptr`.  This is not working for some OpenCL
+    // implementations, though, so we will just query and use the required local
+    // work-group size explicitly.
+    auto device = queue.getInfo<CL_QUEUE_DEVICE>();
+    auto reqd_wgs = kernel.getWorkGroupInfo<CL_KERNEL_COMPILE_WORK_GROUP_SIZE>(device);
+
+    if (reqd_wgs[0] > 0 && reqd_wgs[1] > 0 && reqd_wgs[2] > 0) {
+        return cl::NDRange(reqd_wgs[0], reqd_wgs[1], reqd_wgs[2]);
+    }
+
+    return cl::NullRange;
+}
+
 static void bfloat16_naive(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
@@ -187,6 +210,8 @@ static void bfloat16_naive(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -201,7 +226,7 @@ static void bfloat16_naive(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -237,6 +262,8 @@ static void bfloat16_dpas_rowmajor(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -251,7 +278,7 @@ static void bfloat16_dpas_rowmajor(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M/tM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -293,6 +320,8 @@ static void bfloat16_dpas_rowmajor_tiled(
     } else if (tN * NN > N) {
         printf("N is too small.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -307,7 +336,7 @@ static void bfloat16_dpas_rowmajor_tiled(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N/NN, M/tM/MM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -343,6 +372,8 @@ static void bfloat16_dpas_vnni(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -357,7 +388,7 @@ static void bfloat16_dpas_vnni(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M/tM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -399,6 +430,8 @@ static void bfloat16_dpas_vnni_tiled(
     } else if (tN * NN > N) {
         printf("N is too small.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -413,7 +446,7 @@ static void bfloat16_dpas_vnni_tiled(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N/NN, M/tM/MM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -449,6 +482,8 @@ static void bfloat16_dpas_blockread_rowmajor(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -466,7 +501,7 @@ static void bfloat16_dpas_blockread_rowmajor(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M/tM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -508,6 +543,8 @@ static void bfloat16_dpas_blockread_rowmajor_tiled(
     } else if (tN * NN > N) {
         printf("N is too small.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -525,7 +562,7 @@ static void bfloat16_dpas_blockread_rowmajor_tiled(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N/NN, M/tM/MM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -561,6 +598,8 @@ static void bfloat16_dpas_blockread_vnni(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -578,7 +617,7 @@ static void bfloat16_dpas_blockread_vnni(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M/tM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -620,6 +659,8 @@ static void bfloat16_dpas_blockread_vnni_tiled(
     } else if (tN * NN > N) {
         printf("N is too small.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -637,7 +678,7 @@ static void bfloat16_dpas_blockread_vnni_tiled(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N/NN, M/tM/MM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -729,7 +770,7 @@ int main(int argc, char** argv)
 
     auto minSubGroupSize = findMinSubGroupSize(device);
 
-    bool has_simd8 = minSubGroupSize == 8;
+    bool has_sg8 = supportsSubgroupSize(device, 8);
     bool emulate_tN8 = true;
     bool emulate_tN16 = true;
     if (!emulate && checkDeviceForExtension(device, "cl_intel_subgroup_matrix_multiply_accumulate")) {
@@ -741,7 +782,7 @@ int main(int argc, char** argv)
         }
     }
 
-    buildOptions += " -DHAS_SIMD8=" + std::to_string(has_simd8);
+    buildOptions += " -DHAS_SG8=" + std::to_string(has_sg8);
     buildOptions += " -DEMULATE_tN8=" + std::to_string(emulate_tN8);
     buildOptions += " -DEMULATE_tN16=" + std::to_string(emulate_tN16);
 

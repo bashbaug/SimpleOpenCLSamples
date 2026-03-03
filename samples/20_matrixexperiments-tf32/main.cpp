@@ -179,6 +179,23 @@ static float hw_time(cl::Event& event)
     return ns / 1e9f;
 }
 
+static cl::NDRange getRequiredLocalWorkSize(cl::Kernel& kernel, cl::CommandQueue queue)
+{
+    // Note: This shouldn't be necessary, and the OpenCL implementation should
+    // automatically choose the required local work-group size when the local
+    // work-group size is `nullptr`.  This is not working for some OpenCL
+    // implementations, though, so we will just query and use the required local
+    // work-group size explicitly.
+    auto device = queue.getInfo<CL_QUEUE_DEVICE>();
+    auto reqd_wgs = kernel.getWorkGroupInfo<CL_KERNEL_COMPILE_WORK_GROUP_SIZE>(device);
+
+    if (reqd_wgs[0] > 0 && reqd_wgs[1] > 0 && reqd_wgs[2] > 0) {
+        return cl::NDRange(reqd_wgs[0], reqd_wgs[1], reqd_wgs[2]);
+    }
+
+    return cl::NullRange;
+}
+
 static void tf32_naive(
     cl::Context& context, cl::Program& program, cl::CommandQueue& queue,
     cl::Buffer& C, cl::Buffer& A, cl::Buffer& B,
@@ -191,6 +208,8 @@ static void tf32_naive(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -205,7 +224,7 @@ static void tf32_naive(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -241,6 +260,8 @@ static void tf32_dpas_rowmajor(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -255,7 +276,7 @@ static void tf32_dpas_rowmajor(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M/tM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -297,6 +318,8 @@ static void tf32_dpas_rowmajor_tiled(
     } else if (tN * NN > N) {
         printf("N is too small.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -311,7 +334,7 @@ static void tf32_dpas_rowmajor_tiled(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N/NN, M/tM/MM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -347,6 +370,8 @@ static void tf32_dpas_blockread_rowmajor(
     if (kernel() == nullptr) {
         printf("unsupported.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -364,7 +389,7 @@ static void tf32_dpas_blockread_rowmajor(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N, M/tM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N, M/tM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;
@@ -406,6 +431,8 @@ static void tf32_dpas_blockread_rowmajor_tiled(
     } else if (tN * NN > N) {
         printf("N is too small.\n");
     } else {
+        const cl::NDRange localWorkSize = getRequiredLocalWorkSize(kernel, queue);
+
         kernel.setArg(0, C);
         kernel.setArg(1, A);
         kernel.setArg(2, B);
@@ -423,7 +450,7 @@ static void tf32_dpas_blockread_rowmajor_tiled(
             cl::Event event;
             auto start = test_clock::now();
             queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-                cl::NDRange{N/NN, M/tM/MM}, cl::NullRange, nullptr, &event);
+                cl::NDRange{N/NN, M/tM/MM}, localWorkSize, nullptr, &event);
             queue.finish();
             auto end = test_clock::now();
             std::chrono::duration<float> sw_time = end - start;

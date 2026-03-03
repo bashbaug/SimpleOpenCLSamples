@@ -64,7 +64,7 @@ void HELPER_NAME(btile_load_packed, MM, NN)(global ushort* B, int tN, int N, int
     }
 }
 
-#if HAS_SIMD8
+#if HAS_SG8
 
 void HELPER_NAME(atile_prefetch_rowmajor_sg8, MM, NN)(global ushort* A, int tM, int K, int m, int prefetch_k)
 {
@@ -236,7 +236,7 @@ kernel void MM_KERNEL_NAME(bfloat16_dpas_vnni_tiled, 8, 8, MM, NN)(global float*
     }
 }
 
-#endif // HAS_SIMD8
+#endif // HAS_SG8
 
 void HELPER_NAME(atile_prefetch_rowmajor, MM, NN)(global ushort* A, int tM, int K, int m, int prefetch_k)
 {

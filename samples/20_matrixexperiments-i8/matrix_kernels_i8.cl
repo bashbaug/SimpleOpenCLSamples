@@ -38,7 +38,7 @@ kernel void i8_naive(global int* C, global char* A, global char* B, int K)
 
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_char) && defined(cl_intel_required_subgroup_size)
 
-#if HAS_SIMD8
+#if HAS_SG8
 
 // rowmajor kernels:
 
@@ -55,7 +55,7 @@ kernel void i8_dpas_rowmajor_m1_n8(global int* C, global char* A, global char* B
     int sum = 0;
     for (int k = 0; k < K; k += tK) {
         int     aData = load_a_rowmajor_d8_m1_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
@@ -76,7 +76,7 @@ kernel void i8_dpas_rowmajor_m2_n8(global int* C, global char* A, global char* B
     int2 sum = 0;
     for (int k = 0; k < K; k += tK) {
         int2    aData = load_a_rowmajor_d8_m2_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
@@ -97,7 +97,7 @@ kernel void i8_dpas_rowmajor_m4_n8(global int* C, global char* A, global char* B
     int4 sum = 0;
     for (int k = 0; k < K; k += tK) {
         int4    aData = load_a_rowmajor_d8_m4_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
@@ -118,7 +118,7 @@ kernel void i8_dpas_rowmajor_m8_n8(global int* C, global char* A, global char* B
     int8 sum = 0;
     for (int k = 0; k < K; k += tK) {
         int8    aData = load_a_rowmajor_d8_m8_k32_sg8(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg8(aData, bData, sum);
     }
 
@@ -212,9 +212,9 @@ kernel void i8_dpas_vnni_m8_n8(global int* C, global char* A, global char* B, in
     store_c_rowmajor_int32_m8_nx(C, sum, m, n, N);
 }
 
-#endif // HAS_SIMD8
+#endif // HAS_SG8
 
-// rowmajor krenels:
+// rowmajor kernels:
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void i8_dpas_rowmajor_m1_n16(global int* C, global char* A, global char* B, int K)
@@ -224,12 +224,12 @@ kernel void i8_dpas_rowmajor_m1_n16(global int* C, global char* A, global char* 
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     int sum = 0;
     for (int k = 0; k < K; k += tK) {
         short   aData = load_a_rowmajor_d8_m1_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -245,12 +245,12 @@ kernel void i8_dpas_rowmajor_m2_n16(global int* C, global char* A, global char* 
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     int2 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short2  aData = load_a_rowmajor_d8_m2_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -266,12 +266,12 @@ kernel void i8_dpas_rowmajor_m4_n16(global int* C, global char* A, global char* 
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     int4 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short4  aData = load_a_rowmajor_d8_m4_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 
@@ -287,12 +287,12 @@ kernel void i8_dpas_rowmajor_m8_n16(global int* C, global char* A, global char* 
     const int tN = 16;
     const int N = get_global_size(0);
     const int m = get_group_id(1) * tM;
-    const int n = get_group_id(0) * get_local_size(0);
+    const int n = get_group_id(0) * tN;
 
     int8 sum = 0;
     for (int k = 0; k < K; k += tK) {
         short8  aData = load_a_rowmajor_d8_m8_k32_sg16(A, m, k, K);
-        int8    bData = load_b_rowmajor_d8_k32_nx(B, k, n, N);
+        int8    bData = load_b_rowmajor_8b_32rNc(B, k, n, N);
         sum = mat_mul_sg16(aData, bData, sum);
     }
 

@@ -155,22 +155,22 @@ float  emu_sub_group_bf16_bf16_matrix_mad_k16(short  a, int8 b, float  acc)
 {
     float res = acc;
 
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  0)), bf16_to_fp32(as_ushort2(b.s0).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  1)), bf16_to_fp32(as_ushort2(b.s0).y), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  2)), bf16_to_fp32(as_ushort2(b.s1).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  3)), bf16_to_fp32(as_ushort2(b.s1).y), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  4)), bf16_to_fp32(as_ushort2(b.s2).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  5)), bf16_to_fp32(as_ushort2(b.s2).y), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  6)), bf16_to_fp32(as_ushort2(b.s3).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  7)), bf16_to_fp32(as_ushort2(b.s3).y), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  8)), bf16_to_fp32(as_ushort2(b.s4).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a,  9)), bf16_to_fp32(as_ushort2(b.s4).y), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a, 10)), bf16_to_fp32(as_ushort2(b.s5).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a, 11)), bf16_to_fp32(as_ushort2(b.s5).y), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a, 12)), bf16_to_fp32(as_ushort2(b.s6).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a, 13)), bf16_to_fp32(as_ushort2(b.s6).y), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a, 14)), bf16_to_fp32(as_ushort2(b.s7).x), res);
-    res = fma(bf16_to_fp32(sub_group_broadcast(a, 15)), bf16_to_fp32(as_ushort2(b.s7).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  0)), bf16_to_fp32(as_ushort2(b.s0).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  1)), bf16_to_fp32(as_ushort2(b.s0).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  2)), bf16_to_fp32(as_ushort2(b.s1).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  3)), bf16_to_fp32(as_ushort2(b.s1).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  4)), bf16_to_fp32(as_ushort2(b.s2).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  5)), bf16_to_fp32(as_ushort2(b.s2).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  6)), bf16_to_fp32(as_ushort2(b.s3).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  7)), bf16_to_fp32(as_ushort2(b.s3).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  8)), bf16_to_fp32(as_ushort2(b.s4).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a,  9)), bf16_to_fp32(as_ushort2(b.s4).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a, 10)), bf16_to_fp32(as_ushort2(b.s5).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a, 11)), bf16_to_fp32(as_ushort2(b.s5).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a, 12)), bf16_to_fp32(as_ushort2(b.s6).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a, 13)), bf16_to_fp32(as_ushort2(b.s6).y), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a, 14)), bf16_to_fp32(as_ushort2(b.s7).x), res);
+    res = fma(bf16_to_fp32(intel_sub_group_broadcast(a, 15)), bf16_to_fp32(as_ushort2(b.s7).y), res);
 
     return res;
 }

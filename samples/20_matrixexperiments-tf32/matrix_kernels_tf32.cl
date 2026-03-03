@@ -32,7 +32,7 @@ kernel void tf32_naive(global float* C, global float* A, global float* B, int K)
 
 #if defined(cl_intel_subgroups) && defined(cl_intel_required_subgroup_size)
 
-// rowmajor krenels:
+// rowmajor kernels:
 
 __attribute__((intel_reqd_sub_group_size(16))) __attribute__((reqd_work_group_size(16, 1, 1)))
 kernel void tf32_dpas_rowmajor_m1_n16(global float* C, global float* A, global float* B, int K)
