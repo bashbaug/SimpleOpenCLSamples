@@ -55,6 +55,23 @@ int8 activation(int8 i)
 #define __builtin_expect(x)
 #endif
 
+#if defined(__opencl_c_integer_dot_product_input_4x8bit_packed)
+#define dp4 dot_4x8packed_ss_int
+#else
+#define dp4 emu_dot_4x8packed_ss_int
+
+int emu_dot_4x8packed_ss_int(const uint a, const uint b)
+{
+    const char4 a_c4 = as_char4(a);
+    const char4 b_c4 = as_char4(b);
+
+    return a_c4.x * b_c4.x +
+           a_c4.y * b_c4.y +
+           a_c4.z * b_c4.z +
+           a_c4.w * b_c4.w;
+}
+#endif
+
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_subgroups_char)
 
 typedef global char* global_aligned_char_ptr __attribute__((align_value(4)));
@@ -79,47 +96,14 @@ int  emu_sub_group_i8_i8_matrix_mad_k32(int  a, int8 b, int  acc)
 {
     int res = acc;
 
-    // TODO: this could use integer dot products instead?
-
-    res = as_char4(sub_group_broadcast(a, 0)).x * as_char4(b.s0).x + res;
-    res = as_char4(sub_group_broadcast(a, 0)).y * as_char4(b.s0).y + res;
-    res = as_char4(sub_group_broadcast(a, 0)).z * as_char4(b.s0).z + res;
-    res = as_char4(sub_group_broadcast(a, 0)).w * as_char4(b.s0).w + res;
-
-    res = as_char4(sub_group_broadcast(a, 1)).x * as_char4(b.s1).x + res;
-    res = as_char4(sub_group_broadcast(a, 1)).y * as_char4(b.s1).y + res;
-    res = as_char4(sub_group_broadcast(a, 1)).z * as_char4(b.s1).z + res;
-    res = as_char4(sub_group_broadcast(a, 1)).w * as_char4(b.s1).w + res;
-
-    res = as_char4(sub_group_broadcast(a, 2)).x * as_char4(b.s2).x + res;
-    res = as_char4(sub_group_broadcast(a, 2)).y * as_char4(b.s2).y + res;
-    res = as_char4(sub_group_broadcast(a, 2)).z * as_char4(b.s2).z + res;
-    res = as_char4(sub_group_broadcast(a, 2)).w * as_char4(b.s2).w + res;
-
-    res = as_char4(sub_group_broadcast(a, 3)).x * as_char4(b.s3).x + res;
-    res = as_char4(sub_group_broadcast(a, 3)).y * as_char4(b.s3).y + res;
-    res = as_char4(sub_group_broadcast(a, 3)).z * as_char4(b.s3).z + res;
-    res = as_char4(sub_group_broadcast(a, 3)).w * as_char4(b.s3).w + res;
-
-    res = as_char4(sub_group_broadcast(a, 4)).x * as_char4(b.s4).x + res;
-    res = as_char4(sub_group_broadcast(a, 4)).y * as_char4(b.s4).y + res;
-    res = as_char4(sub_group_broadcast(a, 4)).z * as_char4(b.s4).z + res;
-    res = as_char4(sub_group_broadcast(a, 4)).w * as_char4(b.s4).w + res;
-
-    res = as_char4(sub_group_broadcast(a, 5)).x * as_char4(b.s5).x + res;
-    res = as_char4(sub_group_broadcast(a, 5)).y * as_char4(b.s5).y + res;
-    res = as_char4(sub_group_broadcast(a, 5)).z * as_char4(b.s5).z + res;
-    res = as_char4(sub_group_broadcast(a, 5)).w * as_char4(b.s5).w + res;
-
-    res = as_char4(sub_group_broadcast(a, 6)).x * as_char4(b.s6).x + res;
-    res = as_char4(sub_group_broadcast(a, 6)).y * as_char4(b.s6).y + res;
-    res = as_char4(sub_group_broadcast(a, 6)).z * as_char4(b.s6).z + res;
-    res = as_char4(sub_group_broadcast(a, 6)).w * as_char4(b.s6).w + res;
-
-    res = as_char4(sub_group_broadcast(a, 7)).x * as_char4(b.s7).x + res;
-    res = as_char4(sub_group_broadcast(a, 7)).y * as_char4(b.s7).y + res;
-    res = as_char4(sub_group_broadcast(a, 7)).z * as_char4(b.s7).z + res;
-    res = as_char4(sub_group_broadcast(a, 7)).w * as_char4(b.s7).w + res;
+    res = dp4(sub_group_broadcast(a, 0), b.s0) + res;
+    res = dp4(sub_group_broadcast(a, 1), b.s1) + res;
+    res = dp4(sub_group_broadcast(a, 2), b.s2) + res;
+    res = dp4(sub_group_broadcast(a, 3), b.s3) + res;
+    res = dp4(sub_group_broadcast(a, 4), b.s4) + res;
+    res = dp4(sub_group_broadcast(a, 5), b.s5) + res;
+    res = dp4(sub_group_broadcast(a, 6), b.s6) + res;
+    res = dp4(sub_group_broadcast(a, 7), b.s7) + res;
 
     return res;
 }
@@ -171,45 +155,14 @@ int  emu_sub_group_i8_i8_matrix_mad_k32(short  a, int8 b, int  acc)
 {
     float res = acc;
 
-    res = as_char2(intel_sub_group_broadcast(a,  0)).x * as_char4(b.s0).x + res;
-    res = as_char2(intel_sub_group_broadcast(a,  0)).y * as_char4(b.s0).y + res;
-    res = as_char2(intel_sub_group_broadcast(a,  1)).x * as_char4(b.s0).z + res;
-    res = as_char2(intel_sub_group_broadcast(a,  1)).y * as_char4(b.s0).w + res;
-
-    res = as_char2(intel_sub_group_broadcast(a,  2)).x * as_char4(b.s1).x + res;
-    res = as_char2(intel_sub_group_broadcast(a,  2)).y * as_char4(b.s1).y + res;
-    res = as_char2(intel_sub_group_broadcast(a,  3)).x * as_char4(b.s1).z + res;
-    res = as_char2(intel_sub_group_broadcast(a,  3)).y * as_char4(b.s1).w + res;
-
-    res = as_char2(intel_sub_group_broadcast(a,  4)).x * as_char4(b.s2).x + res;
-    res = as_char2(intel_sub_group_broadcast(a,  4)).y * as_char4(b.s2).y + res;
-    res = as_char2(intel_sub_group_broadcast(a,  5)).x * as_char4(b.s2).z + res;
-    res = as_char2(intel_sub_group_broadcast(a,  5)).y * as_char4(b.s2).w + res;
-
-    res = as_char2(intel_sub_group_broadcast(a,  6)).x * as_char4(b.s3).x + res;
-    res = as_char2(intel_sub_group_broadcast(a,  6)).y * as_char4(b.s3).y + res;
-    res = as_char2(intel_sub_group_broadcast(a,  7)).x * as_char4(b.s3).z + res;
-    res = as_char2(intel_sub_group_broadcast(a,  7)).y * as_char4(b.s3).w + res;
-
-    res = as_char2(intel_sub_group_broadcast(a,  8)).x * as_char4(b.s4).x + res;
-    res = as_char2(intel_sub_group_broadcast(a,  8)).y * as_char4(b.s4).y + res;
-    res = as_char2(intel_sub_group_broadcast(a,  9)).x * as_char4(b.s4).z + res;
-    res = as_char2(intel_sub_group_broadcast(a,  9)).y * as_char4(b.s4).w + res;
-
-    res = as_char2(intel_sub_group_broadcast(a, 10)).x * as_char4(b.s5).x + res;
-    res = as_char2(intel_sub_group_broadcast(a, 10)).y * as_char4(b.s5).y + res;
-    res = as_char2(intel_sub_group_broadcast(a, 11)).x * as_char4(b.s5).z + res;
-    res = as_char2(intel_sub_group_broadcast(a, 11)).y * as_char4(b.s5).w + res;
-
-    res = as_char2(intel_sub_group_broadcast(a, 12)).x * as_char4(b.s6).x + res;
-    res = as_char2(intel_sub_group_broadcast(a, 12)).y * as_char4(b.s6).y + res;
-    res = as_char2(intel_sub_group_broadcast(a, 13)).x * as_char4(b.s6).z + res;
-    res = as_char2(intel_sub_group_broadcast(a, 13)).y * as_char4(b.s6).w + res;
-
-    res = as_char2(intel_sub_group_broadcast(a, 14)).x * as_char4(b.s7).x + res;
-    res = as_char2(intel_sub_group_broadcast(a, 14)).y * as_char4(b.s7).y + res;
-    res = as_char2(intel_sub_group_broadcast(a, 15)).x * as_char4(b.s7).z + res;
-    res = as_char2(intel_sub_group_broadcast(a, 15)).y * as_char4(b.s7).w + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a,  0), sub_group_broadcast(a,  1))), b.s0) + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a,  2), sub_group_broadcast(a,  3))), b.s1) + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a,  4), sub_group_broadcast(a,  5))), b.s2) + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a,  6), sub_group_broadcast(a,  7))), b.s3) + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a,  8), sub_group_broadcast(a,  9))), b.s4) + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a, 10), sub_group_broadcast(a, 11))), b.s5) + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a, 12), sub_group_broadcast(a, 13))), b.s6) + res;
+    res = dp4(as_uint((short2)(sub_group_broadcast(a, 14), sub_group_broadcast(a, 15))), b.s7) + res;
 
     return res;
 }
