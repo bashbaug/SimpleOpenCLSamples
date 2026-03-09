@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2024 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -97,16 +97,17 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
     return CL_SUCCESS;
 }
 
-CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
+CL_API_ENTRY cl_int CL_API_CALL clInitLayerWithProperties(
     cl_uint num_entries,
     const struct _cl_icd_dispatch* target_dispatch,
     cl_uint* num_entries_out,
-    const struct _cl_icd_dispatch** layer_dispatch_ret)
+    const struct _cl_icd_dispatch** layer_dispatch_ret,
+    const cl_layer_properties* properties)
 {
     const size_t dispatchTableSize =
         sizeof(dispatch) / sizeof(dispatch.clGetPlatformIDs);
 
-    if (target_dispatch == nullptr || 
+    if (target_dispatch == nullptr ||
         num_entries_out == nullptr ||
         layer_dispatch_ret == nullptr) {
         return CL_INVALID_VALUE;
@@ -126,3 +127,16 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     return CL_SUCCESS;
 }
 
+CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
+    cl_uint num_entries,
+    const struct _cl_icd_dispatch* target_dispatch,
+    cl_uint* num_entries_out,
+    const struct _cl_icd_dispatch** layer_dispatch_ret)
+{
+    return clInitLayerWithProperties(
+        num_entries,
+        target_dispatch,
+        num_entries_out,
+        layer_dispatch_ret,
+        nullptr);
+}

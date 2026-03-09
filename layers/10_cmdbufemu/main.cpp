@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2024 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -33,6 +33,11 @@
 // use of user events that may not work properly with some implementations.
 
 bool g_EnhancedErrorChecking = false;
+
+// Using kernels for profiling can fix issues with some implementations
+// that do not properly support event profiling on barrkers.
+
+bool g_KernelForProfiling = false;
 
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
@@ -155,10 +160,8 @@ clGetExtensionFunctionAddressForPlatform_layer(
     CHECK_RETURN_EXTENSION_FUNCTION( clRemapCommandBufferKHR );
 #endif
 
-#if defined(cl_khr_command_buffer_mutable_dispatch)
     CHECK_RETURN_EXTENSION_FUNCTION( clUpdateMutableCommandsKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetMutableCommandInfoKHR );
-#endif // defined(cl_khr_command_buffer_mutable_dispatch)
 
     return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
         platform,
@@ -263,16 +266,17 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
     return CL_SUCCESS;
 }
 
-CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
+CL_API_ENTRY cl_int CL_API_CALL clInitLayerWithProperties(
     cl_uint num_entries,
     const struct _cl_icd_dispatch* target_dispatch,
     cl_uint* num_entries_out,
-    const struct _cl_icd_dispatch** layer_dispatch_ret)
+    const struct _cl_icd_dispatch** layer_dispatch_ret,
+    const cl_layer_properties* properties)
 {
     const size_t dispatchTableSize =
         sizeof(dispatch) / sizeof(dispatch.clGetPlatformIDs);
 
-    if (target_dispatch == nullptr || 
+    if (target_dispatch == nullptr ||
         num_entries_out == nullptr ||
         layer_dispatch_ret == nullptr) {
         return CL_INVALID_VALUE;
@@ -285,6 +289,7 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     _init_dispatch();
 
     getControl("CMDBUFEMU_EnhancedErrorChecking", g_EnhancedErrorChecking);
+    getControl("CMDBUFEMU_KernelForProfiling", g_KernelForProfiling);
 
     g_pNextDispatch = target_dispatch;
 
@@ -292,4 +297,18 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     *num_entries_out = dispatchTableSize;
 
     return CL_SUCCESS;
+}
+
+CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
+    cl_uint num_entries,
+    const struct _cl_icd_dispatch* target_dispatch,
+    cl_uint* num_entries_out,
+    const struct _cl_icd_dispatch** layer_dispatch_ret)
+{
+    return clInitLayerWithProperties(
+        num_entries,
+        target_dispatch,
+        num_entries_out,
+        layer_dispatch_ret,
+        nullptr);
 }

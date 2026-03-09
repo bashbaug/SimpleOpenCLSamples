@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2024 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -33,19 +33,17 @@ static void PrintCommandBufferCapabilities(
     if (caps & CL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR       ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR\n");
     if (caps & CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR\n");
     if (caps & CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR    ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR\n");
-    if (caps & CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR        ) printf("\t\tCL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR\n");
 
     cl_device_command_buffer_capabilities_khr extra = caps & ~(
         CL_COMMAND_BUFFER_CAPABILITY_KERNEL_PRINTF_KHR |
         CL_COMMAND_BUFFER_CAPABILITY_DEVICE_SIDE_ENQUEUE_KHR |
-        CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR |
-        CL_COMMAND_BUFFER_CAPABILITY_OUT_OF_ORDER_KHR );
+        CL_COMMAND_BUFFER_CAPABILITY_SIMULTANEOUS_USE_KHR );
     if (extra) {
         printf("\t\t(Unknown capability: %016" PRIx64 ")\n", extra);
     }
 }
 
-static void PrintCommandBufferRequiredQueueProperties(
+static void PrintCommandBufferQueueProperties(
     cl_command_queue_properties props )
 {
     if (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE  ) printf("\t\tCL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE\n");
@@ -99,6 +97,10 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
+
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 
@@ -137,7 +139,17 @@ int main(
         &requiredProps,
         NULL );
     printf("\tCommand Buffer Required Queue Properties:\n");
-    PrintCommandBufferRequiredQueueProperties(requiredProps);
+    PrintCommandBufferQueueProperties(requiredProps);
+
+    cl_command_queue_properties supportedProps = 0;
+    clGetDeviceInfo(
+        devices[deviceIndex](),
+        CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR,
+        sizeof(supportedProps),
+        &supportedProps,
+        NULL );
+    printf("\tCommand Buffer Supported Queue Properties:\n");
+    PrintCommandBufferQueueProperties(supportedProps);
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue{context, devices[deviceIndex]};
@@ -235,7 +247,6 @@ int main(
         printf("\t\tCL_COMMAND_BUFFER_STATE_KHR: %s\n",
             state == CL_COMMAND_BUFFER_STATE_RECORDING_KHR ? "RECORDING" :
             state == CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR ? "EXECUTABLE" :
-            state == CL_COMMAND_BUFFER_STATE_PENDING_KHR ? "PENDING" :
             "UNKNOWN!");
 
         size_t propsSize = 0;
