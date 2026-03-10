@@ -16,9 +16,7 @@ kernel void inc_buffer(global int* dst)
 }
 )CLC";
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv )
 {
     int platformIndex = 0;
     int deviceIndex = 0;
@@ -105,7 +103,7 @@ int main(
     auto start = std::chrono::system_clock::now();
 
     for (const auto& event : events) {
-        totalTimeNS =
+        totalTimeNS +=
             event.getProfilingInfo<CL_PROFILING_COMMAND_END>() -
             event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
     }
