@@ -88,8 +88,8 @@ static void PrintDeviceInfoSummary(
 
         if (checkDeviceForExtension(devices[i], "cl_intel_device_attribute_query")) {
             printf("\n\tFor: cl_intel_device_attribute_query:\n");
+            printf("\tDevice IP Version:               %08X\n", devices[i].getInfo<CL_DEVICE_IP_VERSION_INTEL>());
             if (deviceType & CL_DEVICE_TYPE_GPU) {
-                printf("\tDevice IP Version:               %08X\n", devices[i].getInfo<CL_DEVICE_IP_VERSION_INTEL>());
                 printf("\tDevice ID:                       %04X\n", devices[i].getInfo<CL_DEVICE_ID_INTEL>());
                 printf("\tDevice Num Slices:               %u\n", devices[i].getInfo<CL_DEVICE_NUM_SLICES_INTEL>());
                 printf("\tDevice Num Sub-slices Per Slice: %u\n", devices[i].getInfo<CL_DEVICE_NUM_SUB_SLICES_PER_SLICE_INTEL>());
@@ -97,6 +97,13 @@ static void PrintDeviceInfoSummary(
                 printf("\tDevice Num Threads Per EU:       %u\n", devices[i].getInfo<CL_DEVICE_NUM_THREADS_PER_EU_INTEL>());
                 printf("\tDevice Feature Capabilities:\n");
                 PrintDeviceFeatureCapabilities(devices[i].getInfo<CL_DEVICE_FEATURE_CAPABILITIES_INTEL>());
+            } else if (deviceType & CL_DEVICE_TYPE_CPU) {
+                printf("\tDevice ID:                       %08X (model/family/stepping)\n", devices[i].getInfo<CL_DEVICE_ID_INTEL>());
+                printf("\tDevice Num Slices:               %u (number of NUMA nodes)\n", devices[i].getInfo<CL_DEVICE_NUM_SLICES_INTEL>());
+                printf("\tDevice Num Sub-slices Per Slice: %u (unconditionally one)\n", devices[i].getInfo<CL_DEVICE_NUM_SUB_SLICES_PER_SLICE_INTEL>());
+                printf("\tDevice Num EUs Per Sub-Slice:    %u (number of physical cores)\n", devices[i].getInfo<CL_DEVICE_NUM_EUS_PER_SUB_SLICE_INTEL>());
+                printf("\tDevice Num Threads Per EU:       %u (maximum threads per core)\n", devices[i].getInfo<CL_DEVICE_NUM_THREADS_PER_EU_INTEL>());
+                printf("\tDevice Feature Capabilities:     %" PRIx64 "\n", devices[i].getInfo<CL_DEVICE_FEATURE_CAPABILITIES_INTEL>());
             } else {
                 printf("\tUnknown device type for this extension.\n");
             }
