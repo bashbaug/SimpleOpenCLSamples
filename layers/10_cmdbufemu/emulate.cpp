@@ -817,6 +817,7 @@ private:
 struct NDRangeKernel : Command
 {
     static std::unique_ptr<NDRangeKernel> create(
+        const bool isMutable,
         const cl_command_properties_khr* properties,
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
@@ -1234,6 +1235,11 @@ typedef struct _cl_command_buffer_khr
             cmdbuf->IsInOrder.reserve(num_queues);
             cmdbuf->TestQueues.reserve(num_queues);
             cmdbuf->BlockingEvents.reserve(num_queues);
+
+            if( cmdbuf->Queues.size() == 1 )
+            {
+                cmdbuf->setupSuggestedLocalWorkSize();
+            }
 
             for( auto queue : cmdbuf->Queues )
             {
@@ -1683,6 +1689,32 @@ typedef struct _cl_command_buffer_khr
         return CL_SUCCESS;
     }
 
+    cl_int  clGetKernelSuggestedLocalWorkSize(
+                cl_command_queue queue,
+                cl_kernel kernel,
+                cl_uint work_dim,
+                const size_t* global_work_offset,
+                const size_t* global_work_size,
+                size_t* suggested_local_work_size )
+    {
+        if( ptrGetKernelSuggestedLocalWorkSizeKHR == nullptr )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( queue != nullptr && queue != Queues[0] )
+        {
+            return CL_INVALID_COMMAND_QUEUE;
+        }
+
+        return ptrGetKernelSuggestedLocalWorkSizeKHR(
+            Queues[0],
+            kernel,
+            work_dim,
+            global_work_offset,
+            global_work_size,
+            suggested_local_work_size );
+    }
+
 private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
 
@@ -1702,6 +1734,32 @@ private:
 
     std::vector<std::unique_ptr<Command>> Commands;
     std::atomic<uint32_t> NextSyncPoint;
+
+    clGetKernelSuggestedLocalWorkSizeKHR_fn ptrGetKernelSuggestedLocalWorkSizeKHR = nullptr;
+
+    void setupSuggestedLocalWorkSize()
+    {
+        cl_device_id device = nullptr;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            Queues[0],
+            CL_QUEUE_DEVICE,
+            sizeof(device),
+            &device,
+            nullptr );
+
+        cl_platform_id platform = nullptr;
+        g_pNextDispatch->clGetDeviceInfo(
+            device,
+            CL_DEVICE_PLATFORM,
+            sizeof(platform),
+            &platform,
+            nullptr );
+
+        ptrGetKernelSuggestedLocalWorkSizeKHR = (clGetKernelSuggestedLocalWorkSizeKHR_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform,
+                "clGetKernelSuggestedLocalWorkSizeKHR" );
+    }
 
     void setupTestQueue(cl_command_queue src)
     {
@@ -1847,6 +1905,7 @@ _cl_mutable_command_khr::_cl_mutable_command_khr(
     Queue(queue ? queue : cmdbuf->getQueue()) {}
 
 std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
+    const bool isMutable,
     const cl_command_properties_khr* properties,
     cl_command_buffer_khr cmdbuf,
     cl_command_queue queue,
@@ -1963,6 +2022,21 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
             command->local_work_size.begin(),
             local_work_size,
             local_work_size + work_dim);
+    }
+    else if( g_SuggestedLocalWorkSize && isMutable == false )
+    {
+        command->local_work_size.resize(work_dim);
+        cl_int checkError = cmdbuf->clGetKernelSuggestedLocalWorkSize(
+            queue,
+            kernel,
+            work_dim,
+            global_work_offset,
+            global_work_size,
+            command->local_work_size.data() );
+        if( checkError != CL_SUCCESS )
+        {
+            command->local_work_size.clear();
+        }
     }
 
     g_pNextDispatch->clRetainKernel(command->original_kernel);
@@ -2838,8 +2912,11 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
         }
     }
 
+    const bool isMutable = mutable_handle != nullptr;
+
     cl_int errorCode = CL_SUCCESS;
     auto command = NDRangeKernel::create(
+        isMutable,
         properties,
         cmdbuf,
         command_queue,

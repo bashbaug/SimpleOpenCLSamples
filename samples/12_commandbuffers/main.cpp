@@ -264,17 +264,17 @@ int main(
     cl_sync_point_khr sync_point;
     clCommandNDRangeKernelKHR(
         cmdbuf,
-        NULL,
-        NULL,
+        NULL,   // command queue, can be NULL to use the command buffer queue
+        NULL,   // command properties
         kernel(),
-        1,
-        NULL,
-        &gwx,
-        NULL,
-        0,
-        NULL,
+        1,      // work dim
+        NULL,   // global work offset
+        &gwx,   // global work size
+        NULL,   // local work size
+        0,      // num sync points in wait list
+        NULL,   // sync point wait list
         &sync_point,
-        NULL);
+        NULL);  // mutable handle
     clFinalizeCommandBufferKHR(cmdbuf);
 
     clEnqueueCommandBufferKHR(
