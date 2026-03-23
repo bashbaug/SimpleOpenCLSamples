@@ -2023,7 +2023,7 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
             local_work_size,
             local_work_size + work_dim);
     }
-    else if( isMutable == false )
+    else if( g_SuggestedLocalWorkSize && isMutable == false )
     {
         command->local_work_size.resize(work_dim);
         cl_int checkError = cmdbuf->clGetKernelSuggestedLocalWorkSize(
