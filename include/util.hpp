@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2021-2025 Ben Ashbaugh
+// Copyright (c) 2021-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -66,4 +66,21 @@ static bool checkDeviceForExtension(
     }
 
     return supported;
+}
+
+static bool checkPlatformIndex(
+    const std::vector<cl::Platform>& platforms,
+    int platformIndex)
+{
+    if (platforms.size() == 0) {
+        fprintf(stderr, "Error: No OpenCL platforms found.\n");
+        return false;
+    }
+    if (platformIndex >= (int)platforms.size()) {
+        fprintf(stderr, "Error: Invalid platform index %d specified (max %d)\n",
+            platformIndex,
+            (int)(platforms.size() - 1) );
+        return false;
+    }
+    return true;
 }

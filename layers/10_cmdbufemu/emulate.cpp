@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -19,10 +19,11 @@
 
 #include "emulate.h"
 
+// Reminder: When updating these versions, update the README also!
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 7);
+    CL_MAKE_VERSION(0, 9, 8);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
-    CL_MAKE_VERSION(0, 9, 3);
+    CL_MAKE_VERSION(0, 9, 5);
 
 SLayerContext& getLayerContext(void)
 {
@@ -816,6 +817,7 @@ private:
 struct NDRangeKernel : Command
 {
     static std::unique_ptr<NDRangeKernel> create(
+        const bool isMutable,
         const cl_command_properties_khr* properties,
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
@@ -1119,7 +1121,7 @@ private:
         const size_t* global_work_size,
         const size_t* local_work_size )
     {
-        if( work_dim == 0 || 
+        if( work_dim == 0 ||
             global_work_size == nullptr ||
             local_work_size == nullptr )
         {
@@ -1233,6 +1235,11 @@ typedef struct _cl_command_buffer_khr
             cmdbuf->IsInOrder.reserve(num_queues);
             cmdbuf->TestQueues.reserve(num_queues);
             cmdbuf->BlockingEvents.reserve(num_queues);
+
+            if( cmdbuf->Queues.size() == 1 )
+            {
+                cmdbuf->setupSuggestedLocalWorkSize();
+            }
 
             for( auto queue : cmdbuf->Queues )
             {
@@ -1603,7 +1610,7 @@ typedef struct _cl_command_buffer_khr
         for( const auto& command : Commands )
         {
             errorCode = command->playback(queue, deps);
-            if( (errorCode == CL_SUCCESS) && 
+            if( (errorCode == CL_SUCCESS) &&
                 isRecordQueueInOrder && !isReplayQueueInOrder )
             {
                 errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
@@ -1682,6 +1689,32 @@ typedef struct _cl_command_buffer_khr
         return CL_SUCCESS;
     }
 
+    cl_int  clGetKernelSuggestedLocalWorkSize(
+                cl_command_queue queue,
+                cl_kernel kernel,
+                cl_uint work_dim,
+                const size_t* global_work_offset,
+                const size_t* global_work_size,
+                size_t* suggested_local_work_size )
+    {
+        if( ptrGetKernelSuggestedLocalWorkSizeKHR == nullptr )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( queue != nullptr && queue != Queues[0] )
+        {
+            return CL_INVALID_COMMAND_QUEUE;
+        }
+
+        return ptrGetKernelSuggestedLocalWorkSizeKHR(
+            Queues[0],
+            kernel,
+            work_dim,
+            global_work_offset,
+            global_work_size,
+            suggested_local_work_size );
+    }
+
 private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
 
@@ -1701,6 +1734,32 @@ private:
 
     std::vector<std::unique_ptr<Command>> Commands;
     std::atomic<uint32_t> NextSyncPoint;
+
+    clGetKernelSuggestedLocalWorkSizeKHR_fn ptrGetKernelSuggestedLocalWorkSizeKHR = nullptr;
+
+    void setupSuggestedLocalWorkSize()
+    {
+        cl_device_id device = nullptr;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            Queues[0],
+            CL_QUEUE_DEVICE,
+            sizeof(device),
+            &device,
+            nullptr );
+
+        cl_platform_id platform = nullptr;
+        g_pNextDispatch->clGetDeviceInfo(
+            device,
+            CL_DEVICE_PLATFORM,
+            sizeof(platform),
+            &platform,
+            nullptr );
+
+        ptrGetKernelSuggestedLocalWorkSizeKHR = (clGetKernelSuggestedLocalWorkSizeKHR_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform,
+                "clGetKernelSuggestedLocalWorkSizeKHR" );
+    }
 
     void setupTestQueue(cl_command_queue src)
     {
@@ -1846,6 +1905,7 @@ _cl_mutable_command_khr::_cl_mutable_command_khr(
     Queue(queue ? queue : cmdbuf->getQueue()) {}
 
 std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
+    const bool isMutable,
     const cl_command_properties_khr* properties,
     cl_command_buffer_khr cmdbuf,
     cl_command_queue queue,
@@ -1962,6 +2022,21 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
             command->local_work_size.begin(),
             local_work_size,
             local_work_size + work_dim);
+    }
+    else if( g_SuggestedLocalWorkSize && isMutable == false )
+    {
+        command->local_work_size.resize(work_dim);
+        cl_int checkError = cmdbuf->clGetKernelSuggestedLocalWorkSize(
+            queue,
+            kernel,
+            work_dim,
+            global_work_offset,
+            global_work_size,
+            command->local_work_size.data() );
+        if( checkError != CL_SUCCESS )
+        {
+            command->local_work_size.clear();
+        }
     }
 
     g_pNextDispatch->clRetainKernel(command->original_kernel);
@@ -2113,6 +2188,13 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
         }
     }
 
+    // If the error code is CL_INVALID_KERNEL_ARGS, then there are probably
+    // deferred kernel arguments and the command buffer is not yet in the
+    // executable state, therefore we should return CL_INVALID_OPERATION.
+    if( errorCode == CL_INVALID_KERNEL_ARGS )
+    {
+        errorCode = CL_INVALID_OPERATION;
+    }
     return errorCode;
 }
 
@@ -2821,12 +2903,20 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
                 nullptr,
                 nullptr ) )
         {
-            return errorCode;
+            // Ignore CL_INVALID_KERNEL_ARGS errors if this is a mutable
+            // command in order to handle deferred kernel arguments.
+            if( !( errorCode == CL_INVALID_KERNEL_ARGS && mutable_handle ) )
+            {
+                return errorCode;
+            }
         }
     }
 
+    const bool isMutable = mutable_handle != nullptr;
+
     cl_int errorCode = CL_SUCCESS;
     auto command = NDRangeKernel::create(
+        isMutable,
         properties,
         cmdbuf,
         command_queue,

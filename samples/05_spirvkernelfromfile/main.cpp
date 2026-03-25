@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2025 Ben Ashbaugh
+// Copyright (c) 2019-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -134,6 +134,10 @@ int main(
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
+
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
 
@@ -204,7 +208,13 @@ int main(
             0,
             gwx * sizeof( cl_uint ) );
 
-        printf("First few values: [0] = %u, [1] = %u, [2] = %u\n", ptr[0], ptr[1], ptr[2]);
+        printf("First few values:\n"
+            " [0] = 0x%08X (as hex) = %u (as int) = %.2f (as float)\n"
+            " [1] = 0x%08X (as hex) = %u (as int) = %.2f (as float)\n"
+            " [2] = 0x%08X (as hex) = %u (as int) = %.2f (as float)\n",
+            ptr[0], ptr[0], *((float*)&ptr[0]),
+            ptr[1], ptr[1], *((float*)&ptr[1]),
+            ptr[2], ptr[2], *((float*)&ptr[2]));
 
         commandQueue.enqueueUnmapMemObject(
             deviceMemDst,
