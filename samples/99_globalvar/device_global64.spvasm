@@ -1,0 +1,27 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos LLVM/SPIR-V Translator; 14
+; Bound: 21
+; Schema: 0
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability Linkage
+               OpCapability GlobalVariableHostAccessINTEL
+               OpExtension "SPV_INTEL_global_variable_host_access"
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %kernel "Test" %dev_global
+               OpDecorate %dev_global HostAccessINTEL WriteINTEL "HostAccessName"
+               OpDecorate %dev_global LinkageAttributes "ExportName" Export
+       %uint = OpTypeInt 32 0
+  %gptr_uint = OpTypePointer CrossWorkgroup %uint
+       %void = OpTypeVoid
+ %kernel_sig = OpTypeFunction %void %gptr_uint
+     %uint_0 = OpConstantNull %uint
+    %uint_42 = OpConstant %uint 42
+ %dev_global = OpVariable %gptr_uint CrossWorkgroup %uint_0
+     %kernel = OpFunction %void None %kernel_sig
+        %arg = OpFunctionParameter %gptr_uint
+      %entry = OpLabel
+               OpStore %dev_global %uint_42 Aligned 4
+               OpReturn
+               OpFunctionEnd

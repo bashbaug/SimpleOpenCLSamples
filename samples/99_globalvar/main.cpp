@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2025 Ben Ashbaugh
+// Copyright (c) 2025-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -102,7 +102,7 @@ int main(
     int platformIndex = 0;
     int deviceIndex = 0;
 
-    std::string fileName(sizeof(void*) == 8  ? "sample_kernel64.spv" : "sample_kernel32.spv");
+    std::string fileName(sizeof(void*) == 8  ? "device_global64.spv" : "device_global32.spv");
     std::string buildOptions;
 
     {
@@ -216,13 +216,13 @@ int main(
         cl_int errorCode = CL_SUCCESS;
         size_t gvsize = 0; void* gvptr = nullptr;
         errorCode = clGetDeviceGlobalVariablePointerINTEL(
-            device(), program(), "uid67f037ed289236e5____ZL2dg", &gvsize, &gvptr);
-        printf("clGetDeviceGlobalVariablePointerINTEL with uid67f037ed289236e5____ZL2dg returned %d: %zu %p\n", errorCode, gvsize, gvptr);
+            device(), program(), "HostAccessName", &gvsize, &gvptr);
+        printf("clGetDeviceGlobalVariablePointerINTEL with HostAccessName returned %d: %zu %p\n", errorCode, gvsize, gvptr);
 
         gvsize = 0; gvptr = nullptr;
         errorCode = clGetDeviceGlobalVariablePointerINTEL(
-            device(), program(), "_ZL2dg", &gvsize, &gvptr);
-        printf("clGetDeviceGlobalVariablePointerINTEL with _ZL2dg returned %d: %zu %p\n", errorCode, gvsize, gvptr);
+            device(), program(), "ExportName", &gvsize, &gvptr);
+        printf("clGetDeviceGlobalVariablePointerINTEL with ExportName returned %d: %zu %p\n", errorCode, gvsize, gvptr);
 
         cl_unified_shared_memory_type_intel gvtype = 0;
         errorCode = clGetMemAllocInfoINTEL(
