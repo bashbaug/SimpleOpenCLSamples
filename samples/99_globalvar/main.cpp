@@ -13,11 +13,11 @@
 
 #include "util.hpp"
 
-static std::vector<cl_uchar> readSPIRVFromFile(
+static std::vector<char> readSPIRVFromFile(
     const std::string& filename )
 {
     std::ifstream is(filename, std::ios::binary);
-    std::vector<cl_uchar> ret;
+    std::vector<char> ret;
     if (!is.good()) {
         printf("Couldn't open file '%s'!\n", filename.c_str());
         return ret;
@@ -37,67 +37,7 @@ static std::vector<cl_uchar> readSPIRVFromFile(
     return ret;
 }
 
-static cl::Program createProgramWithIL(
-    const cl::Context& context,
-    const std::vector<cl_uchar>& il )
-{
-    cl_program program = nullptr;
-
-    // Use the core clCreateProgramWithIL if a device supports OpenCL 2.1 or
-    // newer and SPIR-V.
-    bool useCore = false;
-
-    // Use the extension clCreateProgramWithILKHR if a device supports
-    // cl_khr_il_program.
-    bool useExtension = false;
-
-    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-    for (auto device : devices) {
-#ifdef CL_VERSION_2_1
-        // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
-        if (getDeviceOpenCLVersion(device) >= CL_MAKE_VERSION(2, 1, 0) &&
-            !device.getInfo<CL_DEVICE_IL_VERSION>().empty()) {
-            useCore = true;
-        }
-#endif
-        if (checkDeviceForExtension(device, "cl_khr_il_program")) {
-            useExtension = true;
-        }
-    }
-
-#ifdef CL_VERSION_2_1
-    if (useCore) {
-        program = clCreateProgramWithIL(
-            context(),
-            il.data(),
-            il.size(),
-            nullptr);
-    }
-    else
-#endif
-    if (useExtension) {
-        cl::Platform platform{ devices[0].getInfo<CL_DEVICE_PLATFORM>() };
-
-        auto clCreateProgramWithILKHR_ = (clCreateProgramWithILKHR_fn)
-            clGetExtensionFunctionAddressForPlatform(
-                platform(),
-                "clCreateProgramWithILKHR");
-
-        if (clCreateProgramWithILKHR_) {
-            program = clCreateProgramWithILKHR_(
-                context(),
-                il.data(),
-                il.size(),
-                nullptr);
-        }
-    }
-
-    return cl::Program{ program };
-}
-
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv )
 {
     int platformIndex = 0;
     int deviceIndex = 0;
@@ -131,45 +71,25 @@ int main(
     cl::Platform::get(&platforms);
     cl::Platform& platform = platforms[platformIndex];
 
-    printf("Running on platform: %s\n",
-        platform.getInfo<CL_PLATFORM_NAME>().c_str() );
+    printf("Running on platform: %s\n", platform.getInfo<CL_PLATFORM_NAME>().c_str() );
 
     std::vector<cl::Device> devices;
     platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
     cl::Device& device = devices[deviceIndex];
 
-    printf("Running on device: %s\n",
-        device.getInfo<CL_DEVICE_NAME>().c_str() );
-    printf("CL_DEVICE_ADDRESS_BITS is %d for this device.\n",
-        device.getInfo<CL_DEVICE_ADDRESS_BITS>() );
-
-    // Check for SPIR-V support.  If the device supports OpenCL 2.1 or newer
-    // we can use the core clCreateProgramWithIL API.  Otherwise, if the device
-    // the cl_khr_il_program extension we can use the clCreateProgramWithILKHR
-    // extension API.  If neither is supported then we cannot run this sample.
-#ifdef CL_VERSION_2_1
-    // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
-    if (getDeviceOpenCLVersion(device) >= CL_MAKE_VERSION(2, 1, 0) &&
-        !device.getInfo<CL_DEVICE_IL_VERSION>().empty()) {
-        printf("Device supports OpenCL 2.1 or newer, using clCreateProgramWithIL.\n");
-    } else
-#endif
-    if (checkDeviceForExtension(device, "cl_khr_il_program")) {
-        printf("Device supports cl_khr_il_program, using clCreateProgramWithILKHR.\n");
-    } else {
-        printf("Device does not support SPIR-V, exiting.\n");
-        return -1;
-    }
+    printf("Running on device: %s\n", device.getInfo<CL_DEVICE_NAME>().c_str() );
+    printf("Running on drivers: %s\n", device.getInfo<CL_DRIVER_VERSION>().c_str() );
+    printf("CL_DEVICE_ADDRESS_BITS is %d for this device.\n", device.getInfo<CL_DEVICE_ADDRESS_BITS>() );
 
     cl::Context context{device};
     cl::CommandQueue commandQueue{context, device};
 
     printf("Reading SPIR-V from file: %s\n", fileName.c_str());
-    std::vector<cl_uchar> spirv = readSPIRVFromFile(fileName);
+    std::vector<char> spirv = readSPIRVFromFile(fileName);
 
     printf("Building program with build options: %s\n",
         buildOptions.empty() ? "(none)" : buildOptions.c_str() );
-    cl::Program program = createProgramWithIL( context, spirv );
+    cl::Program program{context, spirv};
     program.build(buildOptions.c_str());
     for( auto& device : program.getInfo<CL_PROGRAM_DEVICES>() )
     {
@@ -208,6 +128,9 @@ int main(
     auto clGetMemAllocInfoINTEL = (clGetMemAllocInfoINTEL_fn)
         clGetExtensionFunctionAddressForPlatform(platform(), "clGetMemAllocInfoINTEL");
 
+    constexpr const char* HostAccessName = "HostAccessName";
+    constexpr const char* ExportName = "ExportName";
+
     if (clGetDeviceGlobalVariablePointerINTEL == nullptr) {
         printf("Couldn't get function pointer for clGetDeviceGlobalVariablePointerINTEL!\n");
     } else if (clGetMemAllocInfoINTEL == nullptr) {
@@ -216,13 +139,13 @@ int main(
         cl_int errorCode = CL_SUCCESS;
         size_t gvsize = 0; void* gvptr = nullptr;
         errorCode = clGetDeviceGlobalVariablePointerINTEL(
-            device(), program(), "HostAccessName", &gvsize, &gvptr);
-        printf("clGetDeviceGlobalVariablePointerINTEL with HostAccessName returned %d: %zu %p\n", errorCode, gvsize, gvptr);
+            device(), program(), HostAccessName, &gvsize, &gvptr);
+        printf("clGetDeviceGlobalVariablePointerINTEL with %s returned %d: %p (size %zu)\n", HostAccessName, errorCode, gvptr, gvsize);
 
         gvsize = 0; gvptr = nullptr;
         errorCode = clGetDeviceGlobalVariablePointerINTEL(
-            device(), program(), "ExportName", &gvsize, &gvptr);
-        printf("clGetDeviceGlobalVariablePointerINTEL with ExportName returned %d: %zu %p\n", errorCode, gvsize, gvptr);
+            device(), program(), ExportName, &gvsize, &gvptr);
+        printf("clGetDeviceGlobalVariablePointerINTEL with %s returned %d: %p (size %zu)\n", ExportName, errorCode, gvptr, gvsize);
 
         cl_unified_shared_memory_type_intel gvtype = 0;
         errorCode = clGetMemAllocInfoINTEL(
@@ -231,7 +154,96 @@ int main(
         printf("clGetMemAllocInfoINTEL returned %d: %04X\n", errorCode, gvtype);
     }
 
-    printf("Done.\n");
+    typedef cl_int CL_API_CALL
+    clEnqueueWriteGlobalVariableINTEL_t(
+        cl_command_queue command_queue,
+        cl_program program,
+        const char* name,
+        cl_bool blocking_write,
+        size_t size,
+        size_t offset,
+        const void* ptr,
+        cl_uint num_events_in_wait_list,
+        const cl_event* event_wait_list,
+        cl_event* event);
 
+    typedef clEnqueueWriteGlobalVariableINTEL_t *
+    clEnqueueWriteGlobalVariableINTEL_fn;
+
+    auto clEnqueueWriteGlobalVariableINTEL = (clEnqueueWriteGlobalVariableINTEL_fn)
+        clGetExtensionFunctionAddressForPlatform(platform(), "clEnqueueWriteGlobalVariableINTEL");
+
+    if (clEnqueueWriteGlobalVariableINTEL == nullptr) {
+        printf("Couldn't get function pointer for clEnqueueWriteGlobalVariableINTEL!\n");
+    } else {
+        const int value = 0xDEADBEEF;
+        cl_int errorCode;
+
+        errorCode = clEnqueueWriteGlobalVariableINTEL(
+            commandQueue(),
+            program(),
+            HostAccessName,
+            CL_TRUE,
+            sizeof(value), 0, &value,
+            0, nullptr, nullptr);
+        printf("clEnqueueWriteGlobalVariableINTEL with %s to write %08X returned %d\n", HostAccessName, value, errorCode);
+
+        errorCode = clEnqueueWriteGlobalVariableINTEL(
+            commandQueue(),
+            program(),
+            ExportName,
+            CL_TRUE,
+            sizeof(value), 0, &value,
+            0, nullptr, nullptr);
+        printf("clEnqueueWriteGlobalVariableINTEL with %s to write %08X returned %d\n", ExportName, value, errorCode);
+    }
+
+    typedef cl_int CL_API_CALL
+    clEnqueueReadGlobalVariableINTEL_t(
+        cl_command_queue command_queue,
+        cl_program program,
+        const char* name,
+        cl_bool blocking_read,
+        size_t size,
+        size_t offset,
+        void* ptr,
+        cl_uint num_events_in_wait_list,
+        const cl_event* event_wait_list,
+        cl_event* event);
+
+    typedef clEnqueueReadGlobalVariableINTEL_t *
+    clEnqueueReadGlobalVariableINTEL_fn;
+
+    auto clEnqueueReadGlobalVariableINTEL = (clEnqueueReadGlobalVariableINTEL_fn)
+        clGetExtensionFunctionAddressForPlatform(platform(), "clEnqueueReadGlobalVariableINTEL");
+
+    if (clEnqueueReadGlobalVariableINTEL == nullptr) {
+        printf("Couldn't get function pointer for clEnqueueReadGlobalVariableINTEL!\n");
+    } else {
+        int value;
+        cl_int errorCode;
+
+        value = -1;
+        errorCode = clEnqueueReadGlobalVariableINTEL(
+            commandQueue(),
+            program(),
+            HostAccessName,
+            CL_TRUE,
+            sizeof(value), 0, &value,
+            0, nullptr, nullptr);
+        printf("clEnqueueReadGlobalVariableINTEL with %s returned %d, read %08X\n", HostAccessName, errorCode, value);
+
+        value = -1;
+        errorCode = clEnqueueReadGlobalVariableINTEL(
+            commandQueue(),
+            program(),
+            ExportName,
+            CL_TRUE,
+            sizeof(value), 0, &value,
+            0, nullptr, nullptr);
+        printf("clEnqueueReadGlobalVariableINTEL with %s returned %d, read %08X\n", ExportName, errorCode, value);
+    }
+
+    printf("Done.\n");
     return 0;
 }
