@@ -173,6 +173,11 @@
  *   Enable exceptions for use in the C++ bindings header. This is the
  *   preferred error handling mechanism but is not required.
  *
+ * - CL_HPP_CUSTOM_EXCEPTION_TYPE
+ *
+ *   Specify the type which should be used for exceptions. This type
+ *   must have a constructor accepting an int and a const char*.
+ *
  * - CL_HPP_ENABLE_SIZE_T_COMPATIBILITY
  *
  *   Backward compatibility option to support cl.hpp-style size_t
@@ -740,6 +745,7 @@ namespace cl {
 #endif // cl_khr_command_buffer
 
 #if defined(CL_HPP_ENABLE_EXCEPTIONS)
+#if !defined(CL_HPP_CUSTOM_EXCEPTION_TYPE)
     /*! \brief Exception class 
      * 
      *  This may be thrown by API functions when CL_HPP_ENABLE_EXCEPTIONS is defined.
@@ -782,6 +788,9 @@ namespace cl {
          */
         cl_int err(void) const { return err_; }
     };
+#else
+  using Error = CL_HPP_CUSTOM_EXCEPTION_TYPE;
+#endif
 #define CL_HPP_ERR_STR_(x) #x
 #else
 #define CL_HPP_ERR_STR_(x) nullptr
@@ -1501,6 +1510,9 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR,      cl::vector<cl_external_semaphore_handle_type_khr>) \
     F(cl_semaphore_info_khr, CL_SEMAPHORE_EXPORT_HANDLE_TYPES_KHR,      cl::vector<cl_external_semaphore_handle_type_khr>) \
 
+#define CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_DX_FENCE_EXT(F) \
+    F(cl_external_semaphore_handle_type_khr, CL_SEMAPHORE_HANDLE_D3D12_FENCE_KHR, void*) \
+
 #define CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_OPAQUE_FD_EXT(F) \
     F(cl_external_semaphore_handle_type_khr, CL_SEMAPHORE_HANDLE_OPAQUE_FD_KHR, int) \
 
@@ -1649,6 +1661,19 @@ CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_MEMORY_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #if defined(cl_khr_external_semaphore)
 CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_(CL_HPP_DECLARE_PARAM_TRAITS_)
 #endif // cl_khr_external_semaphore
+
+#if defined(cl_khr_external_semaphore_dx_fence)
+CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_DX_FENCE_EXT(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif // cl_khr_external_semaphore_dx_fence
+#if defined(cl_khr_external_semaphore_opaque_fd)
+CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_OPAQUE_FD_EXT(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif // cl_khr_external_semaphore_opaque_fd
+#if defined(cl_khr_external_semaphore_sync_fd)
+CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_SYNC_FD_EXT(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif // cl_khr_external_semaphore_sync_fd
+#if defined(cl_khr_external_semaphore_win32)
+CL_HPP_PARAM_NAME_CL_KHR_EXTERNAL_SEMAPHORE_WIN32_EXT(CL_HPP_DECLARE_PARAM_TRAITS_)
+#endif // cl_khr_external_semaphore_win32
 
 #if defined(cl_khr_device_uuid)
 using uuid_array = array<cl_uchar, CL_UUID_SIZE_KHR>;
@@ -2014,6 +2039,17 @@ struct ReferenceHandler<cl_event>
     { return CL_(clReleaseEvent)(event); }
 };
 
+#ifdef cl_khr_semaphore
+template <>
+struct ReferenceHandler<cl_semaphore_khr>
+{
+    static cl_int retain(cl_semaphore_khr semaphore)
+    { return CL_(clRetainSemaphoreKHR)(semaphore); }
+
+    static cl_int release(cl_semaphore_khr semaphore)
+    { return CL_(clReleaseSemaphoreKHR)(semaphore); }
+};
+#endif // cl_khr_semaphore
 #if defined(cl_khr_command_buffer)
 template <>
 struct ReferenceHandler<cl_command_buffer_khr>
@@ -2022,6 +2058,17 @@ struct ReferenceHandler<cl_command_buffer_khr>
     { return CL_(clRetainCommandBufferKHR)(cmdbuf); }
     static cl_int release(cl_command_buffer_khr cmdbuf)
     { return CL_(clReleaseCommandBufferKHR)(cmdbuf); }
+};
+
+template <>
+struct ReferenceHandler<cl_mutable_command_khr>
+{
+    // cl_mutable_command_khr does not have retain().
+    static cl_int retain(cl_mutable_command_khr)
+    { return CL_SUCCESS; }
+    // cl_mutable_command_khr does not have release().
+    static cl_int release(cl_mutable_command_khr)
+    { return CL_SUCCESS; }
 };
 #endif // cl_khr_command_buffer
 
@@ -10993,57 +11040,21 @@ namespace compatibility {
 
 
 #if defined(cl_khr_command_buffer)
-
 /*! \class CommandBuffer
  * \brief CommandBuffer interface for cl_command_buffer_khr.
  */
 class CommandBuffer : public detail::Wrapper<cl_command_buffer_khr>
 {
 public:
-    CommandBuffer() {}
+    //! \brief Default constructor - initializes to nullptr.
+    CommandBuffer() : detail::Wrapper<cl_type>() { }
 
-    /*! \brief Constructor from cl_command_queue - takes ownership.
-     *
-     * \param retainObject will cause the constructor to retain its cl object.
-     *                     Defaults to false to maintain compatibility with
-     *                     earlier versions.
-     */
     explicit CommandBuffer(cl_command_buffer_khr cmdbuf, bool retainObject = false) :
         detail::Wrapper<cl_type>(cmdbuf, retainObject) { }
-
-    // TODO: other overloads!
 
     CommandBuffer& operator = (const cl_command_buffer_khr& rhs)
     {
         detail::Wrapper<cl_type>::operator=(rhs);
-        return *this;
-    }
-
-    /*! \brief Copy constructor to forward copy to the superclass correctly.
-     * Required for MSVC.
-     */
-    CommandBuffer(const CommandBuffer& cmdbuf) : detail::Wrapper<cl_type>(cmdbuf) {}
-
-    /*! \brief Copy assignment to forward copy to the superclass correctly.
-     * Required for MSVC.
-     */
-    CommandBuffer& operator = (const CommandBuffer& cmdbuf)
-    {
-        detail::Wrapper<cl_type>::operator=(cmdbuf);
-        return *this;
-    }
-
-    /*! \brief Move constructor to forward move to the superclass correctly.
-     * Required for MSVC.
-     */
-    CommandBuffer(CommandBuffer&& cmdbuf) noexcept : detail::Wrapper<cl_type>(std::move(cmdbuf)) {}
-
-    /*! \brief Move assignment to forward move to the superclass correctly.
-     * Required for MSVC.
-     */
-    CommandBuffer& operator = (CommandBuffer &&cmdbuf)
-    {
-        detail::Wrapper<cl_type>::operator=(std::move(cmdbuf));
         return *this;
     }
 
@@ -11057,8 +11068,8 @@ public:
     }
 
     template <cl_command_buffer_info_khr name> typename
-    detail::param_traits<detail::cl_command_buffer_info_khr, name>::param_type
-    getInfo(cl_int* err = nullptr) const
+        detail::param_traits<detail::cl_command_buffer_info_khr, name>::param_type
+        getInfo(cl_int* err = nullptr) const
     {
         typename detail::param_traits<
             detail::cl_command_buffer_info_khr, name>::param_type param{};
@@ -11069,7 +11080,7 @@ public:
         return param;
     }
 
-    cl_int finalize(void)
+    cl_int finalize() const
     {
         return detail::errHandler(
             CL_(clFinalizeCommandBufferKHR)(object_),

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -19,10 +19,11 @@
 
 #include "emulate.h"
 
+// Reminder: When updating these versions, update the README also!
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 7);
+    CL_MAKE_VERSION(0, 9, 8);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
-    CL_MAKE_VERSION(0, 9, 3);
+    CL_MAKE_VERSION(0, 9, 5);
 
 SLayerContext& getLayerContext(void)
 {
@@ -38,6 +39,26 @@ const cl_mutable_dispatch_fields_khr g_MutableDispatchCaps =
     CL_MUTABLE_DISPATCH_LOCAL_SIZE_KHR |
     CL_MUTABLE_DISPATCH_ARGUMENTS_KHR |
     CL_MUTABLE_DISPATCH_EXEC_INFO_KHR;
+
+static cl_int enqueueProfilingKernel(
+    cl_command_queue queue,
+    cl_kernel kernel,
+    cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list,
+    cl_event* event )
+{
+    const size_t one = 1;
+    return g_pNextDispatch->clEnqueueNDRangeKernel(
+        queue,
+        kernel,
+        1,
+        nullptr,
+        &one,
+        nullptr,
+        num_events_in_wait_list,
+        event_wait_list,
+        event );
+}
 
 typedef struct _cl_mutable_command_khr
 {
@@ -215,7 +236,7 @@ struct BarrierWithWaitList : Command
         return g_pNextDispatch->clEnqueueBarrierWithWaitList(
             queue,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -271,7 +292,7 @@ struct CopyBuffer : Command
             dst_offset,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -345,7 +366,7 @@ struct CopyBufferRect : Command
             dst_row_pitch,
             dst_slice_pitch,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -411,7 +432,7 @@ struct CopyBufferToImage : Command
             dst_origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -473,7 +494,7 @@ struct CopyImage : Command
             dst_origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -535,7 +556,7 @@ struct CopyImageToBuffer : Command
             region.data(),
             dst_offset,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -601,7 +622,7 @@ struct FillBuffer : Command
             offset,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -678,7 +699,7 @@ struct FillImage : Command
             origin.data(),
             region.data(),
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -725,7 +746,7 @@ struct SVMMemcpy : Command
             src_ptr,
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -779,7 +800,7 @@ struct SVMMemFill : Command
             pattern.size(),
             size,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -796,6 +817,7 @@ private:
 struct NDRangeKernel : Command
 {
     static std::unique_ptr<NDRangeKernel> create(
+        const bool isMutable,
         const cl_command_properties_khr* properties,
         cl_command_buffer_khr cmdbuf,
         cl_command_queue queue,
@@ -1073,7 +1095,7 @@ struct NDRangeKernel : Command
             global_work_size.data(),
             local_work_size.size() ? local_work_size.data() : nullptr,
             static_cast<cl_uint>(wait_list.size()),
-            wait_list.data(),
+            wait_list.size() ? wait_list.data() : nullptr,
             signal);
     }
 
@@ -1099,7 +1121,7 @@ private:
         const size_t* global_work_size,
         const size_t* local_work_size )
     {
-        if( work_dim == 0 || 
+        if( work_dim == 0 ||
             global_work_size == nullptr ||
             local_work_size == nullptr )
         {
@@ -1214,6 +1236,11 @@ typedef struct _cl_command_buffer_khr
             cmdbuf->TestQueues.reserve(num_queues);
             cmdbuf->BlockingEvents.reserve(num_queues);
 
+            if( cmdbuf->Queues.size() == 1 )
+            {
+                cmdbuf->setupSuggestedLocalWorkSize();
+            }
+
             for( auto queue : cmdbuf->Queues )
             {
                 g_pNextDispatch->clRetainCommandQueue(queue);
@@ -1229,6 +1256,7 @@ typedef struct _cl_command_buffer_khr
                     (props & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) == 0 );
 
                 cmdbuf->setupTestQueue(queue);
+                cmdbuf->setupProfilingKernel(queue);
             }
         }
 
@@ -1253,6 +1281,11 @@ typedef struct _cl_command_buffer_khr
         for( auto queue : TestQueues )
         {
             g_pNextDispatch->clReleaseCommandQueue(queue);
+        }
+
+        for( auto kernel : ProfilingKernels )
+        {
+            g_pNextDispatch->clReleaseKernel(kernel);
         }
     }
 
@@ -1297,20 +1330,17 @@ typedef struct _cl_command_buffer_khr
 
     cl_command_queue    getQueue() const
     {
-        if( Queues.size() > 0 )
-        {
-            return Queues[0];
-        }
-        return nullptr;
+        return Queues.empty() ? nullptr : Queues[0];
     }
 
     cl_command_queue    getTestQueue() const
     {
-        if( TestQueues.size() > 0 )
-        {
-            return TestQueues[0];
-        }
-        return nullptr;
+        return TestQueues.empty() ? nullptr : TestQueues[0];
+    }
+
+    cl_kernel   getProfilingKernel() const
+    {
+        return ProfilingKernels.empty() ? nullptr : ProfilingKernels[0];
     }
 
     cl_mutable_dispatch_asserts_khr getMutableDispatchAsserts() const
@@ -1510,10 +1540,13 @@ typedef struct _cl_command_buffer_khr
             NextSyncPoint.fetch_add(1, std::memory_order_relaxed) :
             0;
 
-        command->addDependencies(
-            num_sync_points,
-            wait_list,
-            syncPoint);
+        // We only need to add dependencies if there is more than one queue (so
+        // we have possible cross-queue dependencies) or the queue is an
+        // out-of-order queue (so we have possible intra-queue dependencies).
+        if( Queues.size() > 1 || !IsInOrder[0] )
+        {
+            command->addDependencies(num_sync_points, wait_list, syncPoint);
+        }
 
         if( sync_point != nullptr )
         {
@@ -1577,7 +1610,7 @@ typedef struct _cl_command_buffer_khr
         for( const auto& command : Commands )
         {
             errorCode = command->playback(queue, deps);
-            if( (errorCode == CL_SUCCESS) && 
+            if( (errorCode == CL_SUCCESS) &&
                 isRecordQueueInOrder && !isReplayQueueInOrder )
             {
                 errorCode = g_pNextDispatch->clEnqueueBarrierWithWaitList(
@@ -1656,6 +1689,32 @@ typedef struct _cl_command_buffer_khr
         return CL_SUCCESS;
     }
 
+    cl_int  clGetKernelSuggestedLocalWorkSize(
+                cl_command_queue queue,
+                cl_kernel kernel,
+                cl_uint work_dim,
+                const size_t* global_work_offset,
+                const size_t* global_work_size,
+                size_t* suggested_local_work_size )
+    {
+        if( ptrGetKernelSuggestedLocalWorkSizeKHR == nullptr )
+        {
+            return CL_INVALID_OPERATION;
+        }
+        if( queue != nullptr && queue != Queues[0] )
+        {
+            return CL_INVALID_COMMAND_QUEUE;
+        }
+
+        return ptrGetKernelSuggestedLocalWorkSizeKHR(
+            Queues[0],
+            kernel,
+            work_dim,
+            global_work_offset,
+            global_work_size,
+            suggested_local_work_size );
+    }
+
 private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
 
@@ -1671,9 +1730,36 @@ private:
     std::vector<bool>   IsInOrder;
     std::vector<cl_command_queue>   TestQueues;
     std::vector<cl_event>   BlockingEvents;
+    std::vector<cl_kernel>  ProfilingKernels;
 
     std::vector<std::unique_ptr<Command>> Commands;
     std::atomic<uint32_t> NextSyncPoint;
+
+    clGetKernelSuggestedLocalWorkSizeKHR_fn ptrGetKernelSuggestedLocalWorkSizeKHR = nullptr;
+
+    void setupSuggestedLocalWorkSize()
+    {
+        cl_device_id device = nullptr;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            Queues[0],
+            CL_QUEUE_DEVICE,
+            sizeof(device),
+            &device,
+            nullptr );
+
+        cl_platform_id platform = nullptr;
+        g_pNextDispatch->clGetDeviceInfo(
+            device,
+            CL_DEVICE_PLATFORM,
+            sizeof(platform),
+            &platform,
+            nullptr );
+
+        ptrGetKernelSuggestedLocalWorkSizeKHR = (clGetKernelSuggestedLocalWorkSizeKHR_fn)
+            g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+                platform,
+                "clGetKernelSuggestedLocalWorkSizeKHR" );
+    }
 
     void setupTestQueue(cl_command_queue src)
     {
@@ -1747,6 +1833,52 @@ private:
         }
     }
 
+    void setupProfilingKernel(cl_command_queue queue)
+    {
+        if( g_KernelForProfiling )
+        {
+            cl_context context = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queue,
+                CL_QUEUE_CONTEXT,
+                sizeof(context),
+                &context,
+                nullptr );
+
+            cl_device_id device = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queue,
+                CL_QUEUE_DEVICE,
+                sizeof(device),
+                &device,
+                nullptr );
+
+            const char* kernelString = "kernel void Empty() {}";
+            cl_program program = g_pNextDispatch->clCreateProgramWithSource(
+                context,
+                1,
+                &kernelString,
+                nullptr,
+                nullptr );
+            g_pNextDispatch->clBuildProgram(
+                program,
+                1,
+                &device,
+                nullptr,
+                nullptr,
+                nullptr );
+
+            cl_kernel kernel = g_pNextDispatch->clCreateKernel(
+                program,
+                "Empty",
+                nullptr );
+            g_pNextDispatch->clReleaseProgram(
+                program );
+
+            ProfilingKernels.push_back(kernel);
+        }
+    }
+
     _cl_command_buffer_khr(
             cl_command_buffer_flags_khr flags,
             cl_mutable_dispatch_asserts_khr mutableDispatchAsserts) :
@@ -1773,6 +1905,7 @@ _cl_mutable_command_khr::_cl_mutable_command_khr(
     Queue(queue ? queue : cmdbuf->getQueue()) {}
 
 std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
+    const bool isMutable,
     const cl_command_properties_khr* properties,
     cl_command_buffer_khr cmdbuf,
     cl_command_queue queue,
@@ -1890,6 +2023,21 @@ std::unique_ptr<NDRangeKernel> NDRangeKernel::create(
             local_work_size,
             local_work_size + work_dim);
     }
+    else if( g_SuggestedLocalWorkSize && isMutable == false )
+    {
+        command->local_work_size.resize(work_dim);
+        cl_int checkError = cmdbuf->clGetKernelSuggestedLocalWorkSize(
+            queue,
+            kernel,
+            work_dim,
+            global_work_offset,
+            global_work_size,
+            command->local_work_size.data() );
+        if( checkError != CL_SUCCESS )
+        {
+            command->local_work_size.clear();
+        }
+    }
 
     g_pNextDispatch->clRetainKernel(command->original_kernel);
 
@@ -1993,7 +2141,16 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
             queue,
             num_events_in_wait_list,
             event_wait_list,
-            event ? &startEvent : nullptr);
+            event == nullptr || g_KernelForProfiling ? nullptr : &startEvent );
+        if( errorCode == CL_SUCCESS && event && g_KernelForProfiling )
+        {
+            errorCode = enqueueProfilingKernel(
+                queue,
+                cmdbuf->getProfilingKernel(),
+                0,
+                nullptr,
+                &startEvent );
+        }
     }
 
     if( errorCode == CL_SUCCESS )
@@ -2007,7 +2164,16 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
             queue,
             0,
             nullptr,
-            event );
+            g_KernelForProfiling ? nullptr : event );
+        if( errorCode == CL_SUCCESS && g_KernelForProfiling )
+        {
+            errorCode = enqueueProfilingKernel(
+                queue,
+                cmdbuf->getProfilingKernel(),
+                0,
+                nullptr,
+                event );
+        }
     }
 
     if( event )
@@ -2022,6 +2188,13 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
         }
     }
 
+    // If the error code is CL_INVALID_KERNEL_ARGS, then there are probably
+    // deferred kernel arguments and the command buffer is not yet in the
+    // executable state, therefore we should return CL_INVALID_OPERATION.
+    if( errorCode == CL_INVALID_KERNEL_ARGS )
+    {
+        errorCode = CL_INVALID_OPERATION;
+    }
     return errorCode;
 }
 
@@ -2730,12 +2903,20 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
                 nullptr,
                 nullptr ) )
         {
-            return errorCode;
+            // Ignore CL_INVALID_KERNEL_ARGS errors if this is a mutable
+            // command in order to handle deferred kernel arguments.
+            if( !( errorCode == CL_INVALID_KERNEL_ARGS && mutable_handle ) )
+            {
+                return errorCode;
+            }
         }
     }
 
+    const bool isMutable = mutable_handle != nullptr;
+
     cl_int errorCode = CL_SUCCESS;
     auto command = NDRangeKernel::create(
+        isMutable,
         properties,
         cmdbuf,
         command_queue,

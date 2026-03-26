@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2025 Ben Ashbaugh
+// Copyright (c) 2019-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -12,6 +12,8 @@
 #include <CL/opencl.hpp>
 
 #include <chrono>
+
+#include "util.hpp"
 
 const char* filename = "sinjulia.bmp";
 
@@ -196,6 +198,10 @@ int main(
     printf("*** Important Note! ***\n");
     printf("This is the Intercept Layer Tutorial application.\n");
     printf("It will crash initially!  Please see the tutorial README for details.\n");
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

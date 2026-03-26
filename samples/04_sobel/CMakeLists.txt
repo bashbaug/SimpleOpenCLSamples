@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2025 Ben Ashbaugh
+# Copyright (c) 2023-2026 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
