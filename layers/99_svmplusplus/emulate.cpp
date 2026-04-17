@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <mutex>
 
 #include <cassert>
 
@@ -19,6 +20,9 @@
 #include "layer_util.hpp"
 
 #include "emulate.h"
+
+// Locks entry-points for concurrent threads doing allocation/free
+static std::mutex Mutex;
 
 static constexpr cl_version version_cl_khr_unified_svm =
     CL_MAKE_VERSION(0, 2, 0);
@@ -500,7 +504,6 @@ private:
     std::map<cl_context, CAllocMap> AllocMaps;
 
     std::map<cl_event, SEventInfo> EventMap;
-
 };
 
 SLayerContext& getLayerContext(void)
@@ -654,6 +657,7 @@ void* CL_API_CALL clSVMAllocWithPropertiesKHR_EMU(
     size_t size,
     cl_int* errcode_ret)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     cl_platform_id platform = getPlatform(context);
     const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
 
@@ -792,6 +796,7 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesKHR_EMU(
     cl_svm_free_flags_khr flags,
     void* ptr)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     if (ptr == nullptr) {
         return CL_SUCCESS;
     }
@@ -825,6 +830,7 @@ cl_int CL_API_CALL clGetSVMSuggestedTypeIndexKHR_EMU(
     size_t size,
     cl_uint* suggested_svm_type_index)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     if (suggested_svm_type_index == nullptr) {
         return CL_INVALID_VALUE;
     }
@@ -888,6 +894,7 @@ cl_int CL_API_CALL clGetSVMPointerInfoKHR_EMU(
     void* param_value,
     size_t* param_value_size_ret)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     const void* base = nullptr;
     SAllocInfo allocInfo;
     getLayerContext().findAllocInfo(context, ptr, base, allocInfo);
@@ -961,6 +968,7 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
     void* param_value,
     size_t* param_value_size_ret)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     switch(param_name) {
     case CL_DEVICE_EXTENSIONS:
         {
@@ -1090,6 +1098,7 @@ cl_int CL_API_CALL clGetEventInfo_override(
     void* param_value,
     size_t* param_value_size_ret)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     switch(param_name) {
     case CL_EVENT_COMMAND_TYPE:
         {
@@ -1122,6 +1131,7 @@ cl_int CL_API_CALL clGetPlatformInfo_override(
     void* param_value,
     size_t* param_value_size_ret)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     switch(param_name) {
     case CL_PLATFORM_EXTENSIONS:
         {
@@ -1346,6 +1356,7 @@ void CL_API_CALL clSVMFree_override(
     cl_context context,
     void* ptr)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     if (isUSMPtr(context, ptr)) {
         cl_platform_id platform = getPlatform(context);
         const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
@@ -1369,6 +1380,7 @@ cl_int CL_API_CALL clEnqueueSVMFree_override(
     const cl_event* event_wait_list,
     cl_event* event)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     std::vector<void*> nonNullPtrs;
     for (cl_uint i = 0; i < num_svm_pointers; ++i) {
         if (svm_pointers[i] != nullptr) {
@@ -1397,6 +1409,7 @@ cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
     const cl_event* event_wait_list,
     cl_event* event)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     cl_context context = getContext(command_queue);
 
     if (size == 0) {
@@ -1455,6 +1468,7 @@ cl_int CL_API_CALL clEnqueueSVMMemFill_override(
     const cl_event* event_wait_list,
     cl_event* event)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     cl_context context = getContext(command_queue);
 
     if (size == 0) {
@@ -1513,6 +1527,7 @@ cl_int CL_API_CALL clEnqueueSVMMigrateMem_override(
     const cl_event* event_wait_list,
     cl_event* event)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     // for now, just emit a marker
     cl_int ret = g_pNextDispatch->clEnqueueMarkerWithWaitList(
         command_queue,
@@ -1529,6 +1544,7 @@ cl_int CL_API_CALL clEnqueueSVMMigrateMem_override(
 cl_int CL_API_CALL clReleaseEvent_override(
     cl_event event)
 {
+    std::lock_guard<std::mutex> lock(Mutex);
     cl_uint refCount = 0;
     g_pNextDispatch->clGetEventInfo(
         event,
