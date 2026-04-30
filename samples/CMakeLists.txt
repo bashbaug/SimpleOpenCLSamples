@@ -56,6 +56,7 @@ add_subdirectory( images )
 add_subdirectory( opengl )
 add_subdirectory( python )
 add_subdirectory( vulkan )
+add_subdirectory( spirv )
 add_subdirectory( svm )
 add_subdirectory( usm )
 
