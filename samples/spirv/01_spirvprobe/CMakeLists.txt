@@ -21,5 +21,6 @@ add_opencl_sample(
     VERSION 300
     CATEGORY spirv
     SOURCES main.cpp ${CMAKE_CURRENT_BINARY_DIR}/spirv_probes_generated.def
-    INCLUDES ${SPIRV-Headers_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}
+    KERNELS check_spirv.sh
+    INCLUDES ${SPIRV-Headers_SOURCE_DIR}/include ${SPIRV_TOOLS_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}
     LIBS ${SPIRV_TOOLS_LDFLAGS})

@@ -3,7 +3,7 @@ set -u
 
 dir="spirv_dumps"
 tool="./spirvkernelfromfile"
-options="-p1"
+options="${options:-}"
 
 if [[ ! -d "$dir" ]]; then
     echo "Error: directory not found: $dir"
@@ -26,8 +26,13 @@ fi
 for file in "${files[@]}"; do
     name="$(basename "$file")"
 
-    printf 'Running: %q %q --file=%q\n' "$tool" "$options" "$file"
-    "$tool" "$options" --file="$file" > NUL 2>&1
+    if [[ -z "$options" ]]; then
+        printf 'Running: %q --file=%q\n' "$tool" "$file"
+        "$tool" --file="$file" > /dev/null 2>&1
+    else
+        printf 'Running: %q %q --file=%q\n' "$tool" "$options" "$file"
+        "$tool" "$options" --file="$file" > /dev/null 2>&1
+    fi
     rc=$?
 
     if (( rc == 0 )); then
