@@ -30,8 +30,8 @@ for file in "${files[@]}"; do
         printf 'Running: %q --file=%q\n' "$tool" "$file"
         "$tool" --file="$file" > /dev/null 2>&1
     else
-        printf 'Running: %q %q --file=%q\n' "$tool" "$options" "$file"
-        "$tool" "$options" --file="$file" > /dev/null 2>&1
+        printf 'Running: %q %q --file=%q --name="empty"\n' "$tool" "$options" "$file"
+        "$tool" "$options" --file="$file" --name="empty" > /dev/null 2>&1
     fi
     rc=$?
 

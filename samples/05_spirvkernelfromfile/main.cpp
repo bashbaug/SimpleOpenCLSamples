@@ -187,6 +187,11 @@ int main(
     printf("Creating kernel: %s\n", kernelName.c_str() );
     cl::Kernel kernel = cl::Kernel{ program, kernelName.c_str() };
 
+    if (kernel() == nullptr) {
+        printf("Failed to create kernel '%s' from program!\n", kernelName.c_str());
+        return -2;
+    }
+
     cl::Buffer deviceMemDst = cl::Buffer{
         context,
         CL_MEM_ALLOC_HOST_PTR,

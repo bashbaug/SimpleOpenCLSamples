@@ -137,6 +137,24 @@ int main(int argc, char** argv)
 #define SPIRV_PROBE_EXTENSION_CAPABILITY(_e, _c) \
     probes[#_e].push_back(spv::Capability##_c);
 #include "spirv_probes_generated.def"
+#if 0
+probes["SPV_INTEL_16bit_atomics"].push_back(6260); // AtomicInt16CompareExchangeINTEL
+probes["SPV_INTEL_16bit_atomics"].push_back(6261); // Int16AtomicsINTEL
+probes["SPV_INTEL_16bit_atomics"].push_back(6262); // AtomicBFloat16LoadStoreINTEL
+probes["SPV_INTEL_16bit_atomics"].push_back(6255); // AtomicBFloat16AddINTEL
+probes["SPV_INTEL_16bit_atomics"].push_back(6256); // AtomicBFloat16MinMaxINTEL
+probes["SPV_INTEL_bfloat16_arithmetic"].push_back(6226); // BFloat16ArithmeticINTEL
+probes["SPV_INTEL_global_variable_decorations"].push_back(6146); // GlobalVariableDecorationsINTEL
+probes["SPV_INTEL_joint_matrix"].push_back(6434); // PackedCooperativeMatrixINTEL
+probes["SPV_INTEL_joint_matrix"].push_back(6435); // CooperativeMatrixInvocationInstructionsINTEL
+probes["SPV_INTEL_joint_matrix"].push_back(6436); // CooperativeMatrixTF32ComponentTypeINTEL
+probes["SPV_INTEL_joint_matrix"].push_back(6437); // CooperativeMatrixBFloat16ComponentTypeINTEL
+probes["SPV_INTEL_joint_matrix"].push_back(6411); // CooperativeMatrixPrefetchINTEL
+probes["SPV_INTEL_sigmoid"].push_back(6167); // SigmoidINTEL
+// TODO SPV_INTEL_​subgroup_​matrix_​multiply_​accumulate_​float4
+// TODO SPV_INTEL_​subgroup_​matrix_​multiply_​accumulate_​float8
+probes["SPV_INTEL_subgroup_scaled_matrix_multiply_accumulate"].push_back(6263); // SubgroupScaledMatrixMultiplyAccumulateINTEL
+#endif
 #undef SPIRV_PROBE_EXTENSION
 #undef SPIRV_PROBE_EXTENSION_CAPABILITY
 
