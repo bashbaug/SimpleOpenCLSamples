@@ -93,9 +93,9 @@ static void PrintPlatformInfoSummary(
         CL_PLATFORM_VERSION,
         platformVersion );
 
-    printf("\tName:           %s\n", platformName );
-    printf("\tVendor:         %s\n", platformVendor );
-    printf("\tDriver Version: %s\n", platformVersion );
+    printf("\tName:             %s\n", platformName );
+    printf("\tVendor:           %s\n", platformVendor );
+    printf("\tPlatform Version: %s\n", platformVersion );
 
     // Use the query for the platform numeric version as a test for
     // OpenCL 3.0 support.  If this query fails then this probably

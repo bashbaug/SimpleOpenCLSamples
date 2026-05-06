@@ -78,17 +78,17 @@ if __name__ == "__main__":
     program.build()
     kernel = program.Mandelbrot
 
-    deviceMemDst = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR, 
+    deviceMemDst = cl.Buffer(context, cl.mem_flags.ALLOC_HOST_PTR,
                              width * height * np.uint32().itemsize)
 
     # execution
-    kernel(commandQueue, [width, height], None, 
+    kernel(commandQueue, [width, height], None,
            np.float32(-2.0), np.float32(-1.0), np.float32(1.0), np.float32(1.0),
            np.int32(width), np.int32(height), np.int32(maxIterations), deviceMemDst)
 
     # save bitmap
     mapped_dst, event = cl.enqueue_map_buffer(commandQueue, deviceMemDst,
-                                              cl.map_flags.READ, 
+                                              cl.map_flags.READ,
                                               0, width * height, np.uint32)
     with mapped_dst.base:
         colors = np.fromiter((240 if x & 1 else 20 for x in mapped_dst), np.uint8)

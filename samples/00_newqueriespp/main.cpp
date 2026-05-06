@@ -15,9 +15,9 @@
 static void PrintPlatformInfoSummary(
     cl::Platform platform )
 {
-    printf("\tName:           %s\n", platform.getInfo<CL_PLATFORM_NAME>().c_str() );
-    printf("\tVendor:         %s\n", platform.getInfo<CL_PLATFORM_VENDOR>().c_str() );
-    printf("\tDriver Version: %s\n", platform.getInfo<CL_PLATFORM_VERSION>().c_str() );
+    printf("\tName:             %s\n", platform.getInfo<CL_PLATFORM_NAME>().c_str() );
+    printf("\tVendor:           %s\n", platform.getInfo<CL_PLATFORM_VENDOR>().c_str() );
+    printf("\tPlatform Version: %s\n", platform.getInfo<CL_PLATFORM_VERSION>().c_str() );
 
     // Use the query for the platform numeric version as a test for
     // OpenCL 3.0 support.  If this query fails then this probably

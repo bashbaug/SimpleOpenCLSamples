@@ -12,7 +12,7 @@ Note that `CallLogging` can be enabled by passing the `-c` option to `cliloader`
 After enabling these controls, re-run the tutorial application.
 
 ```
-$ cliloader ./sinjulia 
+$ cliloader ./sinjulia
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 CLIntercept (64-bit) is loading...
 CLIntercept file location: /home/bashbaug/bin/../lib/libOpenCL.so

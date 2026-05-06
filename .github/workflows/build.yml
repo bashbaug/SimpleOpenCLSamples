@@ -18,7 +18,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: Check Tabs
       run: |
@@ -39,7 +39,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: Get Ubuntu OpenGL Dependencies
       if: matrix.os == 'ubuntu-latest'
@@ -48,27 +48,27 @@ jobs:
         sudo apt-get install -y libglfw3-dev
 
     - name: Get OpenCL Headers
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: KhronosGroup/OpenCL-Headers
         path: external/OpenCL-Headers
 
     - name: Get OpenCL ICD Loader
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: KhronosGroup/OpenCL-ICD-Loader
         path: external/opencl-icd-loader
 
     - name: Get OpenCL Extension Loader
       if: matrix.ext == 'YES'
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: bashbaug/opencl-extension-loader
         path: external/opencl-extension-loader
 
     - name: Get SPIR-V Headers
       if: matrix.ext == 'YES'
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: KhronosGroup/SPIRV-Headers
         path: external/SPIRV-Headers
