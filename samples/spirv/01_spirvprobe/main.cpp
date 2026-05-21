@@ -37,6 +37,92 @@ constexpr const char* cEpilog = R"SPV(
                OpFunctionEnd
 )SPV";
 
+bool do_test(
+    bool build,
+    const cl::Context& context,
+    spv_target_env env,
+    const std::string& extension,
+    const std::string& instruction_set,
+    spv::Capability capability)
+{
+    auto DisMessagePrinter =
+        [](spv_message_level_t, const char *, const spv_position_t &,
+           const char *message) -> void { fprintf(stderr, "spirv error: %s\n", message); };
+
+    std::vector<uint32_t> spirvBinary;
+
+    spvtools::SpirvTools tools(env);
+    tools.SetMessageConsumer(DisMessagePrinter);
+
+    std::string spirv_text;
+    spirv_text += cProlog;
+    if (capability != spv::CapabilityMax) {
+        spirv_text += "               OpCapability ";
+        spirv_text += spv::CapabilityToString(capability);
+        spirv_text += "\n";
+    }
+    if (!extension.empty()) {
+        spirv_text += "               OpExtension \"";
+        spirv_text += extension;
+        spirv_text += "\"\n";
+    }
+    if (!instruction_set.empty()) {
+        spirv_text += "        %eis = OpExtInstImport \"";
+        spirv_text += instruction_set;
+        spirv_text += "\"\n";
+    }
+    spirv_text += cEpilog;
+
+    if (!tools.Assemble(spirv_text, &spirvBinary)) {
+        printf("failed to assemble!\n");
+        return false;
+    }
+
+    if (!tools.Validate(spirvBinary.data(), spirvBinary.size())) {
+        printf("failed to validate!\n");
+        return false;
+    }
+
+    if (build) {
+        cl::Program program{
+            clCreateProgramWithIL(
+                context(),
+                spirvBinary.data(),
+                spirvBinary.size() * sizeof(uint32_t),
+                nullptr)};
+        cl_int errorCode = program.build();
+        if (errorCode != CL_SUCCESS) {
+            printf("failed to build!\n");
+            for (const auto& device : context.getInfo<CL_CONTEXT_DEVICES>()) {
+                printf("--- Build log for device %s:\n", device.getInfo<CL_DEVICE_NAME>().c_str());
+                printf("%s\n\n", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str());
+            }
+            return false;
+        }
+    } else {
+        std::string filename("./spirv_dumps/");
+        filename += extension;
+        filename += "_";
+        filename += spv::CapabilityToString(capability);
+        filename += ".spv";
+
+        std::ofstream os;
+        os.open(filename, std::ios::out | std::ios::binary);
+        if (os.good()) {
+            os.write(
+                (const char*)spirvBinary.data(),
+                spirvBinary.size() * sizeof(uint32_t));
+            os.close();
+        } else {
+            printf("Failed to dump SPIR-V to file %s!\n", filename.c_str());
+            return false;
+        }
+    }
+
+    printf("success.\n");
+    return true;
+}
+
 int main(int argc, char** argv)
 {
     int platformIndex = 0;
@@ -165,10 +251,6 @@ probes["SPV_INTEL_subgroup_scaled_matrix_multiply_accumulate"].push_back(6263); 
 
     printf("Starting testing!\n\n");
 
-    auto DisMessagePrinter =
-        [](spv_message_level_t, const char *, const spv_position_t &,
-           const char *message) -> void { fprintf(stderr, "spirv error: %s\n", message); };
-
     CProbeMap::iterator i = probes.begin();
     while (i != probes.end()) {
         const auto& extension = (*i).first;
@@ -188,65 +270,7 @@ probes["SPV_INTEL_subgroup_scaled_matrix_multiply_accumulate"].push_back(6263); 
                 static_cast<int>(capability));
             fflush(stdout);
 
-            std::vector<uint32_t> spirvBinary;
-
-            spvtools::SpirvTools tools(env);
-            tools.SetMessageConsumer(DisMessagePrinter);
-
-            std::string spirv_text;
-            spirv_text += cProlog;
-            spirv_text += "               OpCapability ";
-            spirv_text += spv::CapabilityToString(capability);
-            spirv_text += "\n";
-            spirv_text += "               OpExtension \"";
-            spirv_text += extension;
-            spirv_text += "\"\n";
-            spirv_text += cEpilog;
-
-            if (!tools.Assemble(spirv_text, &spirvBinary))
-            {
-                printf("failed to assemble!\n");
-                continue;
-            }
-
-            if (!tools.Validate(spirvBinary.data(), spirvBinary.size())) {
-                printf("failed to validate!\n");
-                continue;
-            }
-
-            if (build) {
-                cl::Program program{
-                    clCreateProgramWithIL(
-                        context(),
-                        spirvBinary.data(),
-                        spirvBinary.size() * sizeof(uint32_t),
-                        nullptr)};
-                cl_int errorCode = program.build();
-                if (errorCode != CL_SUCCESS) {
-                    printf("failed to build!\n");
-                    printf("%s\n", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str());
-                    continue;
-                }
-            } else {
-                std::string filename("./spirv_dumps/");
-                filename += extension;
-                filename += "_";
-                filename += spv::CapabilityToString(capability);
-                filename += ".spv";
-
-                std::ofstream os;
-                os.open(filename, std::ios::out | std::ios::binary);
-                if (os.good()) {
-                    os.write(
-                        (const char*)spirvBinary.data(),
-                        spirvBinary.size() * sizeof(uint32_t));
-                    os.close();
-                } else {
-                    printf("Failed to dump SPIR-V to file %s!\n", filename.c_str());
-                }
-            }
-
-            printf("success.\n");
+            do_test(build, context, env, extension, "", capability);
         }
     }
 
