@@ -34,6 +34,7 @@ int4 activation(int4 i)
     return res;
 }
 
+__attribute__((overloadable))
 int8 activation(int8 i)
 {
     int8 res;
@@ -153,7 +154,7 @@ int8 emu_sub_group_i8_i8_matrix_mad_k32(int8 a, int8 b, int8 acc)
 __attribute__((overloadable))
 int  emu_sub_group_i8_i8_matrix_mad_k32(short  a, int8 b, int  acc)
 {
-    float res = acc;
+    int res = acc;
 
     res = dp4(as_uint((short2)(sub_group_broadcast(a,  0), sub_group_broadcast(a,  1))), b.s0) + res;
     res = dp4(as_uint((short2)(sub_group_broadcast(a,  2), sub_group_broadcast(a,  3))), b.s1) + res;

@@ -2,7 +2,7 @@
 
 ## Sample Purpose
 
-This sample demonstrates various techniques to perform a large matrix multiplcation where the matrix elements contain 8-bit integer data.
+This sample demonstrates various techniques to perform a large matrix multiplication where the matrix elements contain 8-bit integer data.
 The sample includes many different implementations:
 
 1. The "naive" implementation is a very simple implementation.
@@ -40,13 +40,13 @@ This sample will optionally use the following OpenCL extensions:
 |:--|:-:|:--|
 | `-p <index>` | 0 | Specify the index of the OpenCL platform to execute the sample on.
 | `-d <index>` | 0 | Specify the index of the OpenCL device in the platform to execute on the sample on.
-| `--file <string>` | `matrix_kernels_bf16.cl` | Specify the name of the file with the OpenCL kernel source.
+| `--file <string>` | `matrix_kernels_i8.cl` | Specify the name of the file with the OpenCL kernel source.
 | `--options <string>` | None | Specify optional program build options.
 | `--matrixsize <int>` | 512 | Specify the dimensions of the matrix.
 | `--iterations <int>` | 16 | Specify the number of iterations for performance testing.
 | `--validate` | n/a | Validate results for correctness.
 | `--zero` | n/a | Initialize all matrices to zero.
-| `--identity` | n/a | Initialize all matrices to to one.
+| `--identity` | n/a | Initialize all matrices to one.
 | `--fixed` | n/a | Initialize all matrices to values computed from the matrix row and column.
 | `--emulate` | n/a | Do not use specialized matrix multiplication extensions.
 | `--wallclock` | n/a | Measure performance using wallclock time instead of event profiling.
@@ -57,4 +57,4 @@ This sample will optionally use the following OpenCL extensions:
 
 By default, the source matrices are populated with random data.
 When validating results, it is recommended to use either "fixed" or "identity" data.
-For best performance, use "zero" data".
+For best performance, use "zero" data.

@@ -34,6 +34,7 @@ float4 activation(float4 f)
     return res;
 }
 
+__attribute__((overloadable))
 float8 activation(float8 f)
 {
     float8 res;

@@ -8,6 +8,7 @@
 #include <CL/opencl.hpp>
 
 #include <fstream>
+#include <iterator>
 #include <string>
 
 static cl_version getDeviceOpenCLVersion(
@@ -78,11 +79,6 @@ static std::string readStringFromFile(
         printf("Couldn't open file '%s'!\n", filename.c_str());
         return "";
     }
-
-    size_t filesize = 0;
-    is.seekg(0, std::ios::end);
-    filesize = (size_t)is.tellg();
-    is.seekg(0, std::ios::beg);
 
     std::string source{
         std::istreambuf_iterator<char>(is),

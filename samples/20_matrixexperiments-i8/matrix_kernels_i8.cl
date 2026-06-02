@@ -36,7 +36,7 @@ kernel void i8_naive(global int* C, global char* A, global char* B, int K)
 // For all i8 kernels tK == 32:
 #define tK 32
 
-#if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_char) && defined(cl_intel_required_subgroup_size)
+#if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_subgroups_char) && defined(cl_intel_required_subgroup_size)
 
 #if HAS_SG8
 
@@ -582,6 +582,6 @@ kernel void i8_dpas_blockread_vnni_m8_n16(global int* C, global char* A, global 
 
 #endif // cl_intel_subgroup_2d_block_io
 
-#endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_required_subgroup_size)
+#endif // defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short) && defined(cl_intel_subgroups_char) && defined(cl_intel_required_subgroup_size)
 
 #undef tK

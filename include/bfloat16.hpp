@@ -48,10 +48,10 @@ public:
   operator float() const { return to_float(value); }
 
   // Logical operators (!,||,&&) are covered if we can cast to bool
-  explicit operator bool() { return to_float(value) != 0.0f; }
+  explicit operator bool() const { return to_float(value) != 0.0f; }
 
   // Unary minus operator overloading
-  friend bfloat16 operator-(bfloat16 &lhs) {
+  friend bfloat16 operator-(const bfloat16 &lhs) {
     return -to_float(lhs.value);
   }
 

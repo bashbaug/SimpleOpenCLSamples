@@ -2,7 +2,7 @@
 
 ## Sample Purpose
 
-This sample demonstrates various techniques to perform a large matrix multiplcation where the matrix elements contain 32-bit `tf32` data.
+This sample demonstrates various techniques to perform a large matrix multiplication where the matrix elements contain 32-bit `tf32` data.
 The sample includes many different implementations:
 
 1. The "naive" implementation is a very simple implementation.
@@ -44,7 +44,7 @@ This sample will optionally use the following OpenCL extensions:
 | `--iterations <int>` | 16 | Specify the number of iterations for performance testing.
 | `--validate` | n/a | Validate results for correctness.
 | `--zero` | n/a | Initialize all matrices to zero.
-| `--identity` | n/a | Initialize all matrices to to one.
+| `--identity` | n/a | Initialize all matrices to one.
 | `--fixed` | n/a | Initialize all matrices to values computed from the matrix row and column.
 | `--emulate` | n/a | Do not use specialized matrix multiplication extensions.
 | `--wallclock` | n/a | Measure performance using wallclock time instead of event profiling.
@@ -55,4 +55,4 @@ This sample will optionally use the following OpenCL extensions:
 
 By default, the source matrices are populated with random data.
 When validating results, it is recommended to use either "fixed" or "identity" data.
-For best performance, use "zero" data".
+For best performance, use "zero" data.

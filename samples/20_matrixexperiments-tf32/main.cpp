@@ -530,6 +530,7 @@ int main(int argc, char** argv)
     if (deviceIndex >= devices.size()) {
         printf("Requested device index is %d, but only %zu devices were found.\n",
             deviceIndex, devices.size());
+        return -1;
     }
 
     cl::Device& device = devices[deviceIndex];
