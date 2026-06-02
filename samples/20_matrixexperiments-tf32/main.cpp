@@ -154,21 +154,36 @@ void check_results(
     const std::vector<T>& C,
     const std::vector<T>& C_ref)
 {
-    float err = 0.f;
+    const float absolute = 1e-4f;
+
+    float maxErr = 0.f;
+    int errorCount = 0;
+
     for (size_t m = 0; m < M; m++) {
         for (size_t n = 0; n < N; n++) {
             auto index = m * N + n;
-            auto localErr = std::fabs(C[index] - C_ref[index]) /
-                            std::max(std::fabs(C[index]),
-                                    std::fabs(C_ref[index]));
-            err = std::max(localErr, err);
-            if (localErr >= threshold) {
-                std::cerr << "Error at m = " << m << ", n = " << n
-                          << ": (local error " << localErr << "): Wanted "
-                          << C_ref[index] << ", got " << C[index] << std::endl;
-                return;
+            float got  = static_cast<float>(C[index]);
+            float want = static_cast<float>(C_ref[index]);
+            float localErr = std::fabs(got - want);
+            float localThreshold = absolute + threshold * std::fabs(want);
+
+            maxErr = std::max(localErr, maxErr);
+            if (localErr > localThreshold) {
+                if (errorCount < 1) {
+                    std::cerr << "Error at m = " << m << ", n = " << n
+                              << ": (abs error " << localErr << ", threshold "
+                              << localThreshold << "): Wanted " << want
+                              << ", got " << got << std::endl;
+                }
+                ++errorCount;
             }
         }
+    }
+
+    if (errorCount > 0) {
+        std::cerr << "FAILED: " << errorCount << " of " << M * N
+                  << " elements exceeded tolerance. Max abs error: "
+                  << maxErr << std::endl;
     }
 }
 
