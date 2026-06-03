@@ -1,3 +1,8 @@
+/*
+// Copyright (c) 2024-2026 Ben Ashbaugh
+//
+// SPDX-License-Identifier: MIT
+*/
 #pragma once
 
 #include <cmath>

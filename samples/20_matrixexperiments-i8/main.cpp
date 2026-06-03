@@ -10,10 +10,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
-#include <random>
 #include <vector>
 
 #include "util.hpp"
@@ -29,7 +31,6 @@ bool wallclock = false;
 bool skipinit = false;
 bool roundRobin = false;
 int testIterations = 16;
-float threshold = 0.01f;
 
 std::string makeTestName(
     const std::string &func,
@@ -160,7 +161,6 @@ void check_results(
     const std::vector<T>& C,
     const std::vector<T>& C_ref)
 {
-    float err = 0.f;
     for (size_t m = 0; m < M; m++) {
         for (size_t n = 0; n < N; n++) {
             auto index = m * N + n;
@@ -491,7 +491,6 @@ int main(int argc, char** argv)
         op.add<popl::Switch>("", "wallclock", "Measure Wallclock Time", &wallclock);
         op.add<popl::Switch>("", "skipinit", "Do Not Initialize Buffers", &skipinit);
         op.add<popl::Switch>("", "roundrobin", "Use Round Robin Scheduling", &roundRobin);
-        op.add<popl::Value<float>>("", "threshold", "Local Error Threshold", threshold, &threshold);
         op.add<popl::Value<size_t>, popl::Attribute::advanced>("", "mask", "Test Mask", mask, &mask);
         bool printUsage = false;
         try {

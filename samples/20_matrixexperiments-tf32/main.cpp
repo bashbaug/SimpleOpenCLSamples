@@ -10,10 +10,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
-#include <random>
 #include <vector>
 
 #include "util.hpp"

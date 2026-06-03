@@ -52,7 +52,6 @@ This sample will optionally use the following OpenCL extensions:
 | `--wallclock` | n/a | Measure performance using wallclock time instead of event profiling.
 | `--skipinit` | n/a | Skip initialization of source matrices.
 | `--roundrobin` | n/a | Use round robin thread scheduling.
-| `--threshold <float>` | 0.01 | Set the threshold used when validating results.
 | `--mask <int>` | ~0 | Set a mask to only run a subset of tests.
 
 By default, the source matrices are populated with random data.

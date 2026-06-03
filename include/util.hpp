@@ -7,6 +7,9 @@
 
 #include <CL/opencl.hpp>
 
+#include <cctype>
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <string>
