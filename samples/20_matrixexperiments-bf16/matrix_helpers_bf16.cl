@@ -61,8 +61,8 @@ float8 activation(float8 f)
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
-#if __has_builtin(__builtin_expect) == 0
-#define __builtin_expect(x)
+#if __has_builtin(__builtin_assume) == 0
+#define __builtin_assume(x)
 #endif
 
 #if defined(cl_intel_subgroups) && defined(cl_intel_subgroups_short)

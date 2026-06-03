@@ -52,8 +52,8 @@ int8 activation(int8 i)
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
-#if __has_builtin(__builtin_expect) == 0
-#define __builtin_expect(x)
+#if __has_builtin(__builtin_assume) == 0
+#define __builtin_assume(x)
 #endif
 
 #if defined(__opencl_c_integer_dot_product_input_4x8bit_packed)

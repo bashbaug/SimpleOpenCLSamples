@@ -10,7 +10,7 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstdint>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <random>
@@ -68,18 +68,23 @@ std::string makeTestName(
 
 static size_t findMinSubGroupSize(cl::Device& device)
 {
-    auto s = device.getInfo<CL_DEVICE_SUB_GROUP_SIZES_INTEL>();
-    auto it = std::min_element(std::begin(s), std::end(s));
-    if (it != std::end(s)) {
-        return *it;
+    if (checkDeviceForExtension(device, CL_INTEL_REQUIRED_SUBGROUP_SIZE_EXTENSION_NAME)) {
+        auto s = device.getInfo<CL_DEVICE_SUB_GROUP_SIZES_INTEL>();
+        auto it = std::min_element(std::begin(s), std::end(s));
+        if (it != std::end(s)) {
+            return *it;
+        }
     }
     return 0;
 }
 
 static bool supportsSubgroupSize(cl::Device& device, size_t subgroupSize)
 {
-    auto s = device.getInfo<CL_DEVICE_SUB_GROUP_SIZES_INTEL>();
-    return std::find(std::begin(s), std::end(s), subgroupSize) != std::end(s);
+    if (checkDeviceForExtension(device, CL_INTEL_REQUIRED_SUBGROUP_SIZE_EXTENSION_NAME)) {
+        auto s = device.getInfo<CL_DEVICE_SUB_GROUP_SIZES_INTEL>();
+        return std::find(std::begin(s), std::end(s), subgroupSize) != std::end(s);
+    }
+    return false;
 }
 
 static void setRoundRobin(cl::Kernel& kernel)
