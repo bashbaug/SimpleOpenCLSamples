@@ -26,10 +26,10 @@ This sample requires the OpenCL Extension Loader to get the extension APIs for c
 ## Key APIs and Concepts
 
 This sample demonstrates how to create and execute a command buffer that may execute out-of-order.
-This sample also demonstrates how to time commands in an out-or-order command queue.
+This sample also demonstrates how to time commands in an out-of-order command queue.
 
 ```c
-CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR_
+CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR
 clCommandNDRangeKernelKHR with sync points
 clEnqueueBarrierWithWaitList
 ```

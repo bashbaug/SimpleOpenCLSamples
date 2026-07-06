@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -91,6 +91,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
@@ -187,7 +191,6 @@ int main(
         printf("\t\tCL_COMMAND_BUFFER_STATE_KHR: %s\n",
             state == CL_COMMAND_BUFFER_STATE_RECORDING_KHR ? "RECORDING" :
             state == CL_COMMAND_BUFFER_STATE_EXECUTABLE_KHR ? "EXECUTABLE" :
-            state == CL_COMMAND_BUFFER_STATE_PENDING_KHR ? "PENDING" :
             "UNKNOWN!");
 
         printf("\t\tCL_COMMAND_BUFFER_PROPERTIES_ARRAY_KHR size: %zu\n",
@@ -199,17 +202,17 @@ int main(
     cl_sync_point_khr sync_point;
     clCommandNDRangeKernelKHR(
         cmdbuf(),
-        NULL,
-        NULL,
+        NULL,   // command queue, can be NULL to use the command buffer queue
+        NULL,   // command properties
         kernel(),
-        1,
-        NULL,
-        &gwx,
-        NULL,
-        0,
-        NULL,
+        1,      // work dim
+        NULL,   // global work offset
+        &gwx,   // global work size
+        NULL,   // local work size
+        0,      // num sync points in wait list
+        NULL,   // sync point wait list
         &sync_point,
-        NULL);
+        NULL);  // mutable handle
     cmdbuf.finalize();
 
     clEnqueueCommandBufferKHR(

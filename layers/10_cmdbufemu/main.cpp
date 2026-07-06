@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -33,6 +33,17 @@
 // use of user events that may not work properly with some implementations.
 
 bool g_EnhancedErrorChecking = false;
+
+// Using kernels for profiling can fix issues with some implementations
+// that do not properly support event profiling on barriers.
+
+bool g_KernelForProfiling = false;
+
+// Using the suggested local work-group size can reduce overhead by determining
+// the values for a NULL local work-group size when the command buffer is
+// created rather than when it is executed.
+
+bool g_SuggestedLocalWorkSize = true;
 
 const struct _cl_icd_dispatch* g_pNextDispatch = NULL;
 
@@ -226,7 +237,7 @@ static void _init_dispatch()
 }
 
 CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
-    cl_layer_info  param_name,
+    cl_layer_info param_name,
     size_t param_value_size,
     void* param_value,
     size_t* param_value_size_ret)
@@ -246,10 +257,17 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
 #if defined(CL_LAYER_NAME)
     case CL_LAYER_NAME:
         {
+            char str[256];
+            snprintf(str, 256, "Emulation Layer for "
+                CL_KHR_COMMAND_BUFFER_EXTENSION_NAME
+                " (EEC: %s, KFP: %s, SLWS: %s)",
+                g_EnhancedErrorChecking ? "Y" : "N",
+                g_KernelForProfiling ? "Y" : "N",
+                g_SuggestedLocalWorkSize ? "Y" : "N");
             auto ptr = (char*)param_value;
             return writeStringToMemory(
                 param_value_size,
-                "Emulation Layer for " CL_KHR_COMMAND_BUFFER_EXTENSION_NAME,
+                str,
                 param_value_size_ret,
                 ptr);
         }
@@ -261,16 +279,17 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
     return CL_SUCCESS;
 }
 
-CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
+CL_API_ENTRY cl_int CL_API_CALL clInitLayerWithProperties(
     cl_uint num_entries,
     const struct _cl_icd_dispatch* target_dispatch,
     cl_uint* num_entries_out,
-    const struct _cl_icd_dispatch** layer_dispatch_ret)
+    const struct _cl_icd_dispatch** layer_dispatch_ret,
+    const cl_layer_properties* properties)
 {
     const size_t dispatchTableSize =
         sizeof(dispatch) / sizeof(dispatch.clGetPlatformIDs);
 
-    if (target_dispatch == nullptr || 
+    if (target_dispatch == nullptr ||
         num_entries_out == nullptr ||
         layer_dispatch_ret == nullptr) {
         return CL_INVALID_VALUE;
@@ -283,6 +302,8 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     _init_dispatch();
 
     getControl("CMDBUFEMU_EnhancedErrorChecking", g_EnhancedErrorChecking);
+    getControl("CMDBUFEMU_KernelForProfiling", g_KernelForProfiling);
+    getControl("CMDBUFEMU_SuggestedLocalWorkSize", g_SuggestedLocalWorkSize);
 
     g_pNextDispatch = target_dispatch;
 
@@ -290,4 +311,18 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
     *num_entries_out = dispatchTableSize;
 
     return CL_SUCCESS;
+}
+
+CL_API_ENTRY cl_int CL_API_CALL clInitLayer(
+    cl_uint num_entries,
+    const struct _cl_icd_dispatch* target_dispatch,
+    cl_uint* num_entries_out,
+    const struct _cl_icd_dispatch** layer_dispatch_ret)
+{
+    return clInitLayerWithProperties(
+        num_entries,
+        target_dispatch,
+        num_entries_out,
+        layer_dispatch_ret,
+        nullptr);
 }

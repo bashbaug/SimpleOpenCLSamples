@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2025 Ben Ashbaugh
+# Copyright (c) 2019-2026 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
@@ -34,6 +34,12 @@ if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/opencl-extension-loader)
     add_subdirectory(external/opencl-extension-loader)
 else()
     message(STATUS "OpenCL Extension Loader is not found.")
+endif()
+
+if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/SPIRV-Headers)
+    add_subdirectory(external/SPIRV-Headers)
+else()
+    message(STATUS "SPIR-V Headers are not found.")
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)

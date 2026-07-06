@@ -17,7 +17,7 @@ This sample also includes fallback implementations when the `cl_ext_float_atomic
     * The second emulates the floating-point atomic add using 32-bit `atomic_cmpxchg` functions.
       This is a slower emulation, but it is able to reliably return the "old" value that was in memory before performing the atomic add.
 
-This sample was inspired by the blog post: https://pipinspace.github.io/blog/atomic-float-addition-in-opencl.html
+This sample was inspired by the blog post: https://violetspace.github.io/blog/atomic-float-addition-in-opencl.html
 
 ## Key APIs and Concepts
 

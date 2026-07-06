@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2025 Ben Ashbaugh
+// Copyright (c) 2019-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -7,6 +7,8 @@
 #include <popl/popl.hpp>
 
 #include <CL/opencl.hpp>
+
+#include "util.hpp"
 
 const size_t    gwx = 1024*1024;
 
@@ -40,6 +42,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2025 Ben Ashbaugh
+# Copyright (c) 2019-2026 Ben Ashbaugh
 #
 # SPDX-License-Identifier: MIT
 
@@ -92,4 +92,8 @@ if(BUILD_EXTENSION_SAMPLES)
     add_subdirectory( 14_ooqcommandbuffers )
     add_subdirectory( 15_mutablecommandbufferasserts )
     add_subdirectory( 17_relaxedallocations )
+endif()
+
+if(TARGET SPIRV-Headers)
+    add_subdirectory( 00_spirvqueries )
 endif()

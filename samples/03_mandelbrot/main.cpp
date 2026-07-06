@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2019-2025 Ben Ashbaugh
+// Copyright (c) 2019-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -10,6 +10,8 @@
 #include <stb/stb_image_write.h>
 
 #include <CL/opencl.hpp>
+
+#include "util.hpp"
 
 const char* filename = "mandelbrot.bmp";
 
@@ -82,6 +84,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );

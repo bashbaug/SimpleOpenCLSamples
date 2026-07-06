@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2022-2025 Ben Ashbaugh
+// Copyright (c) 2022-2026 Ben Ashbaugh
 //
 // SPDX-License-Identifier: MIT
 */
@@ -66,6 +66,10 @@ int main(
 
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return -1;
+    }
 
     printf("Running on platform: %s\n",
         platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
@@ -148,17 +152,17 @@ int main(
     fillKernel.setArg(2, static_cast<cl_uint>(gwx));
     clCommandNDRangeKernelKHR(
         cmdbuf(),
-        nullptr,
-        nullptr,
+        nullptr,    // command queue, can be NULL to use the command buffer queue
+        nullptr,    // command properties
         fillKernel(),
-        1,
-        nullptr,
-        &one,
-        nullptr,
-        0,
-        nullptr,
+        1,          // work dim
+        nullptr,    // global work offset
+        &one,       // global work size
+        nullptr,    // local work size
+        0,          // num sync points in wait list
+        nullptr,    // sync point wait list
         &writeA,
-        nullptr);
+        nullptr);   // mutable handle
 
     cl_sync_point_khr writeB = 0;
     fillKernel.setArg(0, deviceMemSrcB);
@@ -184,17 +188,17 @@ int main(
     addKernel.setArg(2, deviceMemSrcB);
     clCommandNDRangeKernelKHR(
         cmdbuf(),
-        nullptr,
-        nullptr,
+        nullptr,    // command queue, can be NULL to use the command buffer queue
+        nullptr,    // command properties
         addKernel(),
-        1,
-        nullptr,
-        &gwx,
-        nullptr,
+        1,          // work dim
+        nullptr,    // global work offset
+        &gwx,       // global work size
+        nullptr,    // local work size
         static_cast<cl_uint>(waitList.size()),
         waitList.data(),
-        nullptr,
-        nullptr);
+        nullptr,    // sync point
+        nullptr);   // mutable handle
     cmdbuf.finalize();
 
     // Ensure the queue is empty and no processing is happening
