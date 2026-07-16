@@ -21,6 +21,9 @@ option(SAMPLES_ENABLE_EXCEPTIONS "Enable Exceptions for OpenCL Errors")
 set(OpenCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/OpenCL-Headers CACHE PATH "Path to OpenCL Headers")
 find_package(OpenCL)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OpenCL_INCLUDE_DIR})
 

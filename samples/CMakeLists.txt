@@ -77,6 +77,7 @@ add_subdirectory( 06_ndrangekernelfromfile )
 
 add_subdirectory( 10_queueexperiments )
 add_subdirectory( 16_floatatomics )
+add_subdirectory( 21_multithreading )
 
 set(BUILD_EXTENSION_SAMPLES TRUE)
 if(NOT TARGET OpenCLExt)
