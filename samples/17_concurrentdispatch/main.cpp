@@ -8,6 +8,9 @@
 
 #include <CL/opencl.hpp>
 
+#include <chrono>
+#include <vector>
+
 #include "util.hpp"
 
 // TODO: clean this up once support is in the upstream headers.
