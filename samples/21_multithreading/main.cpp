@@ -74,10 +74,10 @@ static void ThreadFunc(
                     cl::NullRange );
             }
             ++expected;
-        } else if (false && r < 80) {
+        } else if (r < 80) {
             // 10% probability: flush the queue.
             commandQueue.flush();
-        } else if (false && r < 90) {
+        } else if (r < 90) {
             // 10% probability: finish the queue.
             commandQueue.finish();
         } else {
