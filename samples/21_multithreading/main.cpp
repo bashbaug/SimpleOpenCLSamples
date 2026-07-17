@@ -63,7 +63,7 @@ static void ThreadFunc(
                     kernel,
                     cl::NullRange,
                     cl::NDRange{1},
-                    cl::NullRange,
+                    cl::NDRange{1},
                     nullptr,
                     &event );
             } else {
@@ -71,16 +71,10 @@ static void ThreadFunc(
                     kernel,
                     cl::NullRange,
                     cl::NDRange{1},
-                    cl::NullRange );
+                    cl::NDRange{1} );
             }
             ++expected;
         } else if (r < 80) {
-            // 10% probability: flush the queue.
-            commandQueue.flush();
-        } else if (r < 90) {
-            // 10% probability: finish the queue.
-            commandQueue.finish();
-        } else {
             // 10% probability: read and check the result.
             cl_uint result = 0;
             commandQueue.enqueueReadBuffer(
@@ -95,6 +89,12 @@ static void ThreadFunc(
                     threadId, checks, expected, result);
                 quiet = true;
             }
+        } else if (r < 90) {
+            // 10% probability: finish the queue.
+            commandQueue.finish();
+        } else {
+            // 10% probability: flush the queue.
+            commandQueue.flush();
         }
     }
 
