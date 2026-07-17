@@ -78,6 +78,10 @@ add_subdirectory( 06_ndrangekernelfromfile )
 add_subdirectory( 10_queueexperiments )
 add_subdirectory( 16_floatatomics )
 
+add_subdirectory( 20_matrixexperiments-bf16 )
+add_subdirectory( 20_matrixexperiments-i8 )
+add_subdirectory( 20_matrixexperiments-tf32 )
+
 set(BUILD_EXTENSION_SAMPLES TRUE)
 if(NOT TARGET OpenCLExt)
     message(STATUS "Skipping Extension Samples - OpenCL Extension Loader is not found.")
