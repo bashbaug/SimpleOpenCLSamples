@@ -248,6 +248,11 @@ struct SLayerContext
         return TypeCapsDevice[device];
     }
 
+    const size_t getConcurrentAccessAtomSize(cl_device_id device)
+    {
+        return ConcurrentAccessAtomSize[device];
+    }
+
     const SUSMFuncs& getUSMFuncs(cl_platform_id platform)
     {
         return USMFuncs[platform];
@@ -429,6 +434,7 @@ private:
 
         for (auto device: devices) {
             std::vector<cl_svm_capabilities_khr> typeCapsDevice;
+            size_t concurrentAccessAtomSize = 0;
 
             for (auto caps: typeCapsPlatform) {
                 if ((caps & CL_SVM_TYPE_MACRO_DEVICE_KHR) == CL_SVM_TYPE_MACRO_DEVICE_KHR) {
@@ -452,9 +458,14 @@ private:
                 else {
                     assert(0 && "unknown platform SVM type");
                 }
+
+                if (!typeCapsDevice.empty() && (typeCapsDevice.back() & CL_SVM_CAPABILITY_CONCURRENT_ACCESS_KHR)) {
+                    concurrentAccessAtomSize = 1;
+                }
             }
 
             TypeCapsDevice[device] = typeCapsDevice;
+            ConcurrentAccessAtomSize[device] = concurrentAccessAtomSize;
         }
     }
 
@@ -496,6 +507,8 @@ private:
 
     std::map<cl_platform_id, std::vector<cl_svm_capabilities_khr>>  TypeCapsPlatform;
     std::map<cl_device_id, std::vector<cl_svm_capabilities_khr>>    TypeCapsDevice;
+
+    std::map<cl_device_id, size_t>  ConcurrentAccessAtomSize;
 
     std::map<cl_platform_id, SUSMFuncs> USMFuncs;
 
@@ -1102,6 +1115,17 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
             return writeVectorToMemory(
                 param_value_size,
                 deviceSVMCaps,
+                param_value_size_ret,
+                ptr);
+        }
+        break;
+    case CL_DEVICE_SVM_CONCURRENT_ACCESS_ATOM_SIZE_KHR:
+        {
+            const auto concurrentAccessAtomSize = getLayerContext().getConcurrentAccessAtomSize(device);
+            auto ptr = (size_t*)param_value;
+            return writeParamToMemory(
+                param_value_size,
+                concurrentAccessAtomSize,
                 param_value_size_ret,
                 ptr);
         }
