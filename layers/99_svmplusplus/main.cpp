@@ -43,6 +43,7 @@ clGetExtensionFunctionAddressForPlatform_override(
     CHECK_RETURN_EXTENSION_FUNCTION( clSVMFreeWithPropertiesKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetSVMSuggestedTypeIndexKHR );
     CHECK_RETURN_EXTENSION_FUNCTION( clGetSVMPointerInfoKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clEnqueueSVMMemcpyWithPropertiesKHR );
 
     return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
         platform,

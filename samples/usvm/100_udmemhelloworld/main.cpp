@@ -125,8 +125,9 @@ int main(
 
         // verification
         {
-            clEnqueueSVMMemcpy(
+            clEnqueueSVMMemcpyWithPropertiesKHR(
                 commandQueue(),
+                nullptr,
                 CL_TRUE,
                 h_buf,
                 d_dst,

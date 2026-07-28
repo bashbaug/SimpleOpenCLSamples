@@ -962,6 +962,31 @@ cl_int CL_API_CALL clGetSVMPointerInfoKHR_EMU(
     return CL_INVALID_VALUE;
 }
 
+cl_int CL_API_CALL clEnqueueSVMMemcpyWithPropertiesKHR_EMU(
+    cl_command_queue command_queue,
+    cl_svm_copy_properties_khr* properties,
+    cl_bool blocking_copy,
+    void* dst_ptr,
+    const void* src_ptr,
+    size_t size,
+    cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list,
+    cl_event* event)
+{
+    if (properties != nullptr && properties[0] != 0) {
+        return CL_INVALID_PROPERTY;
+    }
+    return clEnqueueSVMMemcpy_override(
+        command_queue,
+        blocking_copy,
+        dst_ptr,
+        src_ptr,
+        size,
+        num_events_in_wait_list,
+        event_wait_list,
+        event);
+}
+
 cl_int CL_API_CALL clGetDeviceInfo_override(
     cl_device_id device,
     cl_device_info param_name,

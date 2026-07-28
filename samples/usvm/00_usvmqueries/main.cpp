@@ -47,11 +47,13 @@ void PrintUSVMCaps(
     const char* prefix,
     cl_svm_capabilities_khr svmcaps )
 {
-    printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+    printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
         prefix,
         ( svmcaps & CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_KHR     ) ? "\n\t\t\tCL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_KHR"      : "",
         ( svmcaps & CL_SVM_CAPABILITY_SYSTEM_ALLOCATED_KHR         ) ? "\n\t\t\tCL_SVM_CAPABILITY_SYSTEM_ALLOCATED_KHR"          : "",
         ( svmcaps & CL_SVM_CAPABILITY_DEVICE_OWNED_KHR             ) ? "\n\t\t\tCL_SVM_CAPABILITY_DEVICE_OWNED_KHR"              : "",
+        ( svmcaps & CL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_KHR      ) ? "\n\t\t\tCL_SVM_CAPABILITY_DEVICE_UNASSOCIATED_KHR"       : "",
+        ( svmcaps & CL_SVM_CAPABILITY_CONTEXT_ACCESS_KHR           ) ? "\n\t\t\tCL_SVM_CAPABILITY_CONTEXT_ACCESS_KHR"            : "",
         ( svmcaps & CL_SVM_CAPABILITY_HOST_OWNED_KHR               ) ? "\n\t\t\tCL_SVM_CAPABILITY_HOST_OWNED_KHR"                : "",
         ( svmcaps & CL_SVM_CAPABILITY_HOST_READ_KHR                ) ? "\n\t\t\tCL_SVM_CAPABILITY_HOST_READ_KHR"                 : "",
         ( svmcaps & CL_SVM_CAPABILITY_HOST_WRITE_KHR               ) ? "\n\t\t\tCL_SVM_CAPABILITY_HOST_WRITE_KHR"                : "",

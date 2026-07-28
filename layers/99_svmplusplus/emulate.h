@@ -39,6 +39,17 @@ cl_int CL_API_CALL clGetSVMPointerInfoKHR_EMU(
     void* param_value,
     size_t* param_value_size_ret);
 
+cl_int CL_API_CALL clEnqueueSVMMemcpyWithPropertiesKHR_EMU(
+    cl_command_queue command_queue,
+    cl_svm_copy_properties_khr* properties,
+    cl_bool blocking_copy,
+    void* dst_ptr,
+    const void* src_ptr,
+    size_t size,
+    cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list,
+    cl_event* event);
+
 cl_int CL_API_CALL clGetDeviceInfo_override(
     cl_device_id device,
     cl_device_info param_name,
