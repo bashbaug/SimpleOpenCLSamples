@@ -1577,8 +1577,8 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_platform_info, CL_PLATFORM_SVM_TYPE_CAPABILITIES_KHR, cl::vector<cl_svm_capabilities_khr>) \
     \
     F(cl_device_info, CL_DEVICE_SVM_TYPE_CAPABILITIES_KHR, cl::vector<cl_svm_capabilities_khr>) \
-    F(cl_device_info, CL_DEVICE_SVM_CONCURRENT_ACCESS_ATOM_SIZE_KHR, size_type) \
-    \
+    F(cl_device_info, CL_DEVICE_SVM_CONCURRENT_ACCESS_ATOM_SIZE_KHR, cl::vector<size_type>) \
+    \~
     F(cl_svm_pointer_info_khr, CL_SVM_INFO_TYPE_INDEX_KHR, cl_uint) \
     F(cl_svm_pointer_info_khr, CL_SVM_INFO_CAPABILITIES_KHR, cl_svm_capabilities_khr) \
     F(cl_svm_pointer_info_khr, CL_SVM_INFO_PROPERTIES_KHR, cl::vector<cl_svm_alloc_properties_khr>) \

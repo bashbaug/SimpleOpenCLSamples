@@ -117,15 +117,15 @@ int main(
             printf("Device[%zu]: %s\n",
                 d,
                 devices[d].getInfo<CL_DEVICE_NAME>().c_str());
-            printf("USM Concurrent Access Atom Size: %zu\n",
-                devices[d].getInfo<CL_DEVICE_SVM_CONCURRENT_ACCESS_ATOM_SIZE_KHR>());
-
             std::vector<cl_svm_capabilities_khr> typeCapsDevice =
                 devices[d].getInfo<CL_DEVICE_SVM_TYPE_CAPABILITIES_KHR>();
+            std::vector<size_t> concurrentAccessAtomSizes =
+                devices[d].getInfo<CL_DEVICE_SVM_CONCURRENT_ACCESS_ATOM_SIZE_KHR>();
             for (size_t t = 0; t < typeCapsDevice.size(); t++)
             {
                 printf("USM Type[%zu]:\n", t);
                 printf("\tinferred name: %s\n", get_svm_name(typeCapsDevice[t]));
+                printf("\tconcurrent access atom size: %zu\n", concurrentAccessAtomSizes[t]);
                 PrintUSVMCaps("\tcapabilities: ", typeCapsDevice[t]);
             }
 

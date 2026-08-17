@@ -248,9 +248,9 @@ struct SLayerContext
         return TypeCapsDevice[device];
     }
 
-    const size_t getConcurrentAccessAtomSize(cl_device_id device)
+    const std::vector<size_t>& getConcurrentAccessAtomSizes(cl_device_id device)
     {
-        return ConcurrentAccessAtomSize[device];
+        return ConcurrentAccessAtomSizes[device];
     }
 
     const SUSMFuncs& getUSMFuncs(cl_platform_id platform)
@@ -434,7 +434,7 @@ private:
 
         for (auto device: devices) {
             std::vector<cl_svm_capabilities_khr> typeCapsDevice;
-            size_t concurrentAccessAtomSize = 0;
+            std::vector<size_t> concurrentAccessAtomSizes;
 
             for (auto caps: typeCapsPlatform) {
                 if ((caps & CL_SVM_TYPE_MACRO_DEVICE_KHR) == CL_SVM_TYPE_MACRO_DEVICE_KHR) {
@@ -459,13 +459,17 @@ private:
                     assert(0 && "unknown platform SVM type");
                 }
 
-                if (!typeCapsDevice.empty() && (typeCapsDevice.back() & CL_SVM_CAPABILITY_CONCURRENT_ACCESS_KHR)) {
-                    concurrentAccessAtomSize = 1;
+                if (typeCapsDevice.size() > concurrentAccessAtomSizes.size()) {
+                    if (typeCapsDevice.back() & CL_SVM_CAPABILITY_CONCURRENT_ACCESS_KHR) {
+                        concurrentAccessAtomSizes.push_back(1);
+                    } else {
+                        concurrentAccessAtomSizes.push_back(0);
+                    }
                 }
             }
 
             TypeCapsDevice[device] = typeCapsDevice;
-            ConcurrentAccessAtomSize[device] = concurrentAccessAtomSize;
+            ConcurrentAccessAtomSizes[device] = concurrentAccessAtomSizes;
         }
     }
 
@@ -508,7 +512,7 @@ private:
     std::map<cl_platform_id, std::vector<cl_svm_capabilities_khr>>  TypeCapsPlatform;
     std::map<cl_device_id, std::vector<cl_svm_capabilities_khr>>    TypeCapsDevice;
 
-    std::map<cl_device_id, size_t>  ConcurrentAccessAtomSize;
+    std::map<cl_device_id, std::vector<size_t>> ConcurrentAccessAtomSizes;
 
     std::map<cl_platform_id, SUSMFuncs> USMFuncs;
 
@@ -1121,11 +1125,11 @@ cl_int CL_API_CALL clGetDeviceInfo_override(
         break;
     case CL_DEVICE_SVM_CONCURRENT_ACCESS_ATOM_SIZE_KHR:
         {
-            const auto concurrentAccessAtomSize = getLayerContext().getConcurrentAccessAtomSize(device);
+            const auto& sizes = getLayerContext().getConcurrentAccessAtomSizes(device);
             auto ptr = (size_t*)param_value;
-            return writeParamToMemory(
+            return writeVectorToMemory(
                 param_value_size,
-                concurrentAccessAtomSize,
+                sizes,
                 param_value_size_ret,
                 ptr);
         }
