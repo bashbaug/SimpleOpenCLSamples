@@ -60,6 +60,10 @@ int main(int argc, char** argv )
 
     printf("Running on device: %s\n",
         devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+    printf("Running on version: %s\n",
+        devices[deviceIndex].getInfo<CL_DEVICE_VERSION>().c_str() );
+    printf("Running on driver: %s\n",
+        devices[deviceIndex].getInfo<CL_DRIVER_VERSION>().c_str() );
 
     cl::Context context{devices[deviceIndex]};
     cl::CommandQueue commandQueue{context, devices[deviceIndex], CL_QUEUE_PROFILING_ENABLE};
@@ -100,18 +104,41 @@ int main(int argc, char** argv )
     cl_ulong totalTimeNS = 0;
     printf("Querying profiling data for %zu events...\n", numEvents);
 
-    auto start = std::chrono::system_clock::now();
-
-    for (const auto& event : events) {
+    float totalQuery = 0.0f;
+    float maxQuery = 0.0f;
+    for (int i = 0; i < numEvents; i++) {
+        auto start = std::chrono::system_clock::now();
         totalTimeNS +=
-            event.getProfilingInfo<CL_PROFILING_COMMAND_END>() -
-            event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
+            events[i].getProfilingInfo<CL_PROFILING_COMMAND_END>() -
+            events[i].getProfilingInfo<CL_PROFILING_COMMAND_START>();
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float> queryTimeS = end - start;
+        totalQuery += queryTimeS.count();
+        if (i > 16 && queryTimeS.count() > maxQuery) {
+            maxQuery = queryTimeS.count();
+        }
     }
 
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<float> queryTimeS = end - start;
     printf("Querying profiling data took %f s (%f us per event)\n",
-        queryTimeS.count(), queryTimeS.count() * 1000000 / numEvents);
+        totalQuery, totalQuery * 1000000 / numEvents);
+    printf("Longest query was %f us\n", maxQuery * 1000000);
+
+    float totalRelease = 0.0f;
+    float maxRelease = 0.0f;
+    for (int i = 0; i < numEvents; i++) {
+        auto start = std::chrono::system_clock::now();
+        events[i] = nullptr;
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float> releaseTime = end - start;
+        totalRelease += releaseTime.count();
+        if (i > 16 && releaseTime.count() > maxRelease) {
+            maxRelease = releaseTime.count();
+        }
+    }
+
+    printf("Releasing events took %f s (%f us per event)\n",
+        totalRelease, totalRelease * 1000000 / numEvents);
+    printf("Longest release was %f us\n", maxRelease * 1000000);
 
     int result = 0;
     commandQueue.enqueueReadBuffer(
