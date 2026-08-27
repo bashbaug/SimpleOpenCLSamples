@@ -100,3 +100,5 @@ endif()
 if(TARGET SPIRV-Headers)
     add_subdirectory( 00_spirvqueries )
 endif()
+
+add_subdirectory( 99_memkernelreadandwrite )
