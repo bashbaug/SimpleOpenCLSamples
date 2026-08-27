@@ -30,6 +30,7 @@ endif()
 
 if (SPIRV_TOOLS_FOUND)
     add_subdirectory( 01_spirvprobe )
+    add_subdirectory( 01_spirvquerycheck )
 else()
     message(STATUS "SPIR-V tools are not found; some samples will not be built.")
 endif()
