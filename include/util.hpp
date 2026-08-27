@@ -6,6 +6,12 @@
 #pragma once
 
 #include <CL/opencl.hpp>
+
+#include <cctype>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <iterator>
 #include <string>
 
 static cl_version getDeviceOpenCLVersion(
@@ -66,6 +72,22 @@ static bool checkDeviceForExtension(
     }
 
     return supported;
+}
+
+static std::string readStringFromFile(
+    const std::string& filename )
+{
+    std::ifstream is(filename, std::ios::binary);
+    if (!is.good()) {
+        printf("Couldn't open file '%s'!\n", filename.c_str());
+        return "";
+    }
+
+    std::string source{
+        std::istreambuf_iterator<char>(is),
+        std::istreambuf_iterator<char>() };
+
+    return source;
 }
 
 static bool checkPlatformIndex(
