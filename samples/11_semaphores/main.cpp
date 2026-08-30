@@ -76,9 +76,9 @@ int main(int argc, char** argv)
 
     // device queries:
 
-    bool has_cl_khr_command_buffer =
+    bool has_cl_khr_semaphore =
         checkDeviceForExtension(device, CL_KHR_SEMAPHORE_EXTENSION_NAME);
-    if (has_cl_khr_command_buffer) {
+    if (has_cl_khr_semaphore) {
         printf("Device supports " CL_KHR_SEMAPHORE_EXTENSION_NAME ".\n");
     } else {
         printf("Device does not support " CL_KHR_SEMAPHORE_EXTENSION_NAME ", exiting.\n");
