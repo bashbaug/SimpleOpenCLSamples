@@ -483,10 +483,9 @@ static void keyboard(GLFWwindow* pWindow, int key, int scancode, int action, int
     }
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -496,6 +495,7 @@ int main(
         bool paused = false;
 
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_gl_sharing", &hostCopy);
@@ -537,24 +537,14 @@ int main(
     pWindow = glfwCreateWindow((int)gwx, (int)gwy, "Sobel Filter with OpenGL", NULL, NULL);
     glfwMakeContextCurrent(pWindow);
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Platform platform;
+    cl::Device device;
+    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-
-    cl::Context context = createContext(platforms[platformIndex], devices[deviceIndex]);
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::Context context = createContext(platform, device);
+    commandQueue = cl::CommandQueue{context, device};
 
     cl::Program program{ context, kernelString };
     program.build();

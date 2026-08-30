@@ -82,17 +82,18 @@ usm_type_to_string( cl_unified_shared_memory_type_intel type )
     return "***Unknown USM Type***";
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
     int platformIndex = 0;
     int deviceIndex = 0;
+    bool verbose = false;
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
+
         bool printUsage = false;
         try {
             op.parse(argc, argv);
@@ -109,29 +110,19 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Platform platform;
+    cl::Device device;
+    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-
-    cl::Context context{devices[deviceIndex]};
+    cl::Context context{device};
 
     cl_device_unified_shared_memory_capabilities_intel usmcaps = 0;
     cl_int errCode;
 
     errCode = clGetDeviceInfo(
-        devices[deviceIndex](),
+        device(),
         CL_DEVICE_HOST_MEM_CAPABILITIES_INTEL,
         sizeof(usmcaps),
         &usmcaps,
@@ -197,7 +188,7 @@ int main(
     }
 
     errCode = clGetDeviceInfo(
-        devices[deviceIndex](),
+        device(),
         CL_DEVICE_DEVICE_MEM_CAPABILITIES_INTEL,
         sizeof(usmcaps),
         &usmcaps,
@@ -206,11 +197,11 @@ int main(
     {
         printf("\nTesting Device Allocations:\n");
         printf("Associated Device is: %p (%s)\n",
-            devices[deviceIndex](),
-            devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str());
+            device(),
+            device.getInfo<CL_DEVICE_NAME>().c_str());
         char* ptr0 = (char*)clDeviceMemAllocINTEL(
             context(),
-            devices[deviceIndex](),
+            device(),
             nullptr,
             16,
             0,
@@ -218,7 +209,7 @@ int main(
         printf("Allocated Device pointer 0: ptr = %p\n", ptr0);
         char* ptr1 = (char*)clDeviceMemAllocINTEL(
             context(),
-            devices[deviceIndex](),
+            device(),
             nullptr,
             16,
             0,
@@ -268,7 +259,7 @@ int main(
     }
 
     errCode = clGetDeviceInfo(
-        devices[deviceIndex](),
+        device(),
         CL_DEVICE_SINGLE_DEVICE_SHARED_MEM_CAPABILITIES_INTEL,
         sizeof(usmcaps),
         &usmcaps,
@@ -277,11 +268,11 @@ int main(
     {
         printf("\nTesting Shared Allocations:\n");
         printf("Associated Device is: %p (%s)\n",
-            devices[deviceIndex](),
-            devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str());
+            device(),
+            device.getInfo<CL_DEVICE_NAME>().c_str());
         char* ptr0 = (char*)clSharedMemAllocINTEL(
             context(),
-            devices[deviceIndex](),
+            device(),
             nullptr,
             16,
             0,
@@ -289,7 +280,7 @@ int main(
         printf("Allocated Shared pointer 0: ptr = %p\n", ptr0);
         char* ptr1 = (char*)clSharedMemAllocINTEL(
             context(),
-            devices[deviceIndex](),
+            device(),
             nullptr,
             16,
             0,

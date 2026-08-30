@@ -83,15 +83,15 @@ static void PrintMutableDispatchCapabilities(
     }
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
 
@@ -111,26 +111,16 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Platform platform;
+    cl::Device device;
+    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
-
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     // device queries:
 
     bool has_cl_khr_command_buffer =
-        checkDeviceForExtension(devices[deviceIndex], CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
+        checkDeviceForExtension(device, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
     if (has_cl_khr_command_buffer) {
         printf("Device supports " CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ".\n");
     } else {
@@ -138,7 +128,7 @@ int main(
         return -1;
     }
     bool has_cl_khr_command_buffer_mutable_dispatch =
-        checkDeviceForExtension(devices[deviceIndex], CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
+        checkDeviceForExtension(device, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
     if (has_cl_khr_command_buffer_mutable_dispatch) {
         printf("Device supports " CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME ".\n");
     } else {
@@ -148,7 +138,7 @@ int main(
 
     cl_device_command_buffer_capabilities_khr caps = 0;
     clGetDeviceInfo(
-        devices[deviceIndex](),
+        device(),
         CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR,
         sizeof(caps),
         &caps,
@@ -158,7 +148,7 @@ int main(
 
     cl_command_queue_properties requiredProps = 0;
     clGetDeviceInfo(
-        devices[deviceIndex](),
+        device(),
         CL_DEVICE_COMMAND_BUFFER_REQUIRED_QUEUE_PROPERTIES_KHR,
         sizeof(requiredProps),
         &requiredProps,
@@ -168,7 +158,7 @@ int main(
 
     cl_command_queue_properties supportedProps = 0;
     clGetDeviceInfo(
-        devices[deviceIndex](),
+        device(),
         CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR,
         sizeof(supportedProps),
         &supportedProps,
@@ -178,7 +168,7 @@ int main(
 
     cl_mutable_dispatch_fields_khr mutableCaps = 0;
     clGetDeviceInfo(
-        devices[deviceIndex](),
+        device(),
         CL_DEVICE_MUTABLE_DISPATCH_CAPABILITIES_KHR,
         sizeof(mutableCaps),
         &mutableCaps,
@@ -190,8 +180,8 @@ int main(
         return -1;
     }
 
-    cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
+    cl::Context context{device};
+    cl::CommandQueue commandQueue{context, device};
 
     cl::Program program{ context, kernelString };
     program.build();

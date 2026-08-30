@@ -36,10 +36,9 @@ static void PrintSemaphoreTypes(const std::vector<cl_semaphore_type_khr>& types)
     }
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -49,9 +48,11 @@ int main(
         bool advanced = false;
 
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size", gwx, &gwx);
+
         bool printUsage = false;
         try {
             op.parse(argc, argv);
@@ -75,19 +76,16 @@ int main(
         return -1;
     }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
+    cl::Platform platform;
+    cl::Device device;
+    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
+        return -1;
+    }
 
     // device queries:
 
     bool has_cl_khr_command_buffer =
-        checkDeviceForExtension(devices[deviceIndex], CL_KHR_SEMAPHORE_EXTENSION_NAME);
+        checkDeviceForExtension(device, CL_KHR_SEMAPHORE_EXTENSION_NAME);
     if (has_cl_khr_command_buffer) {
         printf("Device supports " CL_KHR_SEMAPHORE_EXTENSION_NAME ".\n");
     } else {
@@ -101,13 +99,13 @@ int main(
     PrintSemaphoreTypes(platformSemaphoreTypes);
 
     std::vector<cl_semaphore_type_khr> deviceSemaphoreTypes =
-        devices[deviceIndex].getInfo<CL_DEVICE_SEMAPHORE_TYPES_KHR>();
+        device.getInfo<CL_DEVICE_SEMAPHORE_TYPES_KHR>();
     printf("\tDevice Semaphore Types:\n");
     PrintSemaphoreTypes(deviceSemaphoreTypes);
 
-    cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue q0{context, devices[deviceIndex]};
-    cl::CommandQueue q1{context, devices[deviceIndex]};
+    cl::Context context{device};
+    cl::CommandQueue q0{context, device};
+    cl::CommandQueue q1{context, device};
 
     cl::Program program{ context, kernelString };
     program.build();

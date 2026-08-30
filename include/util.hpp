@@ -106,3 +106,63 @@ static bool checkPlatformIndex(
     }
     return true;
 }
+
+static bool checkDeviceIndex(
+    const std::vector<cl::Device>& devices,
+    int deviceIndex)
+{
+    if (devices.size() == 0) {
+        fprintf(stderr, "Error: No OpenCL devices found.\n");
+        return false;
+    }
+    if (deviceIndex >= (int)devices.size()) {
+        fprintf(stderr, "Error: Invalid device index %d specified (max %d)\n",
+            deviceIndex,
+            (int)(devices.size() - 1) );
+        return false;
+    }
+    return true;
+}
+
+static bool setupPlatformAndDevice(
+    cl::Platform& platform,
+    cl::Device& device,
+    int platformIndex,
+    int deviceIndex,
+    bool verbose = false)
+{
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return false;
+    }
+
+    platform = std::move(platforms[platformIndex]);
+    printf("Running on platform: %s\n",
+        platform.getInfo<CL_PLATFORM_NAME>().c_str() );
+
+    std::vector<cl::Device> devices;
+    platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);  
+
+    if (!checkDeviceIndex(devices, deviceIndex)) {
+        return false;
+    }
+
+    device = std::move(devices[deviceIndex]);
+    if (verbose) {
+        printf("Running on device: %s (%uCUs, %uMHz)\n",
+            device.getInfo<CL_DEVICE_NAME>().c_str(),
+            device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(),
+            device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() );
+        printf("Device version: %s\n",
+            device.getInfo<CL_DEVICE_VERSION>().c_str() );
+        printf("Driver version: %s\n",
+            device.getInfo<CL_DRIVER_VERSION>().c_str() );
+    } else {
+        printf("Running on device: %s\n",
+            device.getInfo<CL_DEVICE_NAME>().c_str() );
+    }
+
+    return true;
+}

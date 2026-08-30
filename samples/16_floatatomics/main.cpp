@@ -81,10 +81,9 @@ static void PrintFloatAtomicCapabilities(
     }
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -97,6 +96,7 @@ int main(
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<size_t>>("i", "iterations", "Iterations", iterations, &iterations);
@@ -121,21 +121,11 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Platform platform;
+    cl::Device device;
+    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
-
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     // On some implementations, the feature test macros for float atomics are
     // only defined when compiling for OpenCL C 3.0 or newer.
@@ -146,29 +136,29 @@ int main(
     } else if (emulate) {
         printf("Forcing emulation.\n");
         buildOptions += " -DEMULATE";
-    } else if (!checkDeviceForExtension(devices[deviceIndex], CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME)) {
+    } else if (!checkDeviceForExtension(device, CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME)) {
         printf("Device does not support " CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME ".\n");
     } else {
         printf("Device supports " CL_EXT_FLOAT_ATOMICS_EXTENSION_NAME ".\n");
 
         cl_device_fp_atomic_capabilities_ext spcaps =
-            devices[deviceIndex].getInfo<CL_DEVICE_SINGLE_FP_ATOMIC_CAPABILITIES_EXT>();
+            device.getInfo<CL_DEVICE_SINGLE_FP_ATOMIC_CAPABILITIES_EXT>();
         printf("CL_DEVICE_SINGLE_FP_ATOMIC_CAPABILITIES_EXT:\n");
         PrintFloatAtomicCapabilities(spcaps);
 
         cl_device_fp_atomic_capabilities_ext dpcaps =
-            devices[deviceIndex].getInfo<CL_DEVICE_DOUBLE_FP_ATOMIC_CAPABILITIES_EXT>();
+            device.getInfo<CL_DEVICE_DOUBLE_FP_ATOMIC_CAPABILITIES_EXT>();
         printf("CL_DEVICE_DOUBLE_FP_ATOMIC_CAPABILITIES_EXT:\n");
         PrintFloatAtomicCapabilities(dpcaps);
 
         cl_device_fp_atomic_capabilities_ext hpcaps =
-            devices[deviceIndex].getInfo<CL_DEVICE_HALF_FP_ATOMIC_CAPABILITIES_EXT>();
+            device.getInfo<CL_DEVICE_HALF_FP_ATOMIC_CAPABILITIES_EXT>();
         printf("CL_DEVICE_HALF_FP_ATOMIC_CAPABILITIES_EXT:\n");
         PrintFloatAtomicCapabilities(hpcaps);
     }
 
-    cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
+    cl::Context context{device};
+    cl::CommandQueue commandQueue{context, device};
 
     cl::Program program{ context, kernelString };
     program.build(buildOptions);

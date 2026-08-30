@@ -210,6 +210,7 @@ private:
     PFN_vkGetSemaphoreFdKHR vkGetSemaphoreFdKHR = NULL;
 #endif
 
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -217,6 +218,7 @@ private:
     bool useExternalSemaphore = true;
 
     cl_external_memory_handle_type_khr externalMemType = 0;
+
     cl::Context context;
     cl::CommandQueue commandQueue;
     cl::Kernel kernel;
@@ -240,6 +242,7 @@ private:
         bool paused = false;
 
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "hostcopy", "Do not use cl_khr_external_memory", &hostCopy);
@@ -287,30 +290,20 @@ private:
     }
 
     void initOpenCL() {
-        std::vector<cl::Platform> platforms;
-        cl::Platform::get(&platforms);
-
-        if (!checkPlatformIndex(platforms, platformIndex)) {
-            throw std::runtime_error("couldn't get OpenCL platform");
+        cl::Platform platform;
+        cl::Device device;
+        if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
+            throw std::runtime_error("couldn't setup OpenCL platform and device");
         }
 
-        printf("Running on platform: %s\n",
-            platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-        std::vector<cl::Device> devices;
-        platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-        printf("Running on device: %s\n",
-            devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-
-        checkOpenCLExternalMemorySupport(devices[deviceIndex]);
-        checkOpenCLExternalSemaphoreSupport(devices[deviceIndex]);
+        checkOpenCLExternalMemorySupport(device);
+        checkOpenCLExternalSemaphoreSupport(device);
 
         if (useExternalMemory) {
             clEnqueueAcquireExternalMemObjectsKHR = (clEnqueueAcquireExternalMemObjectsKHR_fn)
-                clGetExtensionFunctionAddressForPlatform( platforms[platformIndex](), "clEnqueueAcquireExternalMemObjectsKHR");
+                clGetExtensionFunctionAddressForPlatform( platform(), "clEnqueueAcquireExternalMemObjectsKHR");
             clEnqueueReleaseExternalMemObjectsKHR = (clEnqueueReleaseExternalMemObjectsKHR_fn)
-                clGetExtensionFunctionAddressForPlatform( platforms[platformIndex](), "clEnqueueReleaseExternalMemObjectsKHR");
+                clGetExtensionFunctionAddressForPlatform( platform(), "clEnqueueReleaseExternalMemObjectsKHR");
             if (clEnqueueAcquireExternalMemObjectsKHR == NULL ||
                 clEnqueueReleaseExternalMemObjectsKHR == NULL) {
                 throw std::runtime_error("couldn't get function pointers for cl_khr_external_memory");
@@ -319,11 +312,11 @@ private:
 
         if (useExternalSemaphore) {
             clCreateSemaphoreWithPropertiesKHR = (clCreateSemaphoreWithPropertiesKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clCreateSemaphoreWithPropertiesKHR");
+                clGetExtensionFunctionAddressForPlatform(platform(), "clCreateSemaphoreWithPropertiesKHR");
             clEnqueueSignalSemaphoresKHR = (clEnqueueSignalSemaphoresKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clEnqueueSignalSemaphoresKHR");
+                clGetExtensionFunctionAddressForPlatform(platform(), "clEnqueueSignalSemaphoresKHR");
             clReleaseSemaphoreKHR = (clReleaseSemaphoreKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[platformIndex](), "clReleaseSemaphoreKHR");
+                clGetExtensionFunctionAddressForPlatform(platform(), "clReleaseSemaphoreKHR");
             if (clCreateSemaphoreWithPropertiesKHR == NULL ||
                 clEnqueueSignalSemaphoresKHR == NULL ||
                 clReleaseSemaphoreKHR == NULL) {
@@ -331,8 +324,8 @@ private:
             }
         }
 
-        context = cl::Context{devices[deviceIndex]};
-        commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+        context = cl::Context{device};
+        commandQueue = cl::CommandQueue{context, device};
 
         cl::Program program{ context, kernelString };
         program.build();

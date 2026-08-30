@@ -95,10 +95,9 @@ static cl::Program createProgramWithIL(
     return cl::Program{ program };
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -109,12 +108,14 @@ int main(
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<std::string>>("", "file", "Kernel File Name", fileName, &fileName);
         op.add<popl::Value<std::string>>("", "name", "Kernel Name", kernelName, &kernelName);
         op.add<popl::Value<std::string>>("", "options", "Program Build Options", buildOptions, &buildOptions);
         op.add<popl::Value<size_t>>("", "gwx", "Global Work Size", gwx, &gwx);
+
         bool printUsage = false;
         try {
             op.parse(argc, argv);
@@ -131,23 +132,14 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Platform platform;
+    cl::Device device;
+    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
     printf("CL_DEVICE_ADDRESS_BITS is %d for this device.\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_ADDRESS_BITS>() );
+        device.getInfo<CL_DEVICE_ADDRESS_BITS>() );
 
     // Check for SPIR-V support.  If the device supports OpenCL 2.1 or newer
     // we can use the core clCreateProgramWithIL API.  Otherwise, if the device
@@ -155,20 +147,20 @@ int main(
     // extension API.  If neither is supported then we cannot run this sample.
 #ifdef CL_VERSION_2_1
     // Note: This could look for "SPIR-V" in CL_DEVICE_IL_VERSION.
-    if (getDeviceOpenCLVersion(devices[deviceIndex]) >= CL_MAKE_VERSION(2, 1, 0) &&
-        !devices[deviceIndex].getInfo<CL_DEVICE_IL_VERSION>().empty()) {
+    if (getDeviceOpenCLVersion(device) >= CL_MAKE_VERSION(2, 1, 0) &&
+        !device.getInfo<CL_DEVICE_IL_VERSION>().empty()) {
         printf("Device supports OpenCL 2.1 or newer, using clCreateProgramWithIL.\n");
     } else
 #endif
-    if (checkDeviceForExtension(devices[deviceIndex], "cl_khr_il_program")) {
+    if (checkDeviceForExtension(device, "cl_khr_il_program")) {
         printf("Device supports cl_khr_il_program, using clCreateProgramWithILKHR.\n");
     } else {
         printf("Device does not support SPIR-V, exiting.\n");
         return -1;
     }
 
-    cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
+    cl::Context context{device};
+    cl::CommandQueue commandQueue{context, device};
 
     printf("Reading SPIR-V from file: %s\n", fileName.c_str());
     std::vector<cl_uchar> spirv = readSPIRVFromFile(fileName);
