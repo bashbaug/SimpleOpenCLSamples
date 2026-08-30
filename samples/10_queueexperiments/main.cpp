@@ -373,21 +373,23 @@ static void go_kernel_ctx_ioqxN( cl::Device& device, const int numKernels )
     printf("Finished in %f seconds\n", best);
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
+
     int numKernels = 0;
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<int>>("k", "kernels", "Kernel to Execute (<=0 to sweep)", numKernels, &numKernels);
         op.add<popl::Value<int>>("i", "iterations", "Kernel Iterations", numIterations, &numIterations);
         op.add<popl::Value<size_t>>("e", "elements", "Number of ND-Range Elements", numElements, &numElements);
+
         bool printUsage = false;
         try {
             op.parse(argc, argv);
@@ -410,24 +412,12 @@ int main(
         numKernels = maxKernels;
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    cl::Device& device = devices[deviceIndex];
-    printf("Running on device: %s\n",
-        device.getInfo<CL_DEVICE_NAME>().c_str() );
-
-    cl::Context context{ device };
+    cl::Context context{device};
 
     cl::Program program{ context, kernelString };
     program.build();
