@@ -302,14 +302,15 @@ private:
     }
 
     void initOpenCL() {
-        cl::Platform platform;
         cl::Device device;
-        if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
-            throw std::runtime_error("couldn't setup OpenCL platform and device");
+        if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
+            throw std::runtime_error("couldn't setup OpenCL device");
         }
 
         checkOpenCLExternalMemorySupport(device);
         checkOpenCLExternalSemaphoreSupport(device);
+
+        const cl::Platform& platform = device.getInfo<CL_DEVICE_PLATFORM>();
 
         if (useExternalMemory) {
             clEnqueueAcquireExternalMemObjectsKHR = (clEnqueueAcquireExternalMemObjectsKHR_fn)

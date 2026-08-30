@@ -277,9 +277,8 @@ int main(int argc, char** argv)
     pWindow = glfwCreateWindow((int)width, (int)height, "N-Body Simulation with OpenGL", NULL, NULL);
     glfwMakeContextCurrent(pWindow);
 
-    cl::Platform platform;
     cl::Device device;
-    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 

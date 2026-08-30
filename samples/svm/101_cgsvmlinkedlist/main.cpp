@@ -195,9 +195,8 @@ int main(int argc, char** argv)
         }
     }
 
-    cl::Platform platform;
     cl::Device device;
-    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 

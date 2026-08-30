@@ -139,8 +139,10 @@ kernel void Sobel( read_only image2d_t src, write_only image2d_t dst, sampler_t 
 //         OpenGL context.
 // If any of these steps fail or if sharing is disabled then an OpenCL context
 // is created that does not support sharing.
-cl::Context createContext(const cl::Platform& platform, const cl::Device& device)
+cl::Context createContext(const cl::Device& device)
 {
+    const cl::Platform& platform = device.getInfo<CL_DEVICE_PLATFORM>();
+
     const cl_context_properties props[] = {
         CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 #if defined(WIN32)
@@ -537,13 +539,12 @@ int main(int argc, char** argv)
     pWindow = glfwCreateWindow((int)gwx, (int)gwy, "Sobel Filter with OpenGL", NULL, NULL);
     glfwMakeContextCurrent(pWindow);
 
-    cl::Platform platform;
     cl::Device device;
-    if (!setupPlatformAndDevice(platform, device, platformIndex, deviceIndex, verbose)) {
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 
-    cl::Context context = createContext(platform, device);
+    cl::Context context = createContext(device);
     commandQueue = cl::CommandQueue{context, device};
 
     cl::Program program{ context, kernelString };

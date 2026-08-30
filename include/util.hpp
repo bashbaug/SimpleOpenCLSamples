@@ -124,8 +124,7 @@ static bool checkDeviceIndex(
     return true;
 }
 
-static bool setupPlatformAndDevice(
-    cl::Platform& platform,
+static bool setupDevice(
     cl::Device& device,
     int platformIndex,
     int deviceIndex,
@@ -138,7 +137,7 @@ static bool setupPlatformAndDevice(
         return false;
     }
 
-    platform = std::move(platforms[platformIndex]);
+    const cl::Platform& platform = platforms[platformIndex];
     printf("Running on platform: %s\n",
         platform.getInfo<CL_PLATFORM_NAME>().c_str() );
 
