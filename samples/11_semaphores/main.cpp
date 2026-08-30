@@ -69,13 +69,6 @@ int main(int argc, char** argv)
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
-        return -1;
-    }
-
     cl::Device device;
     if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
@@ -92,8 +85,10 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    const cl::Platform& platform = device.getInfo<CL_DEVICE_PLATFORM>();
+
     std::vector<cl_semaphore_type_khr> platformSemaphoreTypes =
-        platforms[platformIndex].getInfo<CL_PLATFORM_SEMAPHORE_TYPES_KHR>();
+        platform.getInfo<CL_PLATFORM_SEMAPHORE_TYPES_KHR>();
     printf("\tPlatform Semaphore Types:\n");
     PrintSemaphoreTypes(platformSemaphoreTypes);
 

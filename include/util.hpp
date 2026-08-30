@@ -98,6 +98,11 @@ static bool checkPlatformIndex(
         fprintf(stderr, "Error: No OpenCL platforms found.\n");
         return false;
     }
+    if (platformIndex < 0) {
+        fprintf(stderr, "Error: Invalid platform index %d specified\n",
+            platformIndex);
+        return false;
+    }
     if (platformIndex >= (int)platforms.size()) {
         fprintf(stderr, "Error: Invalid platform index %d specified (max %d)\n",
             platformIndex,
@@ -113,6 +118,11 @@ static bool checkDeviceIndex(
 {
     if (devices.size() == 0) {
         fprintf(stderr, "Error: No OpenCL devices found.\n");
+        return false;
+    }
+    if (deviceIndex < 0) {
+        fprintf(stderr, "Error: Invalid device index %d specified\n",
+            deviceIndex);
         return false;
     }
     if (deviceIndex >= (int)devices.size()) {
@@ -148,7 +158,7 @@ static bool setupDevice(
         return false;
     }
 
-    device = std::move(devices[deviceIndex]);
+    device = devices[deviceIndex];
     if (verbose) {
         printf("Running on device: %s (%uCUs, %uMHz)\n",
             device.getInfo<CL_DEVICE_NAME>().c_str(),
