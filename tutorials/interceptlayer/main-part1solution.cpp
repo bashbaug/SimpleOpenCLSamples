@@ -159,9 +159,7 @@ static void checkResults()
     commandQueue.finish();
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
     int platformIndex = 0;
     int deviceIndex = 0;

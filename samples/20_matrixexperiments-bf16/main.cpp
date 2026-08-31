@@ -723,6 +723,7 @@ static void bfloat16_dpas_blockread_vnni_tiled(
 
 int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -734,6 +735,7 @@ int main(int argc, char** argv)
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<std::string>>("", "file", "Kernel File Name", fileName, &fileName);
@@ -750,6 +752,7 @@ int main(int argc, char** argv)
         op.add<popl::Switch>("", "roundrobin", "Use Round Robin Scheduling", &roundRobin);
         op.add<popl::Value<float>>("", "threshold", "Local Error Threshold", threshold, &threshold);
         op.add<popl::Value<size_t>, popl::Attribute::advanced>("", "mask", "Test Mask", mask, &mask);
+
         bool printUsage = false;
         try {
             op.parse(argc, argv);
@@ -766,31 +769,10 @@ int main(int argc, char** argv)
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
-
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-    if (deviceIndex >= devices.size()) {
-        printf("Requested device index is %d, but only %zu devices were found.\n",
-            deviceIndex, devices.size());
-        return -1;
-    }
-
-    cl::Device& device = devices[deviceIndex];
-    printf("Running on device: %s (%uCUs, %uMHz)\n",
-        device.getInfo<CL_DEVICE_NAME>().c_str(),
-        device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(),
-        device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>());
-    printf("Running on drivers: %s\n",
-        device.getInfo<CL_DRIVER_VERSION>().c_str());
 
     auto minSubGroupSize = findMinSubGroupSize(device);
 
