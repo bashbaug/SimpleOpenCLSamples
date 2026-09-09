@@ -103,11 +103,13 @@ bool do_test(
 
 int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
 
@@ -127,23 +129,10 @@ int main(int argc, char** argv)
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
-
-    cl::Platform& platform = platforms[platformIndex];
-    printf("Running on platform: %s\n",
-        platform.getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    cl::Device& device = devices[deviceIndex];
-    printf("Running on device: %s\n",
-        device.getInfo<CL_DEVICE_NAME>().c_str() );
 
     cl::Context context{device};
 
