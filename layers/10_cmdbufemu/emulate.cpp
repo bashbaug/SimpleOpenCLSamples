@@ -21,7 +21,7 @@
 
 // Reminder: When updating these versions, update the README also!
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 8);
+    CL_MAKE_VERSION(1, 0, 0);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
     CL_MAKE_VERSION(0, 9, 5);
 
