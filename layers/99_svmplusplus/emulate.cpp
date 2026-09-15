@@ -1434,7 +1434,11 @@ cl_int CL_API_CALL clEnqueueSVMFree_override(
     const cl_event* event_wait_list,
     cl_event* event)
 {
-    std::lock_guard<std::mutex> lock(SLayerContext::Mutex);
+    // Note: This is one of the few SVM APIs that does not acquire the lock.
+    // When there is a callback, it will likely call clSVMFree or
+    // clSVMFreeWithProperties, which will deadlock if this API is holding the
+    // lock. Since there is no need to acquire the lock for this API, just skip
+    // it.
     std::vector<void*> nonNullPtrs;
     for (cl_uint i = 0; i < num_svm_pointers; ++i) {
         if (svm_pointers[i] != nullptr) {
