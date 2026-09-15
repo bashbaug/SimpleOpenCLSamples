@@ -602,39 +602,6 @@ static cl_context getContext(
     return context;
 }
 
-static inline bool isSystemPtr(
-    cl_context context,
-    const void* ptr)
-{
-    const auto& layerContext = getLayerContext();
-    if (layerContext.isKnownAlloc(context, ptr)) {
-        return layerContext.getAllocInfo(context, ptr).IsSystemPointer;
-    }
-    return false;
-}
-
-static inline bool isUSMPtr(
-    cl_context context,
-    const void* ptr)
-{
-    const auto& layerContext = getLayerContext();
-    if (layerContext.isKnownAlloc(context, ptr)) {
-        return layerContext.getAllocInfo(context, ptr).IsUSMPointer;
-    }
-    return false;
-}
-
-static inline bool isSVMPtr(
-    cl_context context,
-    const void* ptr)
-{
-    const auto& layerContext = getLayerContext();
-    if (layerContext.isKnownAlloc(context, ptr)) {
-        return layerContext.getAllocInfo(context, ptr).IsSVMPointer;
-    }
-    return false;
-}
-
 static void parseSVMAllocProperties(
     const cl_svm_alloc_properties_khr* props,
     cl_device_id& device,
@@ -820,18 +787,23 @@ cl_int CL_API_CALL clSVMFreeWithPropertiesKHR_EMU(
     }
 
     cl_int errorCode = CL_SUCCESS;
-    if (isUSMPtr(context, ptr)) {
-        cl_platform_id platform = getPlatform(context);
-        const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
-        errorCode = USMFuncs.clMemBlockingFreeINTEL(
-            context,
-            ptr);
-    } else if (isSVMPtr(context, ptr)) {
-        g_pNextDispatch->clSVMFree(
-            context,
-            ptr);
-    } else if (isSystemPtr(context, ptr)) {
-        align_free(ptr);
+    if (getLayerContext().isKnownAlloc(context, ptr)) {
+        const auto& allocInfo = getLayerContext().getAllocInfo(context, ptr);
+        if (allocInfo.IsUSMPointer) {
+            cl_platform_id platform = getPlatform(context);
+            const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
+            errorCode = USMFuncs.clMemBlockingFreeINTEL(
+                context,
+                ptr);
+        } else if (allocInfo.IsSVMPointer) {
+            g_pNextDispatch->clSVMFree(
+                context,
+                ptr);
+        } else if (allocInfo.IsSystemPointer) {
+            align_free(ptr);
+        } else {
+            errorCode = CL_INVALID_VALUE;
+        }
     } else {
         errorCode = CL_INVALID_VALUE;
     }
@@ -1313,9 +1285,13 @@ cl_int CL_API_CALL clSetKernelArgSVMPointer_override(
     cl_uint arg_index,
     const void* arg_value)
 {
+    std::lock_guard<std::mutex> lock(SLayerContext::Mutex);
     cl_context context = getContext(kernel);
+    const void* base = nullptr;
+    SAllocInfo allocInfo;
+    getLayerContext().findAllocInfo(context, arg_value, base, allocInfo);
 
-    if (isUSMPtr(context, arg_value)) {
+    if (allocInfo.IsUSMPointer) {
         cl_platform_id platform = getPlatform(context);
         const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
         return USMFuncs.clSetKernelArgMemPointerINTEL(
@@ -1336,6 +1312,7 @@ cl_int CL_API_CALL clSetKernelExecInfo_override(
     size_t param_value_size,
     const void* param_value)
 {
+    std::lock_guard<std::mutex> lock(SLayerContext::Mutex);
     switch (param_name) {
     case CL_KERNEL_EXEC_INFO_SVM_INDIRECT_ACCESS_KHR:
         {
@@ -1372,7 +1349,10 @@ cl_int CL_API_CALL clSetKernelExecInfo_override(
             std::vector<const void*> nonNullSVMPtrs;
             for (size_t i = 0; i < numPtrs; ++i) {
                 if (svmPtrs[i] != nullptr) {
-                    if (isUSMPtr(context, svmPtrs[i])) {
+                    const void* base = nullptr;
+                    SAllocInfo allocInfo;
+                    getLayerContext().findAllocInfo(context, svmPtrs[i], base, allocInfo);
+                    if (allocInfo.IsUSMPointer) {
                         nonNullUSMPtrs.push_back(svmPtrs[i]);
                     } else {
                         nonNullSVMPtrs.push_back(svmPtrs[i]);
@@ -1411,7 +1391,11 @@ void CL_API_CALL clSVMFree_override(
     void* ptr)
 {
     std::lock_guard<std::mutex> lock(SLayerContext::Mutex);
-    if (isUSMPtr(context, ptr)) {
+    const void* base = nullptr;
+    SAllocInfo allocInfo;
+    getLayerContext().findAllocInfo(context, ptr, base, allocInfo);
+
+    if (allocInfo.IsUSMPointer) {
         cl_platform_id platform = getPlatform(context);
         const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
         USMFuncs.clMemFreeINTEL(context, ptr);
@@ -1486,7 +1470,15 @@ cl_int CL_API_CALL clEnqueueSVMMemcpy_override(
         return CL_SUCCESS;
     }
 
-    if (isUSMPtr(context, dst_ptr) || isUSMPtr(context, src_ptr)) {
+    const void* base = nullptr;
+
+    SAllocInfo dstAllocInfo;
+    getLayerContext().findAllocInfo(context, dst_ptr, base, dstAllocInfo);
+
+    SAllocInfo srcAllocInfo;
+    getLayerContext().findAllocInfo(context, src_ptr, base, srcAllocInfo);
+
+    if (dstAllocInfo.IsUSMPointer || srcAllocInfo.IsUSMPointer) {
         cl_platform_id platform = getPlatform(context);
         const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
         cl_int ret = USMFuncs.clEnqueueMemcpyINTEL(
@@ -1545,7 +1537,10 @@ cl_int CL_API_CALL clEnqueueSVMMemFill_override(
         return CL_SUCCESS;
     }
 
-    if (isUSMPtr(context, svm_ptr)) {
+    const void* base = nullptr;
+    SAllocInfo allocInfo;
+    getLayerContext().findAllocInfo(context, svm_ptr, base, allocInfo);
+    if (allocInfo.IsUSMPointer) {
         cl_platform_id platform = getPlatform(context);
         const auto& USMFuncs = getLayerContext().getUSMFuncs(platform);
         cl_int ret = USMFuncs.clEnqueueMemFillINTEL(
