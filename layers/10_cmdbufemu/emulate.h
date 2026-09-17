@@ -11,6 +11,7 @@
 
 extern bool g_EnhancedErrorChecking;
 extern bool g_KernelForProfiling;
+extern bool g_SuggestedLocalWorkSize;
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
 

@@ -20,9 +20,7 @@ void PrintUSMCaps(
         ( usmcaps & CL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL ) ? "\n\t\tCL_UNIFIED_SHARED_MEMORY_CONCURRENT_ATOMIC_ACCESS_INTEL" : "" );
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
     {
         popl::OptionParser op("Supported Options");

@@ -28,10 +28,9 @@ kernel void AddBuffers( global uint* dst, global uint* srcA, global uint* srcB )
 }
 )CLC";
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -42,6 +41,7 @@ int main(
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Switch>("", "ioq", "Use an In-Order Queue", &useIOQ);
@@ -64,26 +64,15 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
-
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
 
     // device queries:
 
     bool has_cl_khr_command_buffer =
-        checkDeviceForExtension(devices[deviceIndex], CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
+        checkDeviceForExtension(device, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
     if (has_cl_khr_command_buffer) {
         printf("Device supports " CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ".\n");
     } else {
@@ -92,7 +81,7 @@ int main(
     }
 
     cl_command_queue_properties cmdqprops =
-        devices[deviceIndex].getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
+        device.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
     if (cmdqprops & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) {
         printf("Device supports out-of-order queues.\n");
     } else {
@@ -101,7 +90,7 @@ int main(
     }
 
     cl_command_queue_properties cmdbufqueueprops =
-        devices[deviceIndex].getInfo<CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR>();
+        device.getInfo<CL_DEVICE_COMMAND_BUFFER_SUPPORTED_QUEUE_PROPERTIES_KHR>();
     if (cmdbufqueueprops & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) {
         printf("Device supports out-of-order command buffers.\n");
     } else {
@@ -114,8 +103,8 @@ int main(
     printf("Executing the command buffer %zu times.\n", iterations);
     printf("Buffer Size is %zu 32-bit integers.\n", gwx);
 
-    cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue{context, devices[deviceIndex],
+    cl::Context context{device};
+    cl::CommandQueue commandQueue{context, device,
         useIOQ ? (cl_command_queue_properties)0 : CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE};
 
     cl::Program program{ context, kernelString };
@@ -152,17 +141,17 @@ int main(
     fillKernel.setArg(2, static_cast<cl_uint>(gwx));
     clCommandNDRangeKernelKHR(
         cmdbuf(),
-        nullptr,
-        nullptr,
+        nullptr,    // command queue, can be NULL to use the command buffer queue
+        nullptr,    // command properties
         fillKernel(),
-        1,
-        nullptr,
-        &one,
-        nullptr,
-        0,
-        nullptr,
+        1,          // work dim
+        nullptr,    // global work offset
+        &one,       // global work size
+        nullptr,    // local work size
+        0,          // num sync points in wait list
+        nullptr,    // sync point wait list
         &writeA,
-        nullptr);
+        nullptr);   // mutable handle
 
     cl_sync_point_khr writeB = 0;
     fillKernel.setArg(0, deviceMemSrcB);
@@ -188,17 +177,17 @@ int main(
     addKernel.setArg(2, deviceMemSrcB);
     clCommandNDRangeKernelKHR(
         cmdbuf(),
-        nullptr,
-        nullptr,
+        nullptr,    // command queue, can be NULL to use the command buffer queue
+        nullptr,    // command properties
         addKernel(),
-        1,
-        nullptr,
-        &gwx,
-        nullptr,
+        1,          // work dim
+        nullptr,    // global work offset
+        &gwx,       // global work size
+        nullptr,    // local work size
         static_cast<cl_uint>(waitList.size()),
         waitList.data(),
-        nullptr,
-        nullptr);
+        nullptr,    // sync point
+        nullptr);   // mutable handle
     cmdbuf.finalize();
 
     // Ensure the queue is empty and no processing is happening

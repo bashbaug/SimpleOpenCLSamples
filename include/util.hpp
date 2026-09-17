@@ -6,6 +6,12 @@
 #pragma once
 
 #include <CL/opencl.hpp>
+
+#include <cctype>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <iterator>
 #include <string>
 
 static cl_version getDeviceOpenCLVersion(
@@ -68,6 +74,22 @@ static bool checkDeviceForExtension(
     return supported;
 }
 
+static std::string readStringFromFile(
+    const std::string& filename )
+{
+    std::ifstream is(filename, std::ios::binary);
+    if (!is.good()) {
+        printf("Couldn't open file '%s'!\n", filename.c_str());
+        return "";
+    }
+
+    std::string source{
+        std::istreambuf_iterator<char>(is),
+        std::istreambuf_iterator<char>() };
+
+    return source;
+}
+
 static bool checkPlatformIndex(
     const std::vector<cl::Platform>& platforms,
     int platformIndex)
@@ -76,11 +98,80 @@ static bool checkPlatformIndex(
         fprintf(stderr, "Error: No OpenCL platforms found.\n");
         return false;
     }
+    if (platformIndex < 0) {
+        fprintf(stderr, "Error: Invalid platform index %d specified\n",
+            platformIndex);
+        return false;
+    }
     if (platformIndex >= (int)platforms.size()) {
         fprintf(stderr, "Error: Invalid platform index %d specified (max %d)\n",
             platformIndex,
             (int)(platforms.size() - 1) );
         return false;
     }
+    return true;
+}
+
+static bool checkDeviceIndex(
+    const std::vector<cl::Device>& devices,
+    int deviceIndex)
+{
+    if (devices.size() == 0) {
+        fprintf(stderr, "Error: No OpenCL devices found.\n");
+        return false;
+    }
+    if (deviceIndex < 0) {
+        fprintf(stderr, "Error: Invalid device index %d specified\n",
+            deviceIndex);
+        return false;
+    }
+    if (deviceIndex >= (int)devices.size()) {
+        fprintf(stderr, "Error: Invalid device index %d specified (max %d)\n",
+            deviceIndex,
+            (int)(devices.size() - 1) );
+        return false;
+    }
+    return true;
+}
+
+static bool setupDevice(
+    cl::Device& device,
+    int platformIndex,
+    int deviceIndex,
+    bool verbose = false)
+{
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+
+    if (!checkPlatformIndex(platforms, platformIndex)) {
+        return false;
+    }
+
+    const cl::Platform& platform = platforms[platformIndex];
+    printf("Running on platform: %s\n",
+        platform.getInfo<CL_PLATFORM_NAME>().c_str() );
+
+    std::vector<cl::Device> devices;
+    platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);  
+
+    if (!checkDeviceIndex(devices, deviceIndex)) {
+        return false;
+    }
+
+    device = devices[deviceIndex];
+    if (verbose) {
+        printf("Running on device: %s (%uCUs, %uMHz)\n",
+            device.getInfo<CL_DEVICE_NAME>().c_str(),
+            device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(),
+            device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() );
+        printf("Device version: %s\n",
+            device.getInfo<CL_DEVICE_VERSION>().c_str() );
+        printf("Driver version: %s\n",
+            device.getInfo<CL_DRIVER_VERSION>().c_str() );
+    } else {
+        printf("Running on device: %s\n",
+            device.getInfo<CL_DEVICE_NAME>().c_str() );
+    }
+
     return true;
 }
