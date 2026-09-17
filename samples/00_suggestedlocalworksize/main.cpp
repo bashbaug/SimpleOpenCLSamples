@@ -24,6 +24,7 @@ kernel void test(global uint* dst)
 
 int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
@@ -31,6 +32,7 @@ int main(int argc, char** argv)
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<size_t>>("g", "gws", "Global Work Size", gws, &gws);
@@ -51,40 +53,32 @@ int main(int argc, char** argv)
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (!checkPlatformIndex(platforms, platformIndex)) {
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
         return -1;
     }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-
-    if (checkDeviceForExtension(devices[deviceIndex], CL_KHR_SUGGESTED_LOCAL_WORK_SIZE_EXTENSION_NAME)) {
+    if (checkDeviceForExtension(device, CL_KHR_SUGGESTED_LOCAL_WORK_SIZE_EXTENSION_NAME)) {
         printf("Device supports %s.\n", CL_KHR_SUGGESTED_LOCAL_WORK_SIZE_EXTENSION_NAME);
     } else {
         printf("Device does not support %s, exiting.\n", CL_KHR_SUGGESTED_LOCAL_WORK_SIZE_EXTENSION_NAME);
         return -1;
     }
 
+    printf("Device maximum work-group size is: %zu\n", device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+
+    const cl::Platform& platform = device.getInfo<CL_DEVICE_PLATFORM>();
     clGetKernelSuggestedLocalWorkSizeKHR_fn clGetKernelSuggestedLocalWorkSizeKHR =
         (clGetKernelSuggestedLocalWorkSizeKHR_fn)clGetExtensionFunctionAddressForPlatform(
-            platforms[platformIndex](),
+            platform(),
             "clGetKernelSuggestedLocalWorkSizeKHR" );
     if (clGetKernelSuggestedLocalWorkSizeKHR == nullptr) {
         fprintf(stderr, "Failed to get function pointer for clGetKernelSuggestedLocalWorkSizeKHR, exiting.\n");
         return -1;
     }
 
-    cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue{context, devices[deviceIndex]};
+    cl::Context context{device};
+    cl::CommandQueue commandQueue{context, device};
 
     cl::Program program{ context, kernelString };
     program.build();
