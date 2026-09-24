@@ -57,7 +57,7 @@ getMEM_ALLOC_SIZE_INTEL( cl::Context& context, const void* ptr )
 static cl_device_id
 getMEM_ALLOC_DEVICE_INTEL( cl::Context& context, const void* ptr )
 {
-    cl_device_id device = 0;
+    cl_device_id device = nullptr;
     clGetMemAllocInfoINTEL(
         context(),
         ptr,
