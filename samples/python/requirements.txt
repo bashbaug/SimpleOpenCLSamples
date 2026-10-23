@@ -1,4 +1,4 @@
-matplotlib==3.8.2
+matplotlib==3.10.9
 numpy==1.26.3
 pyopencl==2023.1.4
 pillow==13.0.0

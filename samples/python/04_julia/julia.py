@@ -135,7 +135,7 @@ if __name__ == "__main__":
                                               0, gwx * gwy, np.uint32)
     with mapped_dst.base:
         # note: this generates a 24-bit .bmp file instead of a 32-bit .bmp file!
-        (r, g, b, a) = Image.fromarray(mapped_dst.reshape((gwy, gwx)), 'RGBA').split()
+        (r, g, b, a) = Image.fromarray(mapped_dst.view(np.uint8).reshape((gwy, gwx, 4))).split()
         image = Image.merge('RGB', (r, g, b))
         image.save(filename)
         print('Wrote image file {}'.format(filename))
