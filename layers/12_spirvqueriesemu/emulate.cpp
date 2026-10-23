@@ -285,7 +285,6 @@ private:
                 if (deviceImageSupport == CL_TRUE) {
                     deviceInfo.Capabilities.push_back(spv::CapabilityImage1D);
                     deviceInfo.Capabilities.push_back(spv::CapabilityImageBasic);
-                    deviceInfo.Capabilities.push_back(spv::CapabilityImageBuffer);
                     deviceInfo.Capabilities.push_back(spv::CapabilityLiteralSampler);
                     deviceInfo.Capabilities.push_back(spv::CapabilitySampled1D);
                     deviceInfo.Capabilities.push_back(spv::CapabilitySampledBuffer);
