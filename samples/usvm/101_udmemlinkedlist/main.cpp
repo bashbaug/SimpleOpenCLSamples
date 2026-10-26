@@ -8,6 +8,8 @@
 
 #include <CL/opencl.hpp>
 
+#include "util.hpp"
+
 cl::CommandQueue commandQueue;
 cl::Kernel kernel;
 
@@ -188,15 +190,15 @@ void cleanup( cl::Context& context )
     d_head = nullptr;
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         op.add<popl::Value<cl_uint>>("n", "nodes", "Number of Linked List Nodes", numNodes, &numNodes);
@@ -217,20 +219,13 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
+        return -1;
+    }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-
-    cl::Context context{devices[deviceIndex]};
-    commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::Context context{device};
+    commandQueue = cl::CommandQueue{context, device};
 
     cl::Program program{ context, kernelString };
     program.build();
@@ -251,7 +246,7 @@ int main(
         sizeof(enable),
         &enable );
 
-    init( context, devices[deviceIndex] );
+    init( context, device );
     go();
     checkResults();
 

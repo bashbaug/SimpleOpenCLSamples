@@ -10,6 +10,8 @@
 
 #include <cinttypes>
 
+#include "util.hpp"
+
 static inline bool has_all_svm_caps(
     cl_svm_capabilities_khr caps,
     cl_svm_capabilities_khr check)
@@ -102,15 +104,15 @@ getSVM_INFO_ASSOCIATED_DEVICE_HANDLE_KHR( cl::Context& context, const void* ptr 
     return device;
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         bool printUsage = false;
@@ -129,23 +131,15 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
+        return -1;
+    }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-    printf("\nDevice handle: %p\n", devices[deviceIndex]());
-
-    cl::Context context{devices[deviceIndex]};
+    cl::Context context{device};
 
     std::vector<cl_svm_capabilities_khr> typeCaps =
-        devices[deviceIndex].getInfo<CL_DEVICE_SVM_TYPE_CAPABILITIES_KHR>();
+        device.getInfo<CL_DEVICE_SVM_TYPE_CAPABILITIES_KHR>();
     for (size_t index = 0; index < typeCaps.size(); index++) {
         cl_svm_capabilities_khr caps = typeCaps[index];
 
@@ -160,7 +154,7 @@ int main(
         }
 
         const cl_svm_alloc_properties_khr associatedDeviceProps[] = {
-            CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_KHR, (cl_svm_alloc_properties_khr)devices[deviceIndex](),
+            CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_KHR, (cl_svm_alloc_properties_khr)device(),
             0,
         };
         const cl_svm_alloc_properties_khr* props = nullptr;

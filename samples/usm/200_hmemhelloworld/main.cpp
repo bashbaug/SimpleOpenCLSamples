@@ -22,9 +22,9 @@ kernel void CopyBuffer( global uint* dst, global uint* src )
 
 int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
-    bool verbose = false;
 
     {
         popl::OptionParser op("Supported Options");

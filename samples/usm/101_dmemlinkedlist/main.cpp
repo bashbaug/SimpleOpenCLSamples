@@ -184,9 +184,9 @@ void cleanup( cl::Context& context )
 
 int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
-    bool verbose = false;
 
     {
         popl::OptionParser op("Supported Options");

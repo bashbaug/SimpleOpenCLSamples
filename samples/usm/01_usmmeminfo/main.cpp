@@ -84,9 +84,9 @@ usm_type_to_string( cl_unified_shared_memory_type_intel type )
 
 int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
-    bool verbose = false;
 
     {
         popl::OptionParser op("Supported Options");

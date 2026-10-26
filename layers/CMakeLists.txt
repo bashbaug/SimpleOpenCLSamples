@@ -60,12 +60,4 @@ if(TARGET SPIRV-Headers)
     add_subdirectory( 12_spirvqueriesemu )
 endif()
 
-set(BUILD_EXTENSION_LAYERS TRUE)
-if(NOT TARGET OpenCLExt)
-    message(STATUS "Skipping Extension Layers - OpenCL Extension Loader is not found.")
-    set(BUILD_EXTENSION_LAYERS FALSE)
-endif()
-
-if(BUILD_EXTENSION_LAYERS)
-    add_subdirectory( 99_svmplusplus )
-endif()
+add_subdirectory( 99_svmplusplus )

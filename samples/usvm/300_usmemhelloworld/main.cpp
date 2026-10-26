@@ -8,6 +8,8 @@
 
 #include <CL/opencl.hpp>
 
+#include "util.hpp"
+
 const size_t    gwx = 1024*1024;
 
 static const char kernelString[] = R"CLC(
@@ -18,15 +20,15 @@ kernel void CopyBuffer( global uint* dst, global uint* src )
 }
 )CLC";
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
+    bool verbose = false;
     int platformIndex = 0;
     int deviceIndex = 0;
 
     {
         popl::OptionParser op("Supported Options");
+        op.add<popl::Switch, popl::Attribute::advanced>("v", "verbose", "Verbose Output", &verbose);
         op.add<popl::Value<int>>("p", "platform", "Platform Index", platformIndex, &platformIndex);
         op.add<popl::Value<int>>("d", "device", "Device Index", deviceIndex, &deviceIndex);
         bool printUsage = false;
@@ -45,27 +47,20 @@ int main(
         }
     }
 
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
+    cl::Device device;
+    if (!setupDevice(device, platformIndex, deviceIndex, verbose)) {
+        return -1;
+    }
 
-    printf("Running on platform: %s\n",
-        platforms[platformIndex].getInfo<CL_PLATFORM_NAME>().c_str() );
-
-    std::vector<cl::Device> devices;
-    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-    printf("Running on device: %s\n",
-        devices[deviceIndex].getInfo<CL_DEVICE_NAME>().c_str() );
-
-    cl::Context context{devices[deviceIndex]};
-    cl::CommandQueue commandQueue = cl::CommandQueue{context, devices[deviceIndex]};
+    cl::Context context{device};
+    cl::CommandQueue commandQueue{context, device};
 
     cl::Program program{ context, kernelString };
     program.build();
     cl::Kernel kernel = cl::Kernel{ program, "CopyBuffer" };
 
     const cl_svm_alloc_properties_khr props[] = {
-        CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_KHR, (cl_svm_alloc_properties_khr)devices[deviceIndex](),
+        CL_SVM_ALLOC_ASSOCIATED_DEVICE_HANDLE_KHR, (cl_svm_alloc_properties_khr)device(),
         0,
     };
 

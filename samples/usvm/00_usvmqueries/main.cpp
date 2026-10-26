@@ -47,7 +47,7 @@ void PrintUSVMCaps(
     const char* prefix,
     cl_svm_capabilities_khr svmcaps )
 {
-    printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+    printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
         prefix,
         ( svmcaps & CL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_KHR     ) ? "\n\t\t\tCL_SVM_CAPABILITY_SINGLE_ADDRESS_SPACE_KHR"      : "",
         ( svmcaps & CL_SVM_CAPABILITY_SYSTEM_ALLOCATED_KHR         ) ? "\n\t\t\tCL_SVM_CAPABILITY_SYSTEM_ALLOCATED_KHR"          : "",
@@ -63,7 +63,8 @@ void PrintUSVMCaps(
         ( svmcaps & CL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_KHR     ) ? "\n\t\t\tCL_SVM_CAPABILITY_DEVICE_ATOMIC_ACCESS_KHR"      : "",
         ( svmcaps & CL_SVM_CAPABILITY_CONCURRENT_ACCESS_KHR        ) ? "\n\t\t\tCL_SVM_CAPABILITY_CONCURRENT_ACCESS_KHR"         : "",
         ( svmcaps & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR ) ? "\n\t\t\tCL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR"  : "",
-        ( svmcaps & CL_SVM_CAPABILITY_INDIRECT_ACCESS_KHR          ) ? "\n\t\t\tCL_SVM_CAPABILITY_INDIRECT_ACCESS_KHR"           : "" );
+        ( svmcaps & CL_SVM_CAPABILITY_INDIRECT_ACCESS_KHR          ) ? "\n\t\t\tCL_SVM_CAPABILITY_INDIRECT_ACCESS_KHR"           : "",
+		( svmcaps & CL_SVM_CAPABILITY_CREATE_BUFFER_KHR            ) ? "\n\t\t\tCL_SVM_CAPABILITY_CREATE_BUFFER_KHR"             : "");
 }
 
 int main(
