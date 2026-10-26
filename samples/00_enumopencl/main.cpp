@@ -243,9 +243,7 @@ static cl_int PrintDeviceInfoSummary(
     return errorCode;
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
     {
         popl::OptionParser op("Supported Options");

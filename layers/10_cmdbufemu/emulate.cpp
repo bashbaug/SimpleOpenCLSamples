@@ -21,7 +21,7 @@
 
 // Reminder: When updating these versions, update the README also!
 static constexpr cl_version version_cl_khr_command_buffer =
-    CL_MAKE_VERSION(0, 9, 8);
+    CL_MAKE_VERSION(1, 0, 0);
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
     CL_MAKE_VERSION(0, 9, 5);
 
@@ -1503,6 +1503,14 @@ typedef struct _cl_command_buffer_khr
             &cmdbuf_context,
             nullptr);
 
+        cl_device_id cmdbuf_device = nullptr;
+        g_pNextDispatch->clGetCommandQueueInfo(
+            getQueue(),
+            CL_QUEUE_DEVICE,
+            sizeof(cmdbuf_device),
+            &cmdbuf_device,
+            nullptr);
+
         for( cl_uint q = 0; q < num_queues && queues; q++ )
         {
             if( queues[q] == nullptr )
@@ -1520,6 +1528,18 @@ typedef struct _cl_command_buffer_khr
             if( queue_context != cmdbuf_context )
             {
                 return CL_INVALID_CONTEXT;
+            }
+
+            cl_device_id queue_device = nullptr;
+            g_pNextDispatch->clGetCommandQueueInfo(
+                queues[q],
+                CL_QUEUE_DEVICE,
+                sizeof(queue_device),
+                &queue_device,
+                nullptr);
+            if( queue_device != cmdbuf_device )
+            {
+                return CL_INVALID_DEVICE;
             }
         }
 

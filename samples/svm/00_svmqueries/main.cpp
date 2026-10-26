@@ -20,9 +20,7 @@ void PrintSVMCaps(
         ( svmcaps & CL_DEVICE_SVM_ATOMICS               ) ? "\n\t\tCL_DEVICE_SVM_ATOMICS"               : "" );
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
     {
         popl::OptionParser op("Supported Options");

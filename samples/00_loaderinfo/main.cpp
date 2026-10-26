@@ -31,9 +31,7 @@ static void PrintLoaderInfo(const char* label, cl_icdl_info info)
     printf("Query for for %s (size = %zu) returned: %s\n", label, sz, str.data());
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
     {
         popl::OptionParser op("Supported Options");

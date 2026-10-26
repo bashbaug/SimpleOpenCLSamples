@@ -52,9 +52,7 @@ static cl_int PrintDeviceInfoSummary(
     return CL_SUCCESS;
 }
 
-int main(
-    int argc,
-    char** argv )
+int main(int argc, char** argv)
 {
     {
         popl::OptionParser op("Supported Options");
