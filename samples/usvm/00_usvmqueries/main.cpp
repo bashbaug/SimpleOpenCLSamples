@@ -10,6 +10,12 @@
 
 #include <cinttypes>
 
+#if !defined(CL_SVM_CAPABILITY_CREATE_BUFFER_KHR)
+#define CL_SVM_CAPABILITY_CREATE_BUFFER_KHR                 (1 << 15)
+#else
+#pragma message("CL_SVM_CAPABILITY_CREATE_BUFFER_KHR is now properly defined.")
+#endif
+
 static inline bool has_all_svm_caps(
     cl_svm_capabilities_khr caps,
     cl_svm_capabilities_khr check)
@@ -64,7 +70,7 @@ void PrintUSVMCaps(
         ( svmcaps & CL_SVM_CAPABILITY_CONCURRENT_ACCESS_KHR        ) ? "\n\t\t\tCL_SVM_CAPABILITY_CONCURRENT_ACCESS_KHR"         : "",
         ( svmcaps & CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR ) ? "\n\t\t\tCL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR"  : "",
         ( svmcaps & CL_SVM_CAPABILITY_INDIRECT_ACCESS_KHR          ) ? "\n\t\t\tCL_SVM_CAPABILITY_INDIRECT_ACCESS_KHR"           : "",
-		( svmcaps & CL_SVM_CAPABILITY_CREATE_BUFFER_KHR            ) ? "\n\t\t\tCL_SVM_CAPABILITY_CREATE_BUFFER_KHR"             : "");
+        ( svmcaps & CL_SVM_CAPABILITY_CREATE_BUFFER_KHR            ) ? "\n\t\t\tCL_SVM_CAPABILITY_CREATE_BUFFER_KHR"             : "");
 }
 
 int main(

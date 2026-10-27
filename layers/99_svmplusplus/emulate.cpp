@@ -21,6 +21,14 @@
 
 #include "emulate.h"
 
+// !!! TODO: When removing this code block, also if the SVM type macros have
+// also been updated!
+#if !defined(CL_SVM_CAPABILITY_CREATE_BUFFER_KHR)
+#define CL_SVM_CAPABILITY_CREATE_BUFFER_KHR                 (1 << 15)
+#else
+#pragma message("CL_SVM_CAPABILITY_CREATE_BUFFER_KHR is now properly defined.")
+#endif
+
 static constexpr cl_version version_cl_khr_unified_svm =
     CL_MAKE_VERSION(0, 2, 0);
 
@@ -129,6 +137,7 @@ static cl_svm_capabilities_khr getCoarseGrainSVMCaps(cl_device_id device)
 
     if (svmCaps & CL_DEVICE_SVM_COARSE_GRAIN_BUFFER) {
         ret = CL_SVM_TYPE_MACRO_COARSE_GRAIN_BUFFER_KHR;
+        ret |= CL_SVM_CAPABILITY_CREATE_BUFFER_KHR;
     }
 
     return ret;
@@ -148,6 +157,8 @@ static cl_svm_capabilities_khr getFineGrainSVMCaps(cl_device_id device)
 
     if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) {
         ret = CL_SVM_TYPE_MACRO_FINE_GRAIN_BUFFER_KHR;
+        ret |= CL_SVM_CAPABILITY_CREATE_BUFFER_KHR;
+
 
         if (svmCaps & CL_DEVICE_SVM_ATOMICS) {
             ret |= CL_SVM_CAPABILITY_CONCURRENT_ATOMIC_ACCESS_KHR;
@@ -177,8 +188,15 @@ static cl_svm_capabilities_khr getSystemSVMCaps(cl_device_id device)
         &usmCaps,
         nullptr);
 
-    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_SYSTEM || usmCaps != 0) {
+    if (svmCaps & CL_DEVICE_SVM_FINE_GRAIN_SYSTEM) {
         ret = CL_SVM_TYPE_MACRO_SYSTEM_KHR;
+        ret |= CL_SVM_CAPABILITY_CREATE_BUFFER_KHR;
+    }
+    else if(usmCaps != 0) {
+        ret = CL_SVM_TYPE_MACRO_SYSTEM_KHR;
+        ret |= CL_SVM_CAPABILITY_CREATE_BUFFER_KHR;
+        // USM does not currently support mapping system memory.
+        ret &= ~CL_SVM_CAPABILITY_HOST_MAP_KHR;
     }
 
     return ret;
