@@ -15,7 +15,7 @@ skip_commits:
     - '**/*.md'
 
 before_build:
-  - git clone --depth=1 https://github.com/KhronosGroup/OpenCL-Headers    external/OpenCL-Headers
+  - git clone -b cl_khr_unified_svm --depth=1 https://github.com/KhronosGroup/OpenCL-Headers    external/OpenCL-Headers
   - git clone --depth=1 https://github.com/KhronosGroup/OpenCL-ICD-Loader external/opencl-icd-loader
   - cmake -H. -Bbuild -A%PLATFORM%
 
