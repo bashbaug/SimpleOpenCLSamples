@@ -9,19 +9,12 @@
 
 #include <map>
 
+extern bool g_EmulateUnconditionally;
 extern bool g_EnhancedErrorChecking;
 extern bool g_KernelForProfiling;
 extern bool g_SuggestedLocalWorkSize;
 
 extern const struct _cl_icd_dispatch* g_pNextDispatch;
-
-struct SLayerContext
-{
-    typedef std::map<cl_event, cl_event> CEventMap;
-    CEventMap EventMap;
-};
-
-SLayerContext& getLayerContext(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Emulated Functions
@@ -266,3 +259,9 @@ bool clGetPlatformInfo_override(
     void* param_value,
     size_t* param_value_size_ret,
     cl_int* errcode_ret);
+
+///////////////////////////////////////////////////////////////////////////////
+// Update Functions
+
+void clReleaseEvent_update(
+    cl_event event);

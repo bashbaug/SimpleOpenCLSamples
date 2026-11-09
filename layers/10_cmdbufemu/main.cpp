@@ -28,6 +28,11 @@
 
 #include "emulate.h"
 
+// By default, if any devices in the platform support command buffers,
+// emulation is not performed.
+
+bool g_EmulateUnconditionally = false;
+
 // Enhanced error checking can be used to catch additional errors when
 // commands are recorded into a command buffer, but relies on tricky
 // use of user events that may not work properly with some implementations.
@@ -206,22 +211,7 @@ static cl_int CL_API_CALL
 clReleaseEvent_layer(
     cl_event         event)
 {
-    cl_uint refCount = 0;
-    g_pNextDispatch->clGetEventInfo(
-        event,
-        CL_EVENT_REFERENCE_COUNT,
-        sizeof(refCount),
-        &refCount,
-        nullptr);
-    if (refCount == 1) {
-        auto& context = getLayerContext();
-        auto it = context.EventMap.find(event);
-        if (it != context.EventMap.end()) {
-            g_pNextDispatch->clReleaseEvent(it->second);
-            context.EventMap.erase(it);
-        }
-    }
-
+    clReleaseEvent_update(event);
     return g_pNextDispatch->clReleaseEvent(event);
 }
 
@@ -260,7 +250,8 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
             char str[256];
             snprintf(str, 256, "Emulation Layer for "
                 CL_KHR_COMMAND_BUFFER_EXTENSION_NAME
-                " (EEC: %s, KFP: %s, SLWS: %s)",
+                " (EU: %s, EEC: %s, KFP: %s, SLWS: %s)",
+                g_EmulateUnconditionally ? "Y" : "N",
                 g_EnhancedErrorChecking ? "Y" : "N",
                 g_KernelForProfiling ? "Y" : "N",
                 g_SuggestedLocalWorkSize ? "Y" : "N");
@@ -301,6 +292,7 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayerWithProperties(
 
     _init_dispatch();
 
+    getControl("CMDBUFEMU_EmulateUnconditionally", g_EmulateUnconditionally);
     getControl("CMDBUFEMU_EnhancedErrorChecking", g_EnhancedErrorChecking);
     getControl("CMDBUFEMU_KernelForProfiling", g_KernelForProfiling);
     getControl("CMDBUFEMU_SuggestedLocalWorkSize", g_SuggestedLocalWorkSize);

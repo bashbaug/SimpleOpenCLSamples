@@ -25,6 +25,192 @@ static constexpr cl_version version_cl_khr_command_buffer =
 static constexpr cl_version version_cl_khr_command_buffer_mutable_dispatch =
     CL_MAKE_VERSION(0, 9, 5);
 
+static bool deviceSupportsOpenCL21(cl_device_id device)
+{
+    size_t  size = 0;
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_VERSION,
+        0,
+        nullptr,
+        &size );
+
+    std::vector<char> deviceVersion(size);
+    g_pNextDispatch->clGetDeviceInfo(
+        device,
+        CL_DEVICE_VERSION,
+        size,
+        deviceVersion.data(),
+        nullptr );
+    return getOpenCLVersionFromString(deviceVersion.data()) >= CL_MAKE_VERSION(2, 1, 0);
+}
+
+static void addOrUpdateExtensionVersion(
+    std::vector<cl_name_version>& extensions,
+    const char* extensionName,
+    cl_version version)
+{
+    bool found = false;
+    for (auto& extension : extensions) {
+        if (strcmp(extension.name, extensionName) == 0) {
+            extension.version = version;
+            found = true;
+            break;
+        }
+    }
+    if (found == false) {
+        extensions.emplace_back();
+
+        cl_name_version& extension = extensions.back();
+
+        memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
+        strcpy(extension.name, extensionName);
+
+        extension.version = version;
+    }
+}
+
+struct SPlatformInfo
+{
+    bool emulate_cl_khr_command_buffer = false;
+    bool allDevicesSupportOpenCL21 = false;
+};
+
+struct SLayerContext
+{
+    typedef std::map<cl_event, cl_event> CEventMap;
+
+    SLayerContext()
+    {
+        cl_uint numPlatforms = 0;
+        g_pNextDispatch->clGetPlatformIDs(
+            0,
+            nullptr,
+            &numPlatforms);
+
+        std::vector<cl_platform_id> platforms;
+        platforms.resize(numPlatforms);
+        g_pNextDispatch->clGetPlatformIDs(
+            numPlatforms,
+            platforms.data(),
+            nullptr);
+
+        for (auto platform : platforms) {
+            checkPlatform(platform);
+        }
+    }
+
+    const SPlatformInfo& getPlatformInfo(cl_platform_id platform)
+    {
+        return m_PlatformInfo[platform];
+    }
+
+    const SPlatformInfo& getPlatformInfo(cl_device_id device)
+    {
+        while(true) {
+            cl_device_id parentDevice = nullptr;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_PARENT_DEVICE,
+                sizeof(parentDevice),
+                &parentDevice,
+                nullptr);
+            if (parentDevice != nullptr && parentDevice != device) {
+                device = parentDevice;
+            } else {
+                break;
+            }
+        }
+
+        cl_platform_id platform = nullptr;
+        g_pNextDispatch->clGetDeviceInfo(
+            device,
+            CL_DEVICE_PLATFORM,
+            sizeof(platform),
+            &platform,
+            nullptr);
+
+        return getPlatformInfo(platform);
+    }
+
+    CEventMap& getEventMap()
+    {
+        return m_EventMap;
+    }
+
+private:
+    std::map<cl_platform_id, SPlatformInfo> m_PlatformInfo;
+    CEventMap m_EventMap;
+
+    void checkPlatform(cl_platform_id platform)
+    {
+        SPlatformInfo& platformInfo = m_PlatformInfo[platform];
+
+        bool anyDeviceSupportsCommandBuffers = false;
+        bool anyDeviceSupportsOpenCL21 = false;
+        bool allDevicesSupportopenCL21 = true;
+
+        cl_uint numDevices = 0;
+        g_pNextDispatch->clGetDeviceIDs(
+            platform,
+            CL_DEVICE_TYPE_ALL,
+            0,
+            nullptr,
+            &numDevices);
+
+        std::vector<cl_device_id> devices(numDevices);
+        g_pNextDispatch->clGetDeviceIDs(
+            platform,
+        CL_DEVICE_TYPE_ALL,
+            numDevices,
+            devices.data(),
+            nullptr);
+
+        for (auto device : devices) {
+            bool supportsOpenCL21 = deviceSupportsOpenCL21(device);
+
+            anyDeviceSupportsOpenCL21 |= supportsOpenCL21;
+            allDevicesSupportopenCL21 &= supportsOpenCL21;
+
+            size_t  size = 0;
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_EXTENSIONS,
+                0,
+                nullptr,
+                &size );
+
+            std::string deviceExtensions;
+            deviceExtensions.resize(size);
+            g_pNextDispatch->clGetDeviceInfo(
+                device,
+                CL_DEVICE_EXTENSIONS,
+                size,
+                &deviceExtensions[0],
+                nullptr );
+            deviceExtensions.pop_back();
+
+            bool supportsCommandBuffers = checkStringForExtension(
+                deviceExtensions.c_str(),
+                CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
+
+            anyDeviceSupportsCommandBuffers |= supportsCommandBuffers;
+        }
+
+        // We're going to do emulation for this platform if we are emulating
+        // unconditionally and any device supports OpenCL 2.1, or if no device
+        // supports command buffers.
+
+        platformInfo.emulate_cl_khr_command_buffer =
+            (g_EmulateUnconditionally && anyDeviceSupportsOpenCL21) ||
+            (anyDeviceSupportsCommandBuffers == false);
+
+        // Also record if all devices support OpenCL 2.1.
+
+        platformInfo.allDevicesSupportOpenCL21 = allDevicesSupportopenCL21;
+    }
+};
+
 SLayerContext& getLayerContext(void)
 {
     static SLayerContext c;
@@ -207,7 +393,7 @@ typedef struct _cl_mutable_command_khr
 private:
     static constexpr cl_uint cMagic = 0x4d434442;   // "MCMD"
 
-    const cl_uint Magic;
+    const cl_uint Magic = cMagic;
     const cl_command_type Type;
     cl_command_buffer_khr CmdBuf;
     cl_command_queue Queue;
@@ -1738,10 +1924,10 @@ typedef struct _cl_command_buffer_khr
 private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
 
-    const cl_uint Magic;
+    const cl_uint Magic = cMagic;
     std::vector<cl_command_queue>   Queues;
     std::vector<cl_command_buffer_properties_khr>   Properties;
-    cl_command_buffer_state_khr State;
+    cl_command_buffer_state_khr State = CL_COMMAND_BUFFER_STATE_RECORDING_KHR;
     cl_command_buffer_flags_khr Flags;
     cl_mutable_dispatch_asserts_khr MutableDispatchAsserts;
 
@@ -1902,8 +2088,6 @@ private:
     _cl_command_buffer_khr(
             cl_command_buffer_flags_khr flags,
             cl_mutable_dispatch_asserts_khr mutableDispatchAsserts) :
-        Magic(cMagic),
-        State(CL_COMMAND_BUFFER_STATE_RECORDING_KHR),
         Flags(flags),
         MutableDispatchAsserts(mutableDispatchAsserts),
         RefCount(1),
@@ -1919,7 +2103,6 @@ _cl_mutable_command_khr::_cl_mutable_command_khr(
     cl_command_buffer_khr cmdbuf,
     cl_command_queue queue,
     cl_command_type type) :
-    Magic(cMagic),
     Type(type),
     CmdBuf(cmdbuf),
     Queue(queue ? queue : cmdbuf->getQueue()) {}
@@ -2200,7 +2383,7 @@ cl_int CL_API_CALL clEnqueueCommandBufferKHR_EMU(
     {
         if( errorCode == CL_SUCCESS )
         {
-            getLayerContext().EventMap[event[0]] = startEvent;
+            getLayerContext().getEventMap()[event[0]] = startEvent;
         }
         else
         {
@@ -3059,9 +3242,14 @@ bool clGetDeviceInfo_override(
     size_t* param_value_size_ret,
     cl_int* errcode_ret)
 {
+    const auto& platformInfo = getLayerContext().getPlatformInfo(device);
+    if (platformInfo.emulate_cl_khr_command_buffer == false) {
+        return false;
+    }
+
     switch(param_name) {
     case CL_DEVICE_EXTENSIONS:
-        {
+        if (deviceSupportsOpenCL21(device)) {
             size_t  size = 0;
             g_pNextDispatch->clGetDeviceInfo(
                 device,
@@ -3070,73 +3258,58 @@ bool clGetDeviceInfo_override(
                 nullptr,
                 &size );
 
-            std::vector<char> deviceExtensions(size);
+            std::string deviceExtensions;
+            deviceExtensions.resize(size);
             g_pNextDispatch->clGetDeviceInfo(
                 device,
                 CL_DEVICE_EXTENSIONS,
                 size,
-                deviceExtensions.data(),
+                &deviceExtensions[0],
                 nullptr );
+            deviceExtensions.pop_back();
 
-            size = 0;
-            g_pNextDispatch->clGetDeviceInfo(
-                device,
-                CL_DEVICE_VERSION,
-                0,
-                nullptr,
-                &size );
+            // If we get this far, we're doing full emulation for the base
+            // command buffer extension and all layered extensions. Add all
+            // extensions, unless they're already in the extension string.
 
-            std::vector<char> deviceVersion(size);
-            g_pNextDispatch->clGetDeviceInfo(
-                device,
-                CL_DEVICE_VERSION,
-                size,
-                deviceVersion.data(),
-                nullptr );
+            std::string newExtensions(" ");
 
-            if( checkStringForExtension(
-                    deviceExtensions.data(),
-                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
-                getOpenCLVersionFromString(
-                    deviceVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
-            {
-                std::string newExtensions;
+            if (checkStringForExtension(
+                    deviceExtensions.c_str(),
+                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false) {
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
                 newExtensions += ' ';
-                newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
-
-                std::string oldExtensions(deviceExtensions.data());
-
-                // If the old extension string ends with a space ensure the
-                // new extension string does too.
-                if( oldExtensions.back() == ' ' )
-                {
-                    newExtensions += ' ';
-                }
-                else
-                {
-                    oldExtensions += ' ';
-                }
-
-                oldExtensions += newExtensions;
-
-                auto ptr = (char*)param_value;
-                cl_int errorCode = writeStringToMemory(
-                    param_value_size,
-                    oldExtensions.c_str(),
-                    param_value_size_ret,
-                    ptr );
-
-                if( errcode_ret )
-                {
-                    errcode_ret[0] = errorCode;
-                }
-                return true;
             }
+            if (checkStringForExtension(
+                    deviceExtensions.data(),
+                    CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME ) == false) {
+                newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
+                newExtensions += ' ';
+            }
+
+            // If the old extension string does not end with a space, remove
+            // it from the new extension string, too.
+            if (deviceExtensions.back() != ' ') {
+                newExtensions.pop_back();
+            }
+
+            deviceExtensions += newExtensions;
+
+            auto ptr = (char*)param_value;
+            cl_int errorCode = writeStringToMemory(
+                param_value_size,
+                deviceExtensions.c_str(),
+                param_value_size_ret,
+                ptr );
+
+            if (errcode_ret) {
+                errcode_ret[0] = errorCode;
+            }
+            return true;
         }
         break;
     case CL_DEVICE_EXTENSIONS_WITH_VERSION:
-        {
+        if (deviceSupportsOpenCL21(device)) {
             size_t  size = 0;
             g_pNextDispatch->clGetDeviceInfo(
                 device,
@@ -3154,68 +3327,26 @@ bool clGetDeviceInfo_override(
                 extensions.data(),
                 nullptr );
 
-            size = 0;
-            g_pNextDispatch->clGetDeviceInfo(
-                device,
-                CL_DEVICE_VERSION,
-                0,
-                nullptr,
-                &size );
+            addOrUpdateExtensionVersion(
+                extensions,
+                CL_KHR_COMMAND_BUFFER_EXTENSION_NAME,
+                version_cl_khr_command_buffer);
+            addOrUpdateExtensionVersion(
+                extensions,
+                CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME,
+                version_cl_khr_command_buffer_mutable_dispatch);
 
-            std::vector<char> deviceVersion(size);
-            g_pNextDispatch->clGetDeviceInfo(
-                device,
-                CL_DEVICE_VERSION,
-                size,
-                deviceVersion.data(),
-                nullptr );
+            auto ptr = (cl_name_version*)param_value;
+            cl_int errorCode = writeVectorToMemory(
+                param_value_size,
+                extensions,
+                param_value_size_ret,
+                ptr );
 
-            bool found = false;
-            for( const auto& extension : extensions )
-            {
-                if( strcmp(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME) == 0 )
-                {
-                    found = true;
-                    break;
-                }
+            if (errcode_ret) {
+                errcode_ret[0] = errorCode;
             }
-
-            if( found == false &&
-                getOpenCLVersionFromString(
-                    deviceVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
-            {
-                {
-                    extensions.emplace_back();
-                    cl_name_version& extension = extensions.back();
-
-                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
-
-                    extension.version = version_cl_khr_command_buffer;
-                }
-                {
-                    extensions.emplace_back();
-                    cl_name_version& extension = extensions.back();
-
-                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
-
-                    extension.version = version_cl_khr_command_buffer_mutable_dispatch;
-                }
-
-                auto ptr = (cl_name_version*)param_value;
-                cl_int errorCode = writeVectorToMemory(
-                    param_value_size,
-                    extensions,
-                    param_value_size_ret,
-                    ptr );
-
-                if( errcode_ret )
-                {
-                    errcode_ret[0] = errorCode;
-                }
-                return true;
-            }
+            return true;
         }
         break;
     case CL_DEVICE_COMMAND_BUFFER_CAPABILITIES_KHR:
@@ -3340,9 +3471,9 @@ bool clGetEventInfo_override(
     switch(param_name) {
     case CL_EVENT_COMMAND_TYPE:
         {
-            auto& context = getLayerContext();
-            auto it = context.EventMap.find(event);
-            if (it != context.EventMap.end()) {
+            const auto& eventMap = getLayerContext().getEventMap();
+            auto it = eventMap.find(event);
+            if (it != eventMap.end()) {
                 cl_command_type type = CL_COMMAND_COMMAND_BUFFER_KHR;
                 auto ptr = (cl_command_type*)param_value;
                 cl_int errorCode = writeParamToMemory(
@@ -3377,9 +3508,9 @@ bool clGetEventProfilingInfo_override(
     case CL_PROFILING_COMMAND_SUBMIT:
     case CL_PROFILING_COMMAND_START:
         {
-            auto& context = getLayerContext();
-            auto it = context.EventMap.find(event);
-            if (it != context.EventMap.end()) {
+            const auto& eventMap = getLayerContext().getEventMap();
+            auto it = eventMap.find(event);
+            if (it != eventMap.end()) {
                 cl_int errorCode = g_pNextDispatch->clGetEventProfilingInfo(
                     it->second,
                     param_name,
@@ -3408,9 +3539,14 @@ bool clGetPlatformInfo_override(
     size_t* param_value_size_ret,
     cl_int* errcode_ret)
 {
+    const auto& platformInfo = getLayerContext().getPlatformInfo(platform);
+    if (platformInfo.emulate_cl_khr_command_buffer == false) {
+        return false;
+    }
+
     switch(param_name) {
     case CL_PLATFORM_EXTENSIONS:
-        {
+        if (platformInfo.allDevicesSupportOpenCL21) {
             size_t  size = 0;
             g_pNextDispatch->clGetPlatformInfo(
                 platform,
@@ -3419,73 +3555,58 @@ bool clGetPlatformInfo_override(
                 nullptr,
                 &size );
 
-            std::vector<char> platformExtensions(size);
+            std::string platformExtensions;
+            platformExtensions.resize(size);
             g_pNextDispatch->clGetPlatformInfo(
                 platform,
                 CL_PLATFORM_EXTENSIONS,
                 size,
-                platformExtensions.data(),
+                &platformExtensions[0],
                 nullptr );
+            platformExtensions.pop_back();
 
-            size = 0;
-            g_pNextDispatch->clGetPlatformInfo(
-                platform,
-                CL_PLATFORM_VERSION,
-                0,
-                nullptr,
-                &size );
+            // If we get this far, we're doing full emulation for the base
+            // command buffer extension and all layered extensions. Add all
+            // extensions, unless they're already in the extension string.
 
-            std::vector<char> platformVersion(size);
-            g_pNextDispatch->clGetPlatformInfo(
-                platform,
-                CL_PLATFORM_VERSION,
-                size,
-                platformVersion.data(),
-                nullptr );
+            std::string newExtensions(" ");
 
-            if( checkStringForExtension(
-                    platformExtensions.data(),
-                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false &&
-                getOpenCLVersionFromString(
-                    platformVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
-            {
-                std::string newExtensions;
+            if (checkStringForExtension(
+                    platformExtensions.c_str(),
+                    CL_KHR_COMMAND_BUFFER_EXTENSION_NAME ) == false) {
                 newExtensions += CL_KHR_COMMAND_BUFFER_EXTENSION_NAME;
                 newExtensions += ' ';
-                newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
-
-                std::string oldExtensions(platformExtensions.data());
-
-                // If the old extension string ends with a space ensure the
-                // new extension string does too.
-                if( oldExtensions.back() == ' ' )
-                {
-                    newExtensions += ' ';
-                }
-                else
-                {
-                    oldExtensions += ' ';
-                }
-
-                oldExtensions += newExtensions;
-
-                auto ptr = (char*)param_value;
-                cl_int errorCode = writeStringToMemory(
-                    param_value_size,
-                    oldExtensions.c_str(),
-                    param_value_size_ret,
-                    ptr );
-
-                if( errcode_ret )
-                {
-                    errcode_ret[0] = errorCode;
-                }
-                return true;
             }
+            if (checkStringForExtension(
+                    platformExtensions.c_str(),
+                    CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME ) == false) {
+                newExtensions += CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME;
+                newExtensions += ' ';
+            }
+
+            // If the old extension string does not end with a space, remove
+            // it from the new extension string, too.
+            if (platformExtensions.back() != ' ') {
+                newExtensions.pop_back();
+            }
+
+            platformExtensions += newExtensions;
+
+            auto ptr = (char*)param_value;
+            cl_int errorCode = writeStringToMemory(
+                param_value_size,
+                platformExtensions.c_str(),
+                param_value_size_ret,
+                ptr );
+
+            if (errcode_ret) {
+                errcode_ret[0] = errorCode;
+            }
+            return true;
         }
         break;
     case CL_PLATFORM_EXTENSIONS_WITH_VERSION:
-        {
+        if (platformInfo.allDevicesSupportOpenCL21) {
             size_t  size = 0;
             g_pNextDispatch->clGetPlatformInfo(
                 platform,
@@ -3503,71 +3624,49 @@ bool clGetPlatformInfo_override(
                 extensions.data(),
                 nullptr );
 
-            size = 0;
-            g_pNextDispatch->clGetPlatformInfo(
-                platform,
-                CL_PLATFORM_VERSION,
-                0,
-                nullptr,
-                &size );
+            addOrUpdateExtensionVersion(
+                extensions,
+                CL_KHR_COMMAND_BUFFER_EXTENSION_NAME,
+                version_cl_khr_command_buffer);
+            addOrUpdateExtensionVersion(
+                extensions,
+                CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME,
+                version_cl_khr_command_buffer_mutable_dispatch);
 
-            std::vector<char> platformVersion(size);
-            g_pNextDispatch->clGetPlatformInfo(
-                platform,
-                CL_PLATFORM_VERSION,
-                size,
-                platformVersion.data(),
-                nullptr );
+            auto ptr = (cl_name_version*)param_value;
+            cl_int errorCode = writeVectorToMemory(
+                param_value_size,
+                extensions,
+                param_value_size_ret,
+                ptr );
 
-            bool found = false;
-            for( const auto& extension : extensions )
-            {
-                if( strcmp(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME) == 0 )
-                {
-                    found = true;
-                    break;
-                }
+            if (errcode_ret) {
+                errcode_ret[0] = errorCode;
             }
-
-            if( found == false &&
-                getOpenCLVersionFromString(
-                    platformVersion.data() ) >= CL_MAKE_VERSION(2, 1, 0))
-            {
-                {
-                    extensions.emplace_back();
-                    cl_name_version& extension = extensions.back();
-
-                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_EXTENSION_NAME);
-
-                    extension.version = version_cl_khr_command_buffer;
-                }
-                {
-                    extensions.emplace_back();
-                    cl_name_version& extension = extensions.back();
-
-                    memset(extension.name, 0, CL_NAME_VERSION_MAX_NAME_SIZE);
-                    strcpy(extension.name, CL_KHR_COMMAND_BUFFER_MUTABLE_DISPATCH_EXTENSION_NAME);
-
-                    extension.version = version_cl_khr_command_buffer_mutable_dispatch;
-                }
-
-                auto ptr = (cl_name_version*)param_value;
-                cl_int errorCode = writeVectorToMemory(
-                    param_value_size,
-                    extensions,
-                    param_value_size_ret,
-                    ptr );
-
-                if( errcode_ret )
-                {
-                    errcode_ret[0] = errorCode;
-                }
-                return true;
-            }
+            return true;
         }
         break;
     default: break;
     }
     return false;
+}
+
+void clReleaseEvent_update(
+    cl_event event)
+{
+    cl_uint refCount = 0;
+    g_pNextDispatch->clGetEventInfo(
+        event,
+        CL_EVENT_REFERENCE_COUNT,
+        sizeof(refCount),
+        &refCount,
+        nullptr);
+    if (refCount == 1) {
+        auto& eventMap = getLayerContext().getEventMap();
+        auto it = eventMap.find(event);
+        if (it != eventMap.end()) {
+            g_pNextDispatch->clReleaseEvent(it->second);
+            eventMap.erase(it);
+        }
+    }
 }
