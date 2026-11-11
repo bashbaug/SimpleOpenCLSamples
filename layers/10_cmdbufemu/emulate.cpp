@@ -107,21 +107,6 @@ struct SLayerContext
 
     const SPlatformInfo& getPlatformInfo(cl_device_id device)
     {
-        while(true) {
-            cl_device_id parentDevice = nullptr;
-            g_pNextDispatch->clGetDeviceInfo(
-                device,
-                CL_DEVICE_PARENT_DEVICE,
-                sizeof(parentDevice),
-                &parentDevice,
-                nullptr);
-            if (parentDevice != nullptr && parentDevice != device) {
-                device = parentDevice;
-            } else {
-                break;
-            }
-        }
-
         cl_platform_id platform = nullptr;
         g_pNextDispatch->clGetDeviceInfo(
             device,
@@ -148,7 +133,7 @@ private:
 
         bool anyDeviceSupportsCommandBuffers = false;
         bool anyDeviceSupportsOpenCL21 = false;
-        bool allDevicesSupportopenCL21 = true;
+        bool allDevicesSupportOpenCL21 = true;
 
         cl_uint numDevices = 0;
         g_pNextDispatch->clGetDeviceIDs(
@@ -170,7 +155,7 @@ private:
             bool supportsOpenCL21 = deviceSupportsOpenCL21(device);
 
             anyDeviceSupportsOpenCL21 |= supportsOpenCL21;
-            allDevicesSupportopenCL21 &= supportsOpenCL21;
+            allDevicesSupportOpenCL21 &= supportsOpenCL21;
 
             size_t  size = 0;
             g_pNextDispatch->clGetDeviceInfo(
@@ -207,7 +192,7 @@ private:
 
         // Also record if all devices support OpenCL 2.1.
 
-        platformInfo.allDevicesSupportOpenCL21 = allDevicesSupportopenCL21;
+        platformInfo.allDevicesSupportOpenCL21 = allDevicesSupportOpenCL21;
     }
 };
 
@@ -1623,44 +1608,6 @@ typedef struct _cl_command_buffer_khr
         return CL_INVALID_VALUE;
     }
 
-    cl_int  invalidContext(
-                cl_mem mem )
-    {
-        cl_context checkContext = nullptr;
-        cl_int errorCode = g_pNextDispatch->clGetMemObjectInfo(
-            mem,
-            CL_MEM_CONTEXT,
-            sizeof(checkContext),
-            &checkContext,
-            nullptr );
-        if (errorCode != CL_SUCCESS) {
-            return errorCode;
-        }
-        if (checkContext != Context) {
-            return CL_INVALID_CONTEXT;
-        }
-        return CL_SUCCESS;
-    }
-
-    cl_int  invalidContext(
-                cl_kernel kernel )
-    {
-        cl_context checkContext = nullptr;
-        cl_int errorCode = g_pNextDispatch->clGetKernelInfo(
-            kernel,
-            CL_KERNEL_CONTEXT,
-            sizeof(checkContext),
-            &checkContext,
-            nullptr );
-        if (errorCode != CL_SUCCESS) {
-            return errorCode;
-        }
-        if (checkContext != Context) {
-            return CL_INVALID_CONTEXT;
-        }
-        return CL_SUCCESS;
-    }
-
     cl_int  checkRecordErrors(
                 cl_command_queue queue,
                 cl_uint num_sync_points_in_wait_list,
@@ -1692,6 +1639,36 @@ typedef struct _cl_command_buffer_khr
         // CL_INVALID_CONTEXT if queue and cmdbuf do not have the same context?
 
         return CL_SUCCESS;
+    }
+
+    cl_int  checkRecordObject(
+                cl_mem mem )
+    {
+        cl_context checkContext = nullptr;
+        cl_int errorCode = g_pNextDispatch->clGetMemObjectInfo(
+            mem,
+            CL_MEM_CONTEXT,
+            sizeof(checkContext),
+            &checkContext,
+            nullptr );
+        return errorCode != CL_SUCCESS ? errorCode :
+            checkContext != Context ? CL_INVALID_CONTEXT :
+            CL_SUCCESS;
+    }
+
+    bool    checkRecordObject(
+                cl_kernel kernel )
+    {
+        cl_context checkContext = nullptr;
+        cl_int errorCode = g_pNextDispatch->clGetKernelInfo(
+            kernel,
+            CL_KERNEL_CONTEXT,
+            sizeof(checkContext),
+            &checkContext,
+            nullptr );
+        return errorCode != CL_SUCCESS ? errorCode :
+            checkContext != Context ? CL_INVALID_CONTEXT :
+            CL_SUCCESS;
     }
 
     cl_int  checkPlaybackErrors(
@@ -2503,10 +2480,13 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(src_buffer) ||
-        cmdbuf->invalidContext(dst_buffer) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(src_buffer) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
+    }
+    if( cl_int errorCode = cmdbuf->checkRecordObject(dst_buffer) )
+    {
+        return errorCode;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2582,10 +2562,13 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(src_buffer) ||
-        cmdbuf->invalidContext(dst_buffer) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(src_buffer) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
+    }
+    if( cl_int errorCode = cmdbuf->checkRecordObject(dst_buffer) )
+    {
+        return errorCode;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2664,10 +2647,13 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(src_buffer) ||
-        cmdbuf->invalidContext(dst_image) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(src_buffer) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
+    }
+    if( cl_int errorCode = cmdbuf->checkRecordObject(dst_image) )
+    {
+        return errorCode;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2738,10 +2724,13 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(src_image) ||
-        cmdbuf->invalidContext(dst_image) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(src_image) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
+    }
+    if( cl_int errorCode = cmdbuf->checkRecordObject(dst_image) )
+    {
+        return errorCode;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2812,10 +2801,13 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(src_image) ||
-        cmdbuf->invalidContext(dst_buffer) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(src_image) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
+    }
+    if( cl_int errorCode = cmdbuf->checkRecordObject(dst_buffer) )
+    {
+        return errorCode;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2886,9 +2878,9 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(buffer) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(buffer) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2958,9 +2950,9 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(image) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(image) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -3159,9 +3151,9 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
     {
         return errorCode;
     }
-    if( cmdbuf->invalidContext(kernel) )
+    if( cl_int errorCode = cmdbuf->checkRecordObject(kernel) )
     {
-        return CL_INVALID_CONTEXT;
+        return errorCode;
     }
     if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
     {
@@ -3342,7 +3334,7 @@ bool clGetDeviceInfo_override(
             // command buffer extension and all layered extensions. Add all
             // extensions, unless they're already in the extension string.
 
-            std::string newExtensions(" ");
+            std::string newExtensions;
 
             if (checkStringForExtension(
                     deviceExtensions.c_str(),
@@ -3357,10 +3349,13 @@ bool clGetDeviceInfo_override(
                 newExtensions += ' ';
             }
 
-            // If the old extension string does not end with a space, remove
-            // it from the new extension string, too.
-            if (deviceExtensions.back() != ' ') {
+            // If the old extension string does not end with a space, remove the
+            // trailing space from the new extension string, and add a space
+            // separator.
+            if (!newExtensions.empty() && !deviceExtensions.empty() &&
+                deviceExtensions.back() != ' ') {
                 newExtensions.pop_back();
+                deviceExtensions += ' ';
             }
 
             deviceExtensions += newExtensions;
@@ -3565,6 +3560,48 @@ bool clGetEventInfo_override(
     return false;
 }
 
+#define CHECK_RETURN_EXTENSION_FUNCTION( _funcname )                        \
+    if (strcmp(func_name, #_funcname) == 0) {                               \
+        return (void*)_funcname##_EMU;                                      \
+    }
+
+void* clGetExtensionFunctionAddressForPlatform_override(
+    cl_platform_id platform,
+    const char* func_name)
+{
+    const auto& platformInfo = getLayerContext().getPlatformInfo(platform);
+    if (platformInfo.emulate_cl_khr_command_buffer == false) {
+        return nullptr;
+    }
+
+    CHECK_RETURN_EXTENSION_FUNCTION( clCreateCommandBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clFinalizeCommandBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clRetainCommandBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clReleaseCommandBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clEnqueueCommandBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandBarrierWithWaitListKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyBufferRectKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyBufferToImageKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyImageKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyImageToBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandFillBufferKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandFillImageKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandSVMMemcpyKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandSVMMemFillKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clCommandNDRangeKernelKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clGetCommandBufferInfoKHR );
+
+#if defined(cl_khr_command_buffer_multi_device) && 0
+    CHECK_RETURN_EXTENSION_FUNCTION( clRemapCommandBufferKHR );
+#endif
+
+    CHECK_RETURN_EXTENSION_FUNCTION( clUpdateMutableCommandsKHR );
+    CHECK_RETURN_EXTENSION_FUNCTION( clGetMutableCommandInfoKHR );
+
+    return nullptr;
+}
+
 bool clGetEventProfilingInfo_override(
     cl_event event,
     cl_profiling_info param_name,
@@ -3639,7 +3676,7 @@ bool clGetPlatformInfo_override(
             // command buffer extension and all layered extensions. Add all
             // extensions, unless they're already in the extension string.
 
-            std::string newExtensions(" ");
+            std::string newExtensions;
 
             if (checkStringForExtension(
                     platformExtensions.c_str(),
@@ -3654,10 +3691,13 @@ bool clGetPlatformInfo_override(
                 newExtensions += ' ';
             }
 
-            // If the old extension string does not end with a space, remove
-            // it from the new extension string, too.
-            if (platformExtensions.back() != ' ') {
+            // If the old extension string does not end with a space, remove the
+            // trailing space from the new extension string, and add a space
+            // separator.
+            if (!newExtensions.empty() && !platformExtensions.empty() &&
+                platformExtensions.back() != ' ') {
                 newExtensions.pop_back();
+                platformExtensions += ' ';
             }
 
             platformExtensions += newExtensions;

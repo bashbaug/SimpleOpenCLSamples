@@ -32,14 +32,18 @@ The following environment variables can modify the behavior of the command buffe
 
 | Environment Variable | Behavior |  Example Format |
 |----------------------|----------|-----------------|
+| `CMDBUFEMU_EmulateUnconditionally` | Enables the command buffer emulation layer unconditionally, even when command buffers are supported natively. By default, the command buffer emulation layer operates conditionally and will pass through calls unchanged when command buffers are supported. | `export CMDBUFEMU_EmulateUnconditionally=1`<br/><br/>`set CMDBUFEMU_EmulateUnconditionally=1` |
 | `CMDBUFEMU_EnhancedErrorChecking` | Enables additional error checking when commands are added to a command buffer using a command buffer "test queue".  By default, the additional error checking is disabled. | `export CMDBUFEMU_EnhancedErrorChecking=1`<br/><br/>`set CMDBUFEMU_EnhancedErrorChecking=1` |
 | `CMDBUFEMU_KernelForProfiling` | Enables use of an empty kernel for event profiling instead of event profiling on a command-queue barrier.  By default, to minimize overhead, the empty kernel is not used. | `export CMDBUFEMU_KernelForProfiling=1`<br/><br/>`set CMDBUFEMU_KernelForProfiling=1` |
 | `CMDBUFEMU_SuggestedLocalWorkSize` | Enables use of the suggested local work-group size extension to eliminate `NULL` local work-group sizes.  Only valid when an implementation supports the local work-group size extension and the command is not mutable.  By default, use of the suggested local work-group size is enabled. | `export CMDBUFEMU_SuggestedLocalWorkSize=0`<br/><br/>`set CMDBUFEMU_SuggestedLocalWorkSize=0` |
 
 ## Known Limitations
 
-This section describes some of the limitations of the emulated `cl_khr_command_buffer` functionality:
+The command buffer emulation layer now passes most of the conformance tests on most devices :tada:!
 
-* Some error conditions are not properly checked for and returned.
+This section describes some of the remaining limitations of the emulated `cl_khr_command_buffer` and `cl_khr_command_buffer_mutable_dispatch` functionality:
+
+* Some error conditions may still not be properly checked for.
+If you find a missing error check, please file an issue so it can be added.
 * Deferred kernel arguments are supported, but `CL_COMMAND_BUFFER_STATE_FINALIZED_KHR` is not properly handled.
 * Many functions are not thread safe.

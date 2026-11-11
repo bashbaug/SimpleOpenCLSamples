@@ -136,47 +136,21 @@ clGetEventProfilingInfo_layer(
     return errorCode;
 }
 
-
-#define CHECK_RETURN_EXTENSION_FUNCTION( _funcname )                        \
-    if (strcmp(func_name, #_funcname) == 0) {                               \
-        return (void*)_funcname##_EMU;                                      \
-    }
-
 static void * CL_API_CALL
 clGetExtensionFunctionAddressForPlatform_layer(
     cl_platform_id platform,
     const char *   func_name)
 {
-    // For now, prefer the emulated functions, even if the extension is
-    // supported natively.  Eventually this should become smarter.
-    CHECK_RETURN_EXTENSION_FUNCTION( clCreateCommandBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clFinalizeCommandBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clRetainCommandBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clReleaseCommandBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clEnqueueCommandBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandBarrierWithWaitListKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyBufferRectKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyBufferToImageKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyImageKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandCopyImageToBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandFillBufferKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandFillImageKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandSVMMemcpyKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandSVMMemFillKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clCommandNDRangeKernelKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clGetCommandBufferInfoKHR );
-
-#if defined(cl_khr_command_buffer_multi_device) && 0
-    CHECK_RETURN_EXTENSION_FUNCTION( clRemapCommandBufferKHR );
-#endif
-
-    CHECK_RETURN_EXTENSION_FUNCTION( clUpdateMutableCommandsKHR );
-    CHECK_RETURN_EXTENSION_FUNCTION( clGetMutableCommandInfoKHR );
-
-    return g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+    void*   pFunction = clGetExtensionFunctionAddressForPlatform_override(
         platform,
         func_name);
+    if (pFunction == nullptr) {
+        pFunction = g_pNextDispatch->clGetExtensionFunctionAddressForPlatform(
+            platform,
+            func_name);
+    }
+
+    return pFunction;
 }
 
 static cl_int CL_API_CALL
