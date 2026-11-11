@@ -1338,6 +1338,7 @@ typedef struct _cl_command_buffer_khr
         cl_int errorCode = CL_SUCCESS;
 
         ptrdiff_t numProperties = 0;
+        cl_context context = nullptr;
         cl_command_buffer_flags_khr flags = 0;
         cl_mutable_dispatch_asserts_khr mutableDispatchAsserts = 0;
 
@@ -1389,15 +1390,24 @@ typedef struct _cl_command_buffer_khr
         }
         for( cl_uint q = 0; q < num_queues && queues != nullptr; q++ )
         {
-            cl_uint refCount = 0;
+            cl_context queueContext = nullptr;
             if( g_pNextDispatch->clGetCommandQueueInfo(
                     queues[q],
-                    CL_QUEUE_REFERENCE_COUNT,
-                    sizeof(refCount),
-                    &refCount,
+                    CL_QUEUE_CONTEXT,
+                    sizeof(queueContext),
+                    &queueContext,
                     nullptr) != CL_SUCCESS )
             {
                 errorCode = CL_INVALID_COMMAND_QUEUE;
+                break;
+            }
+            if( context == nullptr )
+            {
+                context = queueContext;
+            }
+            else if( context != queueContext )
+            {
+                errorCode = CL_INVALID_CONTEXT;
                 break;
             }
         }
@@ -1406,7 +1416,7 @@ typedef struct _cl_command_buffer_khr
             errcode_ret[0] = errorCode;
         }
         if( errorCode == CL_SUCCESS) {
-            cmdbuf = new _cl_command_buffer_khr(flags, mutableDispatchAsserts);
+            cmdbuf = new _cl_command_buffer_khr(context, flags, mutableDispatchAsserts);
             cmdbuf->Queues.reserve(num_queues);
             cmdbuf->Queues.insert(
                 cmdbuf->Queues.begin(),
@@ -1597,20 +1607,10 @@ typedef struct _cl_command_buffer_khr
         // not have it.
         case CL_COMMAND_BUFFER_CONTEXT_KHR:
             {
-                cl_context context = nullptr;
-                if( cl_int errorCode = g_pNextDispatch->clGetCommandQueueInfo(
-                        getQueue(),
-                        CL_QUEUE_CONTEXT,
-                        sizeof(context),
-                        &context,
-                        nullptr) )
-                {
-                    return errorCode;
-                }
                 auto ptr = (cl_context*)param_value;
                 return writeParamToMemory(
                     param_value_size,
-                    context,
+                    Context,
                     param_value_size_ret,
                     ptr );
             }
@@ -1621,6 +1621,44 @@ typedef struct _cl_command_buffer_khr
         }
 
         return CL_INVALID_VALUE;
+    }
+
+    cl_int  invalidContext(
+                cl_mem mem )
+    {
+        cl_context checkContext = nullptr;
+        cl_int errorCode = g_pNextDispatch->clGetMemObjectInfo(
+            mem,
+            CL_MEM_CONTEXT,
+            sizeof(checkContext),
+            &checkContext,
+            nullptr );
+        if (errorCode != CL_SUCCESS) {
+            return errorCode;
+        }
+        if (checkContext != Context) {
+            return CL_INVALID_CONTEXT;
+        }
+        return CL_SUCCESS;
+    }
+
+    cl_int  invalidContext(
+                cl_kernel kernel )
+    {
+        cl_context checkContext = nullptr;
+        cl_int errorCode = g_pNextDispatch->clGetKernelInfo(
+            kernel,
+            CL_KERNEL_CONTEXT,
+            sizeof(checkContext),
+            &checkContext,
+            nullptr );
+        if (errorCode != CL_SUCCESS) {
+            return errorCode;
+        }
+        if (checkContext != Context) {
+            return CL_INVALID_CONTEXT;
+        }
+        return CL_SUCCESS;
     }
 
     cl_int  checkRecordErrors(
@@ -1680,14 +1718,22 @@ typedef struct _cl_command_buffer_khr
         {
             return CL_INVALID_EVENT_WAIT_LIST;
         }
-
-        cl_context cmdbuf_context = nullptr;
-        g_pNextDispatch->clGetCommandQueueInfo(
-            getQueue(),
-            CL_QUEUE_CONTEXT,
-            sizeof(cmdbuf_context),
-            &cmdbuf_context,
-            nullptr);
+        for( cl_uint e = 0; e < num_events_in_wait_list; e++ )
+        {
+            cl_context checkContext = nullptr;
+            cl_int errorCode = g_pNextDispatch->clGetEventInfo(
+                event_wait_list[e],
+                CL_EVENT_CONTEXT,
+                sizeof(checkContext),
+                &checkContext,
+                nullptr );
+            if (errorCode != CL_SUCCESS) {
+                return CL_INVALID_EVENT_WAIT_LIST;
+            }
+            if (checkContext != Context) {
+                return CL_INVALID_CONTEXT;
+            }
+        }
 
         cl_device_id cmdbuf_device = nullptr;
         g_pNextDispatch->clGetCommandQueueInfo(
@@ -1711,7 +1757,7 @@ typedef struct _cl_command_buffer_khr
                 sizeof(queue_context),
                 &queue_context,
                 nullptr);
-            if( queue_context != cmdbuf_context )
+            if( queue_context != Context )
             {
                 return CL_INVALID_CONTEXT;
             }
@@ -1925,6 +1971,7 @@ private:
     static constexpr cl_uint cMagic = 0x434d4442;   // "CMDB"
 
     const cl_uint Magic = cMagic;
+    cl_context  Context;
     std::vector<cl_command_queue>   Queues;
     std::vector<cl_command_buffer_properties_khr>   Properties;
     cl_command_buffer_state_khr State = CL_COMMAND_BUFFER_STATE_RECORDING_KHR;
@@ -1973,14 +2020,6 @@ private:
         {
             cl_command_queue testQueue = nullptr;
 
-            cl_context context = nullptr;
-            g_pNextDispatch->clGetCommandQueueInfo(
-                src,
-                CL_QUEUE_CONTEXT,
-                sizeof(context),
-                &context,
-                nullptr );
-
             cl_device_id device = nullptr;
             g_pNextDispatch->clGetCommandQueueInfo(
                 src,
@@ -2006,7 +2045,7 @@ private:
                     props.data(),
                     nullptr );
                 testQueue =  g_pNextDispatch->clCreateCommandQueueWithProperties(
-                    context,
+                    Context,
                     device,
                     props.data(),
                     nullptr );
@@ -2019,14 +2058,14 @@ private:
                     &props,
                     nullptr );
                 testQueue = g_pNextDispatch->clCreateCommandQueue(
-                    context,
+                    Context,
                     device,
                     props,
                     nullptr );
             }
 
             cl_event blockingEvent = g_pNextDispatch->clCreateUserEvent(
-                context,
+                Context,
                 nullptr );
             g_pNextDispatch->clEnqueueBarrierWithWaitList(
                 testQueue,
@@ -2043,14 +2082,6 @@ private:
     {
         if( g_KernelForProfiling )
         {
-            cl_context context = nullptr;
-            g_pNextDispatch->clGetCommandQueueInfo(
-                queue,
-                CL_QUEUE_CONTEXT,
-                sizeof(context),
-                &context,
-                nullptr );
-
             cl_device_id device = nullptr;
             g_pNextDispatch->clGetCommandQueueInfo(
                 queue,
@@ -2061,7 +2092,7 @@ private:
 
             const char* kernelString = "kernel void Empty() {}";
             cl_program program = g_pNextDispatch->clCreateProgramWithSource(
-                context,
+                Context,
                 1,
                 &kernelString,
                 nullptr,
@@ -2086,8 +2117,10 @@ private:
     }
 
     _cl_command_buffer_khr(
+            cl_context context,
             cl_command_buffer_flags_khr flags,
             cl_mutable_dispatch_asserts_khr mutableDispatchAsserts) :
+        Context(context),
         Flags(flags),
         MutableDispatchAsserts(mutableDispatchAsserts),
         RefCount(1),
@@ -2470,6 +2503,11 @@ cl_int CL_API_CALL clCommandCopyBufferKHR_EMU(
     {
         return errorCode;
     }
+    if( cmdbuf->invalidContext(src_buffer) ||
+        cmdbuf->invalidContext(dst_buffer) )
+    {
+        return CL_INVALID_CONTEXT;
+    }
     if( properties != nullptr && properties[0] != 0 )
     {
         return CL_INVALID_PROPERTY;
@@ -2543,6 +2581,11 @@ cl_int CL_API_CALL clCommandCopyBufferRectKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( cmdbuf->invalidContext(src_buffer) ||
+        cmdbuf->invalidContext(dst_buffer) )
+    {
+        return CL_INVALID_CONTEXT;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2621,6 +2664,11 @@ cl_int CL_API_CALL clCommandCopyBufferToImageKHR_EMU(
     {
         return errorCode;
     }
+    if( cmdbuf->invalidContext(src_buffer) ||
+        cmdbuf->invalidContext(dst_image) )
+    {
+        return CL_INVALID_CONTEXT;
+    }
     if( properties != nullptr && properties[0] != 0 )
     {
         return CL_INVALID_PROPERTY;
@@ -2689,6 +2737,11 @@ cl_int CL_API_CALL clCommandCopyImageKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( cmdbuf->invalidContext(src_image) ||
+        cmdbuf->invalidContext(dst_image) )
+    {
+        return CL_INVALID_CONTEXT;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -2759,6 +2812,11 @@ cl_int CL_API_CALL clCommandCopyImageToBufferKHR_EMU(
     {
         return errorCode;
     }
+    if( cmdbuf->invalidContext(src_image) ||
+        cmdbuf->invalidContext(dst_buffer) )
+    {
+        return CL_INVALID_CONTEXT;
+    }
     if( properties != nullptr && properties[0] != 0 )
     {
         return CL_INVALID_PROPERTY;
@@ -2828,6 +2886,10 @@ cl_int CL_API_CALL clCommandFillBufferKHR_EMU(
     {
         return errorCode;
     }
+    if( cmdbuf->invalidContext(buffer) )
+    {
+        return CL_INVALID_CONTEXT;
+    }
     if( properties != nullptr && properties[0] != 0 )
     {
         return CL_INVALID_PROPERTY;
@@ -2895,6 +2957,10 @@ cl_int CL_API_CALL clCommandFillImageKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( cmdbuf->invalidContext(image) )
+    {
+        return CL_INVALID_CONTEXT;
     }
     if( properties != nullptr && properties[0] != 0 )
     {
@@ -3092,6 +3158,10 @@ cl_int CL_API_CALL clCommandNDRangeKernelKHR_EMU(
             sync_point_wait_list) )
     {
         return errorCode;
+    }
+    if( cmdbuf->invalidContext(kernel) )
+    {
+        return CL_INVALID_CONTEXT;
     }
     if( cl_command_queue testQueue = cmdbuf->getTestQueue() )
     {
