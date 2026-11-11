@@ -1656,7 +1656,7 @@ typedef struct _cl_command_buffer_khr
             CL_SUCCESS;
     }
 
-    bool    checkRecordObject(
+    cl_int  checkRecordObject(
                 cl_kernel kernel )
     {
         cl_context checkContext = nullptr;
