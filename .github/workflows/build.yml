@@ -36,14 +36,14 @@ jobs:
         os: [ubuntu-latest, ubuntu-24.04-arm]
         ext: [YES, NO]
         include:
-        - os: windows-latest
-          windows-arch: x64
-        - os: windows-latest
-          windows-arch: Win32
-        - os: windows-11-arm
-          windows-arch: ARM64
-        - os: windows-11-arm
-          windows-arch: ARM64EC
+        - { os: windows-latest, windows-arch: x64,     ext: YES }
+        - { os: windows-latest, windows-arch: x64,     ext: NO  }
+        - { os: windows-latest, windows-arch: Win32,   ext: YES }
+        - { os: windows-latest, windows-arch: Win32,   ext: NO  }
+        - { os: windows-11-arm, windows-arch: ARM64,   ext: YES }
+        - { os: windows-11-arm, windows-arch: ARM64,   ext: NO  }
+        - { os: windows-11-arm, windows-arch: ARM64EC, ext: YES }
+        - { os: windows-11-arm, windows-arch: ARM64EC, ext: NO  }
 
     runs-on: ${{matrix.os}}
 
