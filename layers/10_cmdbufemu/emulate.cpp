@@ -187,7 +187,7 @@ private:
         // supports command buffers.
 
         platformInfo.emulate_cl_khr_command_buffer =
-            (g_EmulateUnconditionally && anyDeviceSupportsOpenCL21) ||
+            (g_EmulateUnconditionally > 0 && anyDeviceSupportsOpenCL21) ||
             (anyDeviceSupportsCommandBuffers == false);
 
         // Also record if all devices support OpenCL 2.1.

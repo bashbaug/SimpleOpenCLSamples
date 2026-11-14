@@ -31,7 +31,7 @@
 // By default, if any devices in the platform support command buffers,
 // emulation is not performed.
 
-bool g_EmulateUnconditionally = false;
+int g_EmulateUnconditionally = 0;
 
 // Enhanced error checking can be used to catch additional errors when
 // commands are recorded into a command buffer, but relies on tricky
@@ -264,12 +264,14 @@ CL_API_ENTRY cl_int CL_API_CALL clInitLayerWithProperties(
         return CL_INVALID_VALUE;
     }
 
-    _init_dispatch();
-
     getControl("CMDBUFEMU_EmulateUnconditionally", g_EmulateUnconditionally);
     getControl("CMDBUFEMU_EnhancedErrorChecking", g_EnhancedErrorChecking);
     getControl("CMDBUFEMU_KernelForProfiling", g_KernelForProfiling);
     getControl("CMDBUFEMU_SuggestedLocalWorkSize", g_SuggestedLocalWorkSize);
+
+    if (g_EmulateUnconditionally >= 0) {
+        _init_dispatch();
+    }
 
     g_pNextDispatch = target_dispatch;
 

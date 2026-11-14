@@ -9,7 +9,7 @@
 
 #include <map>
 
-extern bool g_EmulateUnconditionally;
+extern int  g_EmulateUnconditionally;
 extern bool g_EnhancedErrorChecking;
 extern bool g_KernelForProfiling;
 extern bool g_SuggestedLocalWorkSize;
