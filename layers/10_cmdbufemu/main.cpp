@@ -225,7 +225,7 @@ CL_API_ENTRY cl_int CL_API_CALL clGetLayerInfo(
             snprintf(str, 256, "Emulation Layer for "
                 CL_KHR_COMMAND_BUFFER_EXTENSION_NAME
                 " (EU: %s, EEC: %s, KFP: %s, SLWS: %s)",
-                g_EmulateUnconditionally ? "Y" : "N",
+                g_EmulateUnconditionally > 0 ? "Y" : "N",
                 g_EnhancedErrorChecking ? "Y" : "N",
                 g_KernelForProfiling ? "Y" : "N",
                 g_SuggestedLocalWorkSize ? "Y" : "N");
