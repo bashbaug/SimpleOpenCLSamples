@@ -125,7 +125,7 @@ int main(int argc, char** argv)
 
         std::vector<uint8_t> colors;
         colors.resize(width * height);
-        for (int i = 0; i < width * height; ++i) {
+        for (cl_uint i = 0; i < width * height; ++i) {
             // Map the iteration count to colors by just alternating between
             // two greys.
             colors[i] = (buf[i] & 0x1) ? 240 : 20;
