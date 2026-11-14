@@ -33,8 +33,17 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm]
         ext: [YES, NO]
+        include:
+        - os: windows-latest
+          windows-arch: x64
+        - os: windows-latest
+          windows-arch: Win32
+        - os: windows-11-arm
+          windows-arch: ARM64
+        - os: windows-11-arm
+          windows-arch: ARM64EC
 
     runs-on: ${{matrix.os}}
 
@@ -74,19 +83,24 @@ jobs:
         path: external/SPIRV-Headers
 
     - name: Create Build Directory
-      run: cmake -E make_directory ${{runner.workspace}}/build
+      run: cmake -E make_directory ./build
 
     - name: Run CMake
       shell: bash
-      working-directory: ${{runner.workspace}}/build
-      run: cmake -DOpenCL_INCLUDE_DIRS=$GITHUB_WORKSPACE/external/OpenCL-Headers -DCMAKE_BUILD_TYPE=$BUILD_TYPE $GITHUB_WORKSPACE
+      working-directory: ./build
+      run: |
+        if [[ -n "${{ matrix.windows-arch }}" ]]; then
+          cmake -DOpenCL_INCLUDE_DIRS=$GITHUB_WORKSPACE/external/OpenCL-Headers -DCMAKE_BUILD_TYPE=$BUILD_TYPE -A ${{ matrix.windows-arch }} $GITHUB_WORKSPACE
+        else
+          cmake -DOpenCL_INCLUDE_DIRS=$GITHUB_WORKSPACE/external/OpenCL-Headers -DCMAKE_BUILD_TYPE=$BUILD_TYPE                               $GITHUB_WORKSPACE
+        fi
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ./build
       shell: bash
       run: cmake --build . --parallel --config $BUILD_TYPE
 
     #- name: Test
-    #  working-directory: ${{runner.workspace}}/build
+    #  working-directory: ./build
     #  shell: bash
     #  run: ctest -C $BUILD_TYPE
