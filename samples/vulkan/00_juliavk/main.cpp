@@ -120,11 +120,11 @@ struct QueueFamilyIndices {
     uint32_t presentFamily;
 
     QueueFamilyIndices() :
-        graphicsFamily(~0),
-        presentFamily(~0) {}
+        graphicsFamily(~0U),
+        presentFamily(~0U) {}
 
     bool isComplete() {
-        return graphicsFamily != ~0 && presentFamily != ~0;
+        return graphicsFamily != ~0U && presentFamily != ~0U;
     }
 };
 
